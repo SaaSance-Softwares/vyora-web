@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #171717;
+  /* Font fallbacks — overridden at runtime by layout.tsx via inline style */
+  --font-body: sans-serif;
+  --font-heading: sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary, #000000);
+  --color-secondary: var(--secondary, #ffffff);
+  --color-accent: var(--accent, #3b82f6);
+  /* Tailwind's font-sans utility now uses the dynamic body font */
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ─── Global font application ─────────────────────────────── */
+
+/* All elements inherit font from their parent by default */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Root: body font applied here so everything inherits */
+html {
+  font-family: var(--font-body, sans-serif);
+}
+
+body {
+  font-family: var(--font-body, sans-serif);
+}
+
+/* Headings use the heading font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading, var(--font-body, sans-serif));
+}
+
+/* Ensure interactive / form elements also use theme font (browsers default to system) */
+button, input, textarea, select, label {
+  font-family: inherit;
+}
+
+/* Links and spans also inherit cleanly */
+a, p, span, li, td, th, blockquote, figcaption {
+  font-family: inherit;
+}
+
+/* Hide scrollbar but keep scroll behaviour */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Premium noise texture */
+.bg-noise {
+  background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+}
+
+.glass-premium {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-premium {
+  background: rgba(17, 17, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
