@@ -17,6 +17,7 @@ class QikInkImportTest extends TestCase
         // 1. Create Admin User
         $user = User::factory()->create([
             'email_verified_at' => now(),
+            'role' => 'administrator',
         ]);
 
         \Illuminate\Support\Facades\File::put(storage_path('installed'), 'installed');
