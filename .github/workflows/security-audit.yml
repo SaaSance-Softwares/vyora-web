@@ -1,0 +1,58 @@
+name: Automated Security Audit
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, libxml, pdo
+        coverage: none
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Composer Dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Run Composer Audit (PHP Dependencies)
+      run: composer audit
+
+    - name: Install NPM Dependencies
+      run: npm install
+
+    - name: Run NPM Audit (Node Dependencies)
+      run: npm audit --audit-level=high
+
+    - name: Run Laravel Pint (Code Style & Formatting)
+      run: ./vendor/bin/pint --test
+
+    - name: Prepare Database for Testing
+      run: |
+        touch database/database.sqlite
+      
+    - name: Setup Application for Testing
+      run: |
+        cp .env.example .env || touch .env
+        php artisan key:generate
+        php artisan migrate --force
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+
+    - name: Run Automated Tests
+      run: php artisan test
