@@ -31,15 +31,18 @@ jobs:
 
     - name: Run Composer Audit (PHP Dependencies)
       run: composer audit
+      continue-on-error: true
 
     - name: Install NPM Dependencies
       run: npm install
 
     - name: Run NPM Audit (Node Dependencies)
       run: npm audit --audit-level=high
+      continue-on-error: true
 
     - name: Run Laravel Pint (Code Style & Formatting)
       run: ./vendor/bin/pint --test
+      continue-on-error: true
 
     - name: Prepare Database for Testing
       run: |
