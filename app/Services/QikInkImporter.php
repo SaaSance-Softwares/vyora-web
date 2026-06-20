@@ -3,18 +3,19 @@
 namespace App\Services;
 
 use App\Models\Attribute;
-use App\Models\AttributeValue;
+use App\Models\Color;
 use App\Models\Product;
 use App\Models\ProductType;
+use App\Models\Size;
 use App\Models\Sku;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class QikInkImporter
 {
     public function importRow(array $row, int $rowNumber = 0)
     {
-        return DB::transaction(function () use ($row, $rowNumber) {
+        return DB::transaction(function () use ($row) {
             // 1. Resolve Product
             $productName = $row['Item name'] ?? 'Unknown Product';
             $slug = Str::slug($productName);
@@ -39,7 +40,7 @@ class QikInkImporter
                 ['code' => $skuCode],
                 [
                     'product_id' => $product->id,
-                    'design_sku'  => $row['Design SKU']  ?? null,
+                    'design_sku' => $row['Design SKU'] ?? null,
                     'product_sku' => $row['Product SKU'] ?? null,
                     'price' => $this->parsePrice($row['Product price'] ?? 0),
                     'mrp' => $this->parsePrice($row['Product price'] ?? 0),
@@ -93,25 +94,28 @@ class QikInkImporter
 
     private function getOrCreateColor($name)
     {
-        if (empty(trim($name)))
+        if (empty(trim($name))) {
             return null;
+        }
 
-        $color = \App\Models\Color::firstOrCreate(
+        $color = Color::firstOrCreate(
             ['name' => $name],
             ['hex_code' => '#000000']
         );
+
         return $color->id;
     }
 
     private function getOrCreateSize($name)
     {
-        if (empty(trim($name)))
+        if (empty(trim($name))) {
             return null;
+        }
 
         $val = trim($name);
         $code = strtoupper($val);
 
-        $size = \App\Models\Size::where('code', $code)
+        $size = Size::where('code', $code)
             ->orWhere('name', $val)
             ->first();
 
@@ -119,16 +123,18 @@ class QikInkImporter
             return $size->id;
         }
 
-        $size = \App\Models\Size::create([
+        $size = Size::create([
             'name' => $val,
-            'code' => $code
+            'code' => $code,
         ]);
+
         return $size->id;
     }
 
     private function isLikelySize($val)
     {
         $sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+
         return in_array(strtoupper($val), $sizes);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\GeneralProductImporter;
 use App\Services\QikInkImporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
@@ -10,9 +11,10 @@ use Illuminate\Support\Facades\Response;
 class ProductUploadController extends Controller
 {
     protected $qikinkImporter;
+
     protected $generalImporter;
 
-    public function __construct(QikInkImporter $qikinkImporter, \App\Services\GeneralProductImporter $generalImporter)
+    public function __construct(QikInkImporter $qikinkImporter, GeneralProductImporter $generalImporter)
     {
         $this->qikinkImporter = $qikinkImporter;
         $this->generalImporter = $generalImporter;
@@ -26,9 +28,9 @@ class ProductUploadController extends Controller
     public function downloadSampleGeneral()
     {
         $headers = [
-            "Content-type" => "text/csv",
-            "Content-Disposition" => "attachment; filename=sample_general.csv",
-            "Pragma" => "no-cache"
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=sample_general.csv',
+            'Pragma' => 'no-cache',
         ];
 
         // Comprehensive list of columns based on user request
@@ -60,7 +62,7 @@ class ProductUploadController extends Controller
             'Qualified for return',
             'Product type',
             'HSN',
-            'Tax On Product'
+            'Tax On Product',
         ];
 
         $callback = function () use ($columns) {
@@ -94,7 +96,7 @@ class ProductUploadController extends Controller
                 'Yes',
                 'Hoodie',
                 '6101',
-                '12%'
+                '12%',
             ]);
             fclose($file);
         };
@@ -105,9 +107,9 @@ class ProductUploadController extends Controller
     public function downloadSampleQikink()
     {
         $headers = [
-            "Content-type" => "text/csv",
-            "Content-Disposition" => "attachment; filename=sample_qikink.csv",
-            "Pragma" => "no-cache",
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=sample_qikink.csv',
+            'Pragma' => 'no-cache',
         ];
 
         $columns = ['Item name', 'Variant', 'Design SKU', 'Product SKU', 'Store SKU', 'Selling price', 'Product price'];
@@ -126,7 +128,7 @@ class ProductUploadController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:csv,txt',
-            'type' => 'required|in:qikink,general'
+            'type' => 'required|in:qikink,general',
         ]);
 
         $file = $request->file('file');
@@ -141,8 +143,9 @@ class ProductUploadController extends Controller
             $rowNumber++; // Increment for each data row
 
             // Basic check to avoid index errors on empty lines
-            if (count($row) < count($header))
+            if (count($row) < count($header)) {
                 continue;
+            }
 
             // Ensure row matches header length for combination
             $row = array_slice($row, 0, count($header));
@@ -154,9 +157,10 @@ class ProductUploadController extends Controller
                 $count++;
             } catch (\Exception $e) {
                 fclose($handle);
+
                 return redirect()
                     ->route('admin.upload', ['tab' => $request->type])
-                    ->withErrors(['error' => 'Row ' . $rowNumber . ': ' . $e->getMessage()])
+                    ->withErrors(['error' => 'Row '.$rowNumber.': '.$e->getMessage()])
                     ->withInput();
             }
         }

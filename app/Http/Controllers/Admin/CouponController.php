@@ -11,6 +11,7 @@ class CouponController extends Controller
     public function index()
     {
         $coupons = Coupon::latest()->paginate(15);
+
         return view('admin.coupons.index', compact('coupons'));
     }
 
@@ -43,7 +44,7 @@ class CouponController extends Controller
             'exclude_sale_items' => 'boolean',
             'first_time_users_only' => 'boolean',
             'can_combine' => 'boolean',
-            'applicable_product_ids' => 'nullable|string', 
+            'applicable_product_ids' => 'nullable|string',
             'applicable_category_ids' => 'nullable|string',
             'excluded_product_ids' => 'nullable|string',
         ]);
@@ -58,8 +59,8 @@ class CouponController extends Controller
         $validated['can_combine'] = $request->has('can_combine');
 
         // Convert CSV strings to JSON arrays
-        foreach(['applicable_product_ids', 'applicable_category_ids', 'excluded_product_ids'] as $field) {
-            if (!empty($validated[$field])) {
+        foreach (['applicable_product_ids', 'applicable_category_ids', 'excluded_product_ids'] as $field) {
+            if (! empty($validated[$field])) {
                 $validated[$field] = array_map('trim', explode(',', $validated[$field]));
             } else {
                 $validated[$field] = null;
@@ -67,6 +68,7 @@ class CouponController extends Controller
         }
 
         Coupon::create($validated);
+
         return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon campaign launched successfully!');
     }
 
@@ -78,7 +80,7 @@ class CouponController extends Controller
     public function update(Request $request, Coupon $coupon)
     {
         $validated = $request->validate([
-            'code' => 'required|string|unique:coupons,code,' . $coupon->id,
+            'code' => 'required|string|unique:coupons,code,'.$coupon->id,
             'name' => 'nullable|string',
             'type' => 'required|in:percentage,fixed,free_shipping,bogo',
             'bogo_buy_qty' => 'nullable|integer|min:1',
@@ -112,8 +114,8 @@ class CouponController extends Controller
         $validated['first_time_users_only'] = $request->has('first_time_users_only');
         $validated['can_combine'] = $request->has('can_combine');
 
-        foreach(['applicable_product_ids', 'applicable_category_ids', 'excluded_product_ids'] as $field) {
-            if (!empty($validated[$field])) {
+        foreach (['applicable_product_ids', 'applicable_category_ids', 'excluded_product_ids'] as $field) {
+            if (! empty($validated[$field])) {
                 $itemValue = $request->input($field);
                 $validated[$field] = array_map('trim', explode(',', $itemValue));
             } else {
@@ -122,12 +124,14 @@ class CouponController extends Controller
         }
 
         $coupon->update($validated);
+
         return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon configuration updated!');
     }
 
     public function destroy(Coupon $coupon)
     {
         $coupon->delete();
+
         return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon archived and removed.');
     }
 }

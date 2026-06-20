@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -37,20 +39,21 @@ class HandleInertiaRequests extends Middleware
     {
         $settings = [];
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('theme_settings')) {
-                $all = \App\Models\ThemeSetting::all();
-                $integrationSettings = $all->filter(fn($s) => str_starts_with($s->group, 'integration.'))
+            if (Schema::hasTable('theme_settings')) {
+                $all = ThemeSetting::all();
+                $integrationSettings = $all->filter(fn ($s) => str_starts_with($s->group, 'integration.'))
                     ->groupBy('group')
                     ->map(function ($groupSettings) {
                         return $groupSettings->keyBy('key')->map(function ($s) {
                             if (in_array($s->key, ['key_id', 'key_secret', 'smtp_password', 'access_token'])) {
                                 return null;
                             }
+
                             return $s->value;
                         })->filter()->toArray();
                     });
 
-                $allData = $all->filter(fn($s) => !str_starts_with($s->group, 'integration.'))
+                $allData = $all->filter(fn ($s) => ! str_starts_with($s->group, 'integration.'))
                     ->pluck('value', 'key')->toArray();
 
                 if (isset($allData['taxes'])) {
@@ -65,8 +68,8 @@ class HandleInertiaRequests extends Middleware
 
                 $settings = array_merge($allData, [
                     'integrations' => $integrationSettings,
-                    'policies'     => $all->whereIn('key', $policyKeys)->pluck('value', 'key'),
-                    'general'      => $all->whereIn('key', $generalKeys)->pluck('value', 'key')
+                    'policies' => $all->whereIn('key', $policyKeys)->pluck('value', 'key'),
+                    'general' => $all->whereIn('key', $generalKeys)->pluck('value', 'key'),
                 ]);
             }
         } catch (\Exception $e) {
@@ -76,7 +79,10 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge($request->user()->toArray(), [
+                    'default_pincode' => $request->user()->addresses()->where('is_default', true)->value('zip_code')
+                                      ?? $request->user()->addresses()->latest()->value('zip_code'),
+                ]) : null,
             ],
             'settings' => $settings,
             'flash' => [

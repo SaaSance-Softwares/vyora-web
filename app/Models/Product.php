@@ -29,15 +29,19 @@ class Product extends Model
     public function getImageUrlAttribute()
     {
         $path = $this->preview_image;
-        if (!$path) return null;
-        if (str_starts_with($path, 'http')) return $path;
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
 
         $cleanPath = ltrim($path, '/');
         if (str_starts_with($cleanPath, 'storage/') || str_starts_with($cleanPath, 'uploads/')) {
             return asset($cleanPath);
         }
 
-        return asset('storage/' . $cleanPath);
+        return asset('storage/'.$cleanPath);
     }
 
     public function skus()

@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Razorpay\Api\Api;
+use Razorpay\Api\Errors\AuthenticationError;
 
 class IntegrationSettingsController extends Controller
 {
@@ -14,101 +16,101 @@ class IntegrationSettingsController extends Controller
 
     private $integrations = [
         'razorpay' => [
-            'name'        => 'Razorpay',
+            'name' => 'Razorpay',
             'description' => 'Accept UPI, Cards, Net Banking & Wallets via Razorpay',
-            'icon'        => 'razorpay',
-            'status'      => 'active',
+            'icon' => 'razorpay',
+            'status' => 'active',
         ],
-        
+
         'algolia' => [
-            'name'        => 'Algolia Search',
+            'name' => 'Algolia Search',
             'description' => 'Lightning-fast, typo-tolerant search for your products',
-            'icon'        => 'search',
-            'status'      => 'active',
+            'icon' => 'search',
+            'status' => 'active',
         ],
         'qikink' => [
-            'name'        => 'Qikink',
+            'name' => 'Qikink',
             'description' => 'Automated Print on Demand and Dropshipping fulfillment',
-            'icon'        => 'truck',
-            'status'      => 'active',
+            'icon' => 'truck',
+            'status' => 'active',
         ],
         'smtp' => [
-            'name'        => 'SMTP Email',
+            'name' => 'SMTP Email',
             'description' => 'Send transactional emails via a custom SMTP server',
-            'icon'        => 'mail',
-            'status'      => 'active',
+            'icon' => 'mail',
+            'status' => 'active',
         ],
         'zoho-books' => [
-            'name'        => 'Zoho Books',
+            'name' => 'Zoho Books',
             'description' => 'Sync orders with your Zoho Books accounting',
-            'icon'        => 'book',
-            'status'      => 'soon',
+            'icon' => 'book',
+            'status' => 'soon',
         ],
         'zoho-campaign' => [
-            'name'        => 'Zoho Campaigns',
+            'name' => 'Zoho Campaigns',
             'description' => 'Email marketing automation via Zoho',
-            'icon'        => 'send',
-            'status'      => 'soon',
+            'icon' => 'send',
+            'status' => 'soon',
         ],
         'whatsapp' => [
-            'name'        => 'WhatsApp Business API',
+            'name' => 'WhatsApp Business API',
             'description' => 'Connect WhatsApp for order notifications and customer support',
-            'icon'        => 'whatsapp',
-            'status'      => 'active',
+            'icon' => 'whatsapp',
+            'status' => 'active',
         ],
         'google-analytics' => [
-            'name'        => 'Google Analytics',
+            'name' => 'Google Analytics',
             'description' => 'Track visitors and trace conversion data using GA4 properties',
-            'icon'        => 'google-analytics',
-            'status'      => 'active',
+            'icon' => 'google-analytics',
+            'status' => 'active',
         ],
         'meta-pixel' => [
-            'name'        => 'Meta Pixel API',
+            'name' => 'Meta Pixel API',
             'description' => 'Track user behaviors and optimize Meta/Facebook ad campaigns',
-            'icon'        => 'meta-pixel',
-            'status'      => 'active',
+            'icon' => 'meta-pixel',
+            'status' => 'active',
         ],
         'bing-webmaster' => [
-            'name'        => 'Bing Webmaster',
+            'name' => 'Bing Webmaster',
             'description' => 'Submit sitemaps and index products with Microsoft Bing search engine',
-            'icon'        => 'bing',
-            'status'      => 'soon',
+            'icon' => 'bing',
+            'status' => 'soon',
         ],
         'google-search-console' => [
-            'name'        => 'Google Search Console',
+            'name' => 'Google Search Console',
             'description' => 'Monitor Google Search performance and crawl status for your storefront',
-            'icon'        => 'google-search-console',
-            'status'      => 'active',
+            'icon' => 'google-search-console',
+            'status' => 'active',
         ],
         'google-merchant' => [
-            'name'        => 'Google Merchant Center',
+            'name' => 'Google Merchant Center',
             'description' => 'Sync your products with Google Shopping feeds and free listings',
-            'icon'        => 'google-merchant',
-            'status'      => 'active',
+            'icon' => 'google-merchant',
+            'status' => 'active',
         ],
         'ondc' => [
-            'name'        => 'ONDC Network Integration',
+            'name' => 'ONDC Network Integration',
             'description' => 'List and sell products across the open commerce network in India',
-            'icon'        => 'ondc',
-            'status'      => 'soon',
+            'icon' => 'ondc',
+            'status' => 'soon',
         ],
         'social-login' => [
-            'name'        => 'Social Login Integration',
+            'name' => 'Social Login Integration',
             'description' => 'Allow customers to log in using Google, Facebook, or Apple credentials',
-            'icon'        => 'social-login',
-            'status'      => 'soon',
+            'icon' => 'social-login',
+            'status' => 'soon',
         ],
         'twilio' => [
-            'name'        => 'SMS Integration (Twilio)',
+            'name' => 'SMS Integration (Twilio)',
             'description' => 'Send instant order tracking and verification notifications via Twilio SMS API',
-            'icon'        => 'twilio',
-            'status'      => 'active',
+            'icon' => 'twilio',
+            'status' => 'active',
         ],
         'slack' => [
-            'name'        => 'Slack Integration',
+            'name' => 'Slack Integration',
             'description' => 'Receive instant notifications for new orders and store alerts in your Slack channels',
-            'icon'        => 'slack',
-            'status'      => 'soon',
+            'icon' => 'slack',
+            'status' => 'soon',
         ],
     ];
 
@@ -118,14 +120,15 @@ class IntegrationSettingsController extends Controller
     {
         // Attach live status from DB for each integration
         $settings = ThemeSetting::where('group', 'like', 'integration.%')->get()->keyBy(function ($s) {
-            return $s->group . '.' . $s->key;
+            return $s->group.'.'.$s->key;
         });
 
         $integrations = collect($this->integrations)->map(function ($data, $slug) use ($settings) {
             $enabled = $settings->get("integration.{$slug}.enabled")?->value === '1';
-            $mode    = $settings->get("integration.{$slug}.mode")?->value ?? 'test';
+            $mode = $settings->get("integration.{$slug}.mode")?->value ?? 'test';
             $data['enabled'] = $enabled;
-            $data['mode']    = $mode;
+            $data['mode'] = $mode;
+
             return $data;
         });
 
@@ -136,47 +139,47 @@ class IntegrationSettingsController extends Controller
 
     public function show($slug)
     {
-        if (!array_key_exists($slug, $this->integrations)) {
+        if (! array_key_exists($slug, $this->integrations)) {
             abort(404);
         }
 
         $integration = $this->integrations[$slug];
-        $rows        = ThemeSetting::where('group', "integration.{$slug}")->get()->keyBy('key');
+        $rows = ThemeSetting::where('group', "integration.{$slug}")->get()->keyBy('key');
 
         // Pull saved settings (decrypt sensitive values)
         $saved = [
-            'enabled'       => $rows->get('enabled')?->value === '1',
-            'mode'          => $rows->get('mode')?->value ?? 'test',
-            'app_id'          => $rows->get('app_id') ? $this->maybeDecrypt($rows->get('app_id')->value) : '',
-            'admin_api_key'   => $rows->get('admin_api_key') ? $this->maskedSecret($rows->get('admin_api_key')->value) : '',
-            'key_id'        => $rows->get('key_id') ? $this->maybeDecrypt($rows->get('key_id')->value) : '',
-            'key_secret'    => $rows->get('key_secret') ? $this->maskedSecret($rows->get('key_secret')->value) : '',
+            'enabled' => $rows->get('enabled')?->value === '1',
+            'mode' => $rows->get('mode')?->value ?? 'test',
+            'app_id' => $rows->get('app_id') ? $this->maybeDecrypt($rows->get('app_id')->value) : '',
+            'admin_api_key' => $rows->get('admin_api_key') ? $this->maskedSecret($rows->get('admin_api_key')->value) : '',
+            'key_id' => $rows->get('key_id') ? $this->maybeDecrypt($rows->get('key_id')->value) : '',
+            'key_secret' => $rows->get('key_secret') ? $this->maskedSecret($rows->get('key_secret')->value) : '',
             'client_secret' => $rows->get('client_secret') ? $this->maskedSecret($rows->get('client_secret')->value) : '',
             'measurement_id' => $rows->get('measurement_id') ? $this->maybeDecrypt($rows->get('measurement_id')->value) : '',
-            'pixel_id'      => $rows->get('pixel_id') ? $this->maybeDecrypt($rows->get('pixel_id')->value) : '',
-            'access_token'  => $rows->get('access_token') ? $this->maskedSecret($rows->get('access_token')->value) : '',
+            'pixel_id' => $rows->get('pixel_id') ? $this->maybeDecrypt($rows->get('pixel_id')->value) : '',
+            'access_token' => $rows->get('access_token') ? $this->maskedSecret($rows->get('access_token')->value) : '',
             'test_event_code' => $rows->get('test_event_code') ? $this->maybeDecrypt($rows->get('test_event_code')->value) : '',
-            
+
             // Google Search Console
             'site_verification_code' => $rows->get('site_verification_code') ? $this->maybeDecrypt($rows->get('site_verification_code')->value) : '',
-            
+
             // SMTP
-            'smtp_host'       => $rows->get('smtp_host') ? $this->maybeDecrypt($rows->get('smtp_host')->value) : '',
-            'smtp_port'       => $rows->get('smtp_port') ? $this->maybeDecrypt($rows->get('smtp_port')->value) : '',
-            'smtp_username'   => $rows->get('smtp_username') ? $this->maybeDecrypt($rows->get('smtp_username')->value) : '',
-            'smtp_password'   => $rows->get('smtp_password') ? $this->maskedSecret($rows->get('smtp_password')->value) : '',
+            'smtp_host' => $rows->get('smtp_host') ? $this->maybeDecrypt($rows->get('smtp_host')->value) : '',
+            'smtp_port' => $rows->get('smtp_port') ? $this->maybeDecrypt($rows->get('smtp_port')->value) : '',
+            'smtp_username' => $rows->get('smtp_username') ? $this->maybeDecrypt($rows->get('smtp_username')->value) : '',
+            'smtp_password' => $rows->get('smtp_password') ? $this->maskedSecret($rows->get('smtp_password')->value) : '',
             'smtp_encryption' => $rows->get('smtp_encryption') ? $this->maybeDecrypt($rows->get('smtp_encryption')->value) : '',
             'smtp_from_address' => $rows->get('smtp_from_address') ? $this->maybeDecrypt($rows->get('smtp_from_address')->value) : '',
-            'smtp_from_name'  => $rows->get('smtp_from_name') ? $this->maybeDecrypt($rows->get('smtp_from_name')->value) : '',
-            
+            'smtp_from_name' => $rows->get('smtp_from_name') ? $this->maybeDecrypt($rows->get('smtp_from_name')->value) : '',
+
             // Twilio
-            'twilio_sid'          => $rows->get('twilio_sid') ? $this->maybeDecrypt($rows->get('twilio_sid')->value) : '',
-            'twilio_auth_token'   => $rows->get('twilio_auth_token') ? $this->maskedSecret($rows->get('twilio_auth_token')->value) : '',
+            'twilio_sid' => $rows->get('twilio_sid') ? $this->maybeDecrypt($rows->get('twilio_sid')->value) : '',
+            'twilio_auth_token' => $rows->get('twilio_auth_token') ? $this->maskedSecret($rows->get('twilio_auth_token')->value) : '',
             'twilio_phone_number' => $rows->get('twilio_phone_number') ? $this->maybeDecrypt($rows->get('twilio_phone_number')->value) : '',
             'twilio_template_confirmed' => $rows->get('twilio_template_confirmed') ? $this->maybeDecrypt($rows->get('twilio_template_confirmed')->value) : '',
-            'twilio_template_shipped'   => $rows->get('twilio_template_shipped') ? $this->maybeDecrypt($rows->get('twilio_template_shipped')->value) : '',
+            'twilio_template_shipped' => $rows->get('twilio_template_shipped') ? $this->maybeDecrypt($rows->get('twilio_template_shipped')->value) : '',
             'twilio_template_cancelled' => $rows->get('twilio_template_cancelled') ? $this->maybeDecrypt($rows->get('twilio_template_cancelled')->value) : '',
-            
+
             // WhatsApp
             'whatsapp_access_token' => $rows->get('whatsapp_access_token') ? $this->maskedSecret($rows->get('whatsapp_access_token')->value) : '',
             'whatsapp_phone_id' => $rows->get('whatsapp_phone_id') ? $this->maybeDecrypt($rows->get('whatsapp_phone_id')->value) : '',
@@ -197,7 +200,7 @@ class IntegrationSettingsController extends Controller
 
     public function update(Request $request, $slug)
     {
-        if (!array_key_exists($slug, $this->integrations)) {
+        if (! array_key_exists($slug, $this->integrations)) {
             abort(404);
         }
 
@@ -243,11 +246,11 @@ class IntegrationSettingsController extends Controller
     private function updateTwilio(Request $request)
     {
         $request->validate([
-            'twilio_sid'          => 'required|string',
-            'twilio_auth_token'   => 'nullable|string',
+            'twilio_sid' => 'required|string',
+            'twilio_auth_token' => 'nullable|string',
             'twilio_phone_number' => 'required|string',
             'twilio_template_confirmed' => 'required|string',
-            'twilio_template_shipped'   => 'required|string',
+            'twilio_template_shipped' => 'required|string',
             'twilio_template_cancelled' => 'required|string',
         ]);
 
@@ -260,7 +263,7 @@ class IntegrationSettingsController extends Controller
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'twilio_template_shipped'], ['value' => Crypt::encryptString($request->twilio_template_shipped), 'type' => 'string']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'twilio_template_cancelled'], ['value' => Crypt::encryptString($request->twilio_template_cancelled), 'type' => 'string']);
 
-        if ($request->filled('twilio_auth_token') && !str_contains($request->twilio_auth_token, '****')) {
+        if ($request->filled('twilio_auth_token') && ! str_contains($request->twilio_auth_token, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'twilio_auth_token'], ['value' => Crypt::encryptString($request->twilio_auth_token), 'type' => 'string']);
         }
 
@@ -305,11 +308,11 @@ class IntegrationSettingsController extends Controller
             }
         }
 
-        if ($request->filled('whatsapp_access_token') && !str_contains($request->whatsapp_access_token, '****')) {
+        if ($request->filled('whatsapp_access_token') && ! str_contains($request->whatsapp_access_token, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_access_token'], ['value' => Crypt::encryptString($request->whatsapp_access_token), 'type' => 'string']);
         }
-        
-        if ($request->filled('whatsapp_webhook_verify_token') && !str_contains($request->whatsapp_webhook_verify_token, '****')) {
+
+        if ($request->filled('whatsapp_webhook_verify_token') && ! str_contains($request->whatsapp_webhook_verify_token, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_webhook_verify_token'], ['value' => Crypt::encryptString($request->whatsapp_webhook_verify_token), 'type' => 'string']);
         }
 
@@ -319,13 +322,13 @@ class IntegrationSettingsController extends Controller
     private function updateSmtp(Request $request)
     {
         $request->validate([
-            'smtp_host'         => 'required|string',
-            'smtp_port'         => 'required|string',
-            'smtp_username'     => 'required|string',
-            'smtp_password'     => 'nullable|string',
-            'smtp_encryption'   => 'nullable|string',
+            'smtp_host' => 'required|string',
+            'smtp_port' => 'required|string',
+            'smtp_username' => 'required|string',
+            'smtp_password' => 'nullable|string',
+            'smtp_encryption' => 'nullable|string',
             'smtp_from_address' => 'required|email',
-            'smtp_from_name'    => 'required|string',
+            'smtp_from_name' => 'required|string',
         ]);
 
         $group = 'integration.smtp';
@@ -338,7 +341,7 @@ class IntegrationSettingsController extends Controller
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_from_address'], ['value' => Crypt::encryptString($request->smtp_from_address), 'type' => 'string']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_from_name'], ['value' => Crypt::encryptString($request->smtp_from_name), 'type' => 'string']);
 
-        if ($request->filled('smtp_password') && !str_contains($request->smtp_password, '****')) {
+        if ($request->filled('smtp_password') && ! str_contains($request->smtp_password, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_password'], ['value' => Crypt::encryptString($request->smtp_password), 'type' => 'string']);
         }
 
@@ -348,19 +351,19 @@ class IntegrationSettingsController extends Controller
     private function updateRazorpay(Request $request)
     {
         $request->validate([
-            'mode'       => 'required|in:test,live',
-            'key_id'     => 'required|string',
+            'mode' => 'required|in:test,live',
+            'key_id' => 'required|string',
             'key_secret' => 'required|string|min:4',
         ]);
 
         $group = 'integration.razorpay';
 
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'],  ['value' => $request->boolean('enabled') ? '1' : '0']);
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'mode'],     ['value' => $request->mode]);
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'key_id'],   ['value' => Crypt::encryptString($request->key_id)]);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'mode'], ['value' => $request->mode]);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'key_id'], ['value' => Crypt::encryptString($request->key_id)]);
 
         // Only update secret if not the masked placeholder
-        if (!str_contains($request->key_secret, '****')) {
+        if (! str_contains($request->key_secret, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'key_secret'], ['value' => Crypt::encryptString($request->key_secret)]);
         }
 
@@ -372,13 +375,13 @@ class IntegrationSettingsController extends Controller
     public function testRazorpay(Request $request)
     {
         $group = 'integration.razorpay';
-        $rows  = ThemeSetting::where('group', $group)->get()->keyBy('key');
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
 
         try {
-            $keyId     = $this->maybeDecrypt($rows->get('key_id')?->value ?? '');
+            $keyId = $this->maybeDecrypt($rows->get('key_id')?->value ?? '');
             $keySecret = $this->maybeDecrypt($rows->get('key_secret')?->value ?? '');
 
-            if (!$keyId || !$keySecret) {
+            if (! $keyId || ! $keySecret) {
                 return response()->json(['success' => false, 'message' => 'API credentials not configured. Save your keys first.']);
             }
 
@@ -388,30 +391,30 @@ class IntegrationSettingsController extends Controller
             $api->payment->all(['count' => 1]);
 
             return response()->json(['success' => true, 'message' => 'Connection successful! Razorpay credentials are valid.']);
-        } catch (\Razorpay\Api\Errors\AuthenticationError $e) {
+        } catch (AuthenticationError $e) {
             return response()->json(['success' => false, 'message' => 'Authentication failed. Check your Key ID and Secret.']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Connection failed: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Connection failed: '.$e->getMessage()]);
         }
     }
 
     public function testQikink(Request $request)
     {
         $group = 'integration.qikink';
-        $rows  = ThemeSetting::where('group', $group)->get()->keyBy('key');
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
 
         try {
-            $clientId     = $this->maybeDecrypt($rows->get('client_id')?->value ?? '');
+            $clientId = $this->maybeDecrypt($rows->get('client_id')?->value ?? '');
             $clientSecret = $this->maybeDecrypt($rows->get('client_secret')?->value ?? '');
-            $mode         = $rows->get('mode')?->value ?? 'test';
+            $mode = $rows->get('mode')?->value ?? 'test';
 
-            if (!$clientId || !$clientSecret) {
+            if (! $clientId || ! $clientSecret) {
                 return response()->json(['success' => false, 'message' => 'API credentials not configured. Save your keys first.']);
             }
 
             $endpoint = $mode === 'live' ? 'https://api.qikink.com/api/token' : 'https://sandbox.qikink.com/api/token';
 
-            $response = \Illuminate\Support\Facades\Http::asForm()->post($endpoint, [
+            $response = Http::asForm()->post($endpoint, [
                 'ClientId' => $clientId,
                 'client_secret' => $clientSecret,
             ]);
@@ -421,22 +424,23 @@ class IntegrationSettingsController extends Controller
             }
 
             $errorDetail = $response->body();
-            return response()->json(['success' => false, 'message' => 'Authentication failed. Check your Client ID and Secret. Details: ' . $errorDetail]);
+
+            return response()->json(['success' => false, 'message' => 'Authentication failed. Check your Client ID and Secret. Details: '.$errorDetail]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Connection failed: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Connection failed: '.$e->getMessage()]);
         }
     }
 
-        public function testAlgolia(Request $request)
+    public function testAlgolia(Request $request)
     {
         $group = 'integration.algolia';
-        $rows  = ThemeSetting::where('group', $group)->get()->keyBy('key');
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
 
         try {
-            $appId  = $this->maybeDecrypt($rows->get('app_id')?->value ?? '');
+            $appId = $this->maybeDecrypt($rows->get('app_id')?->value ?? '');
             $apiKey = $this->maybeDecrypt($rows->get('admin_api_key')?->value ?? '');
 
-            if (!$appId || !$apiKey) {
+            if (! $appId || ! $apiKey) {
                 return response()->json(['success' => false, 'message' => 'API credentials not configured. Save your keys first.']);
             }
 
@@ -454,16 +458,16 @@ class IntegrationSettingsController extends Controller
     private function updateAlgolia(Request $request)
     {
         $request->validate([
-            'app_id'        => 'required|string',
+            'app_id' => 'required|string',
             'admin_api_key' => 'required|string|min:4',
         ]);
 
         $group = 'integration.algolia';
 
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'],  ['value' => $request->boolean('enabled') ? '1' : '0']);
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'app_id'],   ['value' => Crypt::encryptString($request->app_id)]);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'app_id'], ['value' => Crypt::encryptString($request->app_id)]);
 
-        if (!str_contains($request->admin_api_key, '****')) {
+        if (! str_contains($request->admin_api_key, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'admin_api_key'], ['value' => Crypt::encryptString($request->admin_api_key)]);
         }
 
@@ -473,18 +477,18 @@ class IntegrationSettingsController extends Controller
     private function updateQikink(Request $request)
     {
         $request->validate([
-            'mode'          => 'required|in:test,live',
-            'client_id'     => 'required|string',
+            'mode' => 'required|in:test,live',
+            'client_id' => 'required|string',
             'client_secret' => 'required|string|min:4',
         ]);
 
         $group = 'integration.qikink';
 
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'],  ['value' => $request->boolean('enabled') ? '1' : '0']);
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'mode'],     ['value' => $request->mode]);
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'client_id'],   ['value' => Crypt::encryptString($request->client_id)]);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'mode'], ['value' => $request->mode]);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'client_id'], ['value' => Crypt::encryptString($request->client_id)]);
 
-        if (!str_contains($request->client_secret, '****')) {
+        if (! str_contains($request->client_secret, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'client_secret'], ['value' => Crypt::encryptString($request->client_secret)]);
         }
 
@@ -494,7 +498,7 @@ class IntegrationSettingsController extends Controller
     private function updateGoogleSearchConsole(Request $request)
     {
         $data = $request->validate([
-            'enabled'                => 'nullable|boolean',
+            'enabled' => 'nullable|boolean',
             'site_verification_code' => 'nullable|string|max:255',
         ]);
 
@@ -524,7 +528,7 @@ class IntegrationSettingsController extends Controller
 
         $group = 'integration.google-analytics';
 
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'],  ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'measurement_id'], ['value' => Crypt::encryptString($request->measurement_id)]);
 
         return redirect()->back()->with('success', 'Google Analytics settings saved successfully.');
@@ -538,10 +542,10 @@ class IntegrationSettingsController extends Controller
 
         $group = 'integration.meta-pixel';
 
-        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'],  ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'pixel_id'], ['value' => Crypt::encryptString($request->pixel_id)]);
 
-        if ($request->filled('access_token') && !str_contains($request->access_token, '****')) {
+        if ($request->filled('access_token') && ! str_contains($request->access_token, '****')) {
             ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'access_token'], ['value' => Crypt::encryptString($request->access_token)]);
         }
 
@@ -558,7 +562,9 @@ class IntegrationSettingsController extends Controller
 
     private function maybeDecrypt(?string $value): string
     {
-        if (!$value) return '';
+        if (! $value) {
+            return '';
+        }
         try {
             return Crypt::decryptString($value);
         } catch (\Exception) {
@@ -568,10 +574,13 @@ class IntegrationSettingsController extends Controller
 
     private function maskedSecret(?string $encryptedValue): string
     {
-        if (!$encryptedValue) return '';
+        if (! $encryptedValue) {
+            return '';
+        }
         try {
             $plain = Crypt::decryptString($encryptedValue);
-            return substr($plain, 0, 4) . str_repeat('*', max(0, strlen($plain) - 8)) . substr($plain, -4);
+
+            return substr($plain, 0, 4).str_repeat('*', max(0, strlen($plain) - 8)).substr($plain, -4);
         } catch (\Exception) {
             return '****';
         }

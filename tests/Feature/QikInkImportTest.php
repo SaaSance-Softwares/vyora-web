@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class QikInkImportTest extends TestCase
@@ -20,11 +21,11 @@ class QikInkImportTest extends TestCase
             'role' => 'administrator',
         ]);
 
-        \Illuminate\Support\Facades\File::put(storage_path('installed'), 'installed');
+        File::put(storage_path('installed'), 'installed');
 
         // 2. Create Fake CSV
-        $header = "Item name,Variant,Design SKU,Product SKU,Store SKU,Selling price,Product price";
-        $row1 = "Test T-Shirt,Black - L,DES-001,PROD-001,SKU-TEST-BLK-L,999,500";
+        $header = 'Item name,Variant,Design SKU,Product SKU,Store SKU,Selling price,Product price';
+        $row1 = 'Test T-Shirt,Black - L,DES-001,PROD-001,SKU-TEST-BLK-L,999,500';
 
         $content = "$header\n$row1";
         $file = UploadedFile::fake()->createWithContent('test_import.csv', $content);
@@ -45,7 +46,7 @@ class QikInkImportTest extends TestCase
         $this->assertDatabaseHas('skus', [
             'code' => 'SKU-TEST-BLK-L',
             'design_sku' => 'DES-001',
-            'stock' => 100
+            'stock' => 100,
         ]);
 
         $this->assertDatabaseHas('attributes', ['name' => 'Color']);

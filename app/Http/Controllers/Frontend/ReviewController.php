@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\Review;
 use App\Models\ReviewImage;
 use Illuminate\Http\Request;
@@ -15,7 +15,7 @@ class ReviewController extends Controller
 {
     public function store(Request $request, Product $product)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return back()->with('error', 'You must be logged in to leave a review.');
         }
 
@@ -29,7 +29,7 @@ class ReviewController extends Controller
             })
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             return back()->with('error', 'You can only review products you have purchased and received.');
         }
 
@@ -46,7 +46,7 @@ class ReviewController extends Controller
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
-            'images.*' => 'nullable|image|max:5120' // Max 5MB per image
+            'images.*' => 'nullable|image|max:5120', // Max 5MB per image
         ]);
 
         $review = Review::create([
@@ -59,13 +59,13 @@ class ReviewController extends Controller
 
         if ($request->hasFile('images')) {
             $destinationPath = public_path('storage/reviews');
-            if (!file_exists($destinationPath)) {
+            if (! file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
 
             foreach ($request->file('images') as $file) {
                 $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $fileName = time() . '_' . Str::random(5) . '_' . Str::slug($originalName) . '.' . $file->getClientOriginalExtension();
+                $fileName = time().'_'.Str::random(5).'_'.Str::slug($originalName).'.'.$file->getClientOriginalExtension();
                 $file->move($destinationPath, $fileName);
 
                 ReviewImage::create([

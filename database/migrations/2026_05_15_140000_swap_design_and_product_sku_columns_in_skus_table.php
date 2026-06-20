@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('skus', function (Blueprint $table) {
-            // Swap columns logic: 
+            // Swap columns logic:
             // 1. Rename design_sku to a temporary name
             // 2. Rename product_sku to design_sku
             // 3. Rename temporary name to product_sku
-            
+
             $table->renameColumn('design_sku', 'temp_sku');
         });
 

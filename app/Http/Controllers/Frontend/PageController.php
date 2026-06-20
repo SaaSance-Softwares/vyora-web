@@ -3,19 +3,22 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use App\Models\CmsPage;
-use App\Models\Product;
+use App\Http\Resources\ProductResource;
 use App\Models\Category;
+use App\Models\CmsPage;
 use App\Models\Collection;
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PageController extends Controller
 {
-    public function home(\Illuminate\Http\Request $request)
+    public function home(Request $request)
     {
         $page = CmsPage::where('is_home', true)->where('is_active', true)->first();
 
-        if (!$page) {
+        if (! $page) {
             return Inertia::render('Home', [
                 'page' => null,
                 'content' => null,
@@ -29,7 +32,7 @@ class PageController extends Controller
         ]);
     }
 
-    public function show(\Illuminate\Http\Request $request, $slug)
+    public function show(Request $request, $slug)
     {
         $page = CmsPage::where('slug', $slug)->where('is_active', true)->firstOrFail();
 
@@ -65,14 +68,14 @@ class PageController extends Controller
             ->firstOrFail();
 
         return Inertia::render('Product/Show', [
-            'product' => (new \App\Http\Resources\ProductResource($product))->resolve(),
+            'product' => (new ProductResource($product))->resolve(),
         ]);
     }
 
     public function category($slug)
     {
         $category = Category::where('slug', $slug)->firstOrFail();
-        $products = Product::whereHas('categories', function($q) use ($category) {
+        $products = Product::whereHas('categories', function ($q) use ($category) {
             $q->where('category_id', $category->id);
         })->where('is_active', true)->paginate(12);
 
@@ -85,7 +88,7 @@ class PageController extends Controller
     public function collection($slug)
     {
         $collection = Collection::where('slug', $slug)->firstOrFail();
-        $products = Product::whereHas('collections', function($q) use ($collection) {
+        $products = Product::whereHas('collections', function ($q) use ($collection) {
             $q->where('collection_id', $collection->id);
         })->where('is_active', true)->paginate(12);
 
@@ -107,12 +110,12 @@ class PageController extends Controller
 
     public function thankYou($uuid)
     {
-        $order = \App\Models\Order::with(['items.product', 'items.sku.color', 'items.sku.size'])
+        $order = Order::with(['items.product', 'items.sku.color', 'items.sku.size'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
         return Inertia::render('Checkout/ThankYou', [
-            'order' => $order
+            'order' => $order,
         ]);
     }
 
@@ -120,5 +123,4 @@ class PageController extends Controller
     {
         return Inertia::render('Wishlist');
     }
-
 }

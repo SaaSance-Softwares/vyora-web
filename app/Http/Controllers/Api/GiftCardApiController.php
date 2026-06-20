@@ -26,14 +26,14 @@ class GiftCardApiController extends Controller
             ->withCount('issuedCards as purchased_count')
             ->orderBy('amount')
             ->get()
-            ->map(fn($t) => [
-                'id'            => $t->id,
-                'name'          => $t->displayName(),
-                'amount'        => $t->amount,
-                'description'   => $t->description,
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->displayName(),
+                'amount' => $t->amount,
+                'description' => $t->description,
                 'validity_days' => $t->validity_days,
-                'purchased_count'=> $t->purchased_count,
-                'created_at'    => $t->created_at,
+                'purchased_count' => $t->purchased_count,
+                'created_at' => $t->created_at,
             ]);
 
         return response()->json($templates);
@@ -52,23 +52,23 @@ class GiftCardApiController extends Controller
             ->with(['creator:id,name', 'purchaser:id,name', 'template:id,name,amount'])
             ->latest()
             ->get()
-            ->map(fn($card) => [
-                'id'               => $card->id,
-                'card_number'      => $card->card_number,
-                'plain_code'       => $card->plain_code,   // decrypted – safe since only owner sees this
-                'share_token'      => $card->share_token,
-                'amount'           => $card->amount,
-                'used_amount'      => $card->used_amount,
+            ->map(fn ($card) => [
+                'id' => $card->id,
+                'card_number' => $card->card_number,
+                'plain_code' => $card->plain_code,   // decrypted – safe since only owner sees this
+                'share_token' => $card->share_token,
+                'amount' => $card->amount,
+                'used_amount' => $card->used_amount,
                 'remaining_amount' => $card->remaining_amount,
-                'status'           => $card->status,
-                'status_badge'     => $card->status_badge,
-                'type'             => $card->type,
-                'template_name'    => $card->template?->displayName(),
-                'created_at'       => $card->created_at,
-                'expires_at'       => $card->expires_at,
-                'purchased_by'     => $card->purchaser?->name,
-                'created_by'       => $card->creator?->name,
-                'is_redeemable'    => $card->isRedeemable(),
+                'status' => $card->status,
+                'status_badge' => $card->status_badge,
+                'type' => $card->type,
+                'template_name' => $card->template?->displayName(),
+                'created_at' => $card->created_at,
+                'expires_at' => $card->expires_at,
+                'purchased_by' => $card->purchaser?->name,
+                'created_by' => $card->creator?->name,
+                'is_redeemable' => $card->isRedeemable(),
             ]);
 
         return response()->json($cards);
@@ -93,7 +93,7 @@ class GiftCardApiController extends Controller
         return response()->json([
             'total_balance' => $ownCards->sum('remaining_amount'),
             'gifted_amount' => $giftedCards->sum('amount'),
-            'active_cards'  => $ownCards->count(),
+            'active_cards' => $ownCards->count(),
         ]);
     }
 
@@ -107,25 +107,25 @@ class GiftCardApiController extends Controller
     {
         $request->validate([
             'template_id' => 'required|exists:gift_card_templates,id',
-            'order_id'    => 'nullable|integer',
+            'order_id' => 'nullable|integer',
         ]);
 
         $template = GiftCardTemplate::find($request->template_id);
-        $userId   = $request->user()->id;
+        $userId = $request->user()->id;
 
-        if (!$template->is_active) {
+        if (! $template->is_active) {
             return response()->json(['success' => false, 'message' => 'This gift card is no longer available.'], 422);
         }
 
         $card = $this->service->issueFromTemplate($template, $userId, $request->order_id);
 
         return response()->json([
-            'success'     => true,
-            'message'     => 'Gift card activated!',
+            'success' => true,
+            'message' => 'Gift card activated!',
             'card_number' => $card->card_number,
-            'plain_code'  => $card->plain_code,
+            'plain_code' => $card->plain_code,
             'share_token' => $card->share_token,
-            'amount'      => $card->amount,
+            'amount' => $card->amount,
         ]);
     }
 
@@ -142,7 +142,7 @@ class GiftCardApiController extends Controller
             ->orWhere('phone', $request->identifier)
             ->first(['id', 'name', 'email', 'phone']);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['found' => false, 'message' => 'No user found with that email or phone.'], 404);
         }
         if ($user->id === $request->user()->id) {
@@ -162,7 +162,7 @@ class GiftCardApiController extends Controller
             'recipient_id' => 'required|exists:users,id',
         ]);
 
-        $card   = GiftCard::find($request->gift_card_id);
+        $card = GiftCard::find($request->gift_card_id);
         $userId = $request->user()->id;
 
         if ($card->assigned_to !== $userId && $card->purchased_by !== $userId) {
@@ -170,7 +170,7 @@ class GiftCardApiController extends Controller
         }
 
         $recipient = User::find($request->recipient_id);
-        $error     = $this->service->assignCard($card, $recipient, $userId);
+        $error = $this->service->assignCard($card, $recipient, $userId);
 
         if ($error) {
             return response()->json(['success' => false, 'message' => $error], 422);
@@ -189,21 +189,21 @@ class GiftCardApiController extends Controller
             ->with(['purchaser:id,name', 'template:id,name,amount'])
             ->first();
 
-        if (!$card) {
+        if (! $card) {
             return response()->json(['success' => false, 'message' => 'Invalid share link.'], 404);
         }
 
         return response()->json([
-            'success'          => true,
-            'card_number'      => $card->card_number,
-            'plain_code'       => $card->plain_code,   // code shown on the gift claim page
-            'amount'           => $card->amount,
+            'success' => true,
+            'card_number' => $card->card_number,
+            'plain_code' => $card->plain_code,   // code shown on the gift claim page
+            'amount' => $card->amount,
             'remaining_amount' => $card->remaining_amount,
-            'status'           => $card->status,
-            'is_redeemable'    => $card->isRedeemable(),
-            'template_name'    => $card->template?->displayName() ?? "₹{$card->amount} Gift Card",
-            'purchased_by'     => $card->purchaser?->name ?? 'Dope Style',
-            'expires_at'       => $card->expires_at,
+            'status' => $card->status,
+            'is_redeemable' => $card->isRedeemable(),
+            'template_name' => $card->template?->displayName() ?? "₹{$card->amount} Gift Card",
+            'purchased_by' => $card->purchaser?->name ?? 'Dope Style',
+            'expires_at' => $card->expires_at,
         ]);
     }
 
@@ -218,26 +218,27 @@ class GiftCardApiController extends Controller
         $plainCode = strtoupper(trim($request->code));
 
         $card = GiftCard::whereIn('status', ['active', 'partially_used'])->get()
-            ->first(fn($gc) => $gc->plain_code === $plainCode);
+            ->first(fn ($gc) => $gc->plain_code === $plainCode);
 
-        if (!$card) {
+        if (! $card) {
             return response()->json(['success' => false, 'message' => 'Invalid or already used gift card code.'], 422);
         }
-        if (!$card->isRedeemable()) {
+        if (! $card->isRedeemable()) {
             return response()->json(['success' => false, 'message' => 'This gift card has expired or is no longer valid.'], 422);
         }
         if ($card->assigned_to && $card->assigned_to !== $request->user()?->id) {
-            $msg = $request->user() 
-                ? 'This gift card is not assigned to your account.' 
+            $msg = $request->user()
+                ? 'This gift card is not assigned to your account.'
                 : 'This gift card is assigned to a specific account. Please login to use it.';
+
             return response()->json(['success' => false, 'message' => $msg], 403);
         }
 
         return response()->json([
-            'success'          => true,
-            'card_number'      => $card->card_number,
+            'success' => true,
+            'card_number' => $card->card_number,
             'remaining_amount' => $card->remaining_amount,
-            'message'          => "Gift card valid! ₹{$card->remaining_amount} available.",
+            'message' => "Gift card valid! ₹{$card->remaining_amount} available.",
         ]);
     }
 }

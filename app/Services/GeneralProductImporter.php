@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Category;
+use App\Models\Color;
 use App\Models\Product;
 use App\Models\ProductType;
+use App\Models\Size;
 use App\Models\Sku;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class GeneralProductImporter
 {
@@ -18,7 +20,7 @@ class GeneralProductImporter
      */
     public function importRow(array $row, int $rowNumber = 0)
     {
-        return DB::transaction(function () use ($row, $rowNumber) {
+        return DB::transaction(function () use ($row) {
             // 1. Resolve Product Type (like T-shirt, hoodie)
             // 'Product type' column, 'HSN', 'Tax On Product'
             $productType = $this->getOrCreateProductType(
@@ -55,7 +57,7 @@ class GeneralProductImporter
 
             // 3. Categories (Multiple, comma separated?)
             // "Category (One Product can be listed in multiple category)"
-            if (!empty($row['Category'])) {
+            if (! empty($row['Category'])) {
                 $categoryNames = explode(',', $row['Category']);
                 $categoryIds = [];
                 foreach ($categoryNames as $catName) {
@@ -77,26 +79,26 @@ class GeneralProductImporter
             $sizeId = null;
 
             $sizeValue = $row['Attribute Size'] ?? $row['Size'] ?? null;
-            if (!empty($sizeValue)) {
+            if (! empty($sizeValue)) {
                 $val = trim($sizeValue);
                 $code = strtoupper($val);
-                
-                $size = \App\Models\Size::where('code', $code)
+
+                $size = Size::where('code', $code)
                     ->orWhere('name', $val)
                     ->first();
 
-                if (!$size) {
-                    $size = \App\Models\Size::create([
+                if (! $size) {
+                    $size = Size::create([
                         'name' => $val,
-                        'code' => $code
+                        'code' => $code,
                     ]);
                 }
                 $sizeId = $size->id;
             }
 
             $colorValue = $row['Attribute Color'] ?? $row['Color'] ?? null;
-            if (!empty($colorValue)) {
-                $color = \App\Models\Color::firstOrCreate(
+            if (! empty($colorValue)) {
+                $color = Color::firstOrCreate(
                     ['name' => trim($colorValue)],
                     ['hex_code' => '#000000'] // Default hex code
                 );
@@ -121,9 +123,9 @@ class GeneralProductImporter
             }
 
             // Throw exception if any required field is missing
-            if (!empty($missingFields)) {
+            if (! empty($missingFields)) {
                 throw new \Exception(
-                    'Missing required field(s): ' . implode(', ', $missingFields) . '. ' .
+                    'Missing required field(s): '.implode(', ', $missingFields).'. '.
                     'Please check your CSV and ensure all required fields are filled.'
                 );
             }
@@ -132,34 +134,34 @@ class GeneralProductImporter
             $existingSku = Sku::where('code', $skuCode)->first();
             if ($existingSku) {
                 throw new \Exception(
-                    'SKU "' . $skuCode . '" already exists in database. ' .
+                    'SKU "'.$skuCode.'" already exists in database. '.
                     'Please use a unique SKU code or update the existing product instead.'
                 );
             }
 
             $sku = Sku::create(
                 [
-                    'code'       => $skuCode,
+                    'code' => $skuCode,
                     'product_id' => $product->id,
-                    'price'      => $this->parsePrice($sellingPrice),
-                    'mrp'        => $this->parsePrice($labelPrice),
-                    'stock'      => intval($row['Stock per sku'] ?? 0),
+                    'price' => $this->parsePrice($sellingPrice),
+                    'mrp' => $this->parsePrice($labelPrice),
+                    'stock' => intval($row['Stock per sku'] ?? 0),
                     'min_order_quantity' => intval($row['Minimum order'] ?? 1),
                     'max_order_quantity' => $row['Maximum order'] ? intval($row['Maximum order']) : null,
 
                     // QikInk fields
-                    'design_sku'  => $row['Design SKU']  ?? null,
+                    'design_sku' => $row['Design SKU'] ?? null,
                     'product_sku' => $row['Product SKU'] ?? null,
 
                     // Link Color and Size directly
                     'color_id' => $colorId,
-                    'size_id'  => $sizeId,
+                    'size_id' => $sizeId,
 
                     // Dimensions - convert empty strings to null for decimal fields
-                    'weight' => !empty($row['Package weight']) ? floatval($row['Package weight']) : null,
-                    'width'  => !empty($row['Package width'])  ? floatval($row['Package width'])  : null,
-                    'height' => !empty($row['Package height']) ? floatval($row['Package height']) : null,
-                    'length' => !empty($row['Package length']) ? floatval($row['Package length']) : null,
+                    'weight' => ! empty($row['Package weight']) ? floatval($row['Package weight']) : null,
+                    'width' => ! empty($row['Package width']) ? floatval($row['Package width']) : null,
+                    'height' => ! empty($row['Package height']) ? floatval($row['Package height']) : null,
+                    'length' => ! empty($row['Package length']) ? floatval($row['Package length']) : null,
                 ]
             );
 
@@ -170,7 +172,7 @@ class GeneralProductImporter
     private function getOrCreateProductType($name, $hsn, $tax)
     {
         // If HSN code is provided, try to find existing ProductType by HSN first
-        if (!empty($hsn)) {
+        if (! empty($hsn)) {
             $existingByHsn = ProductType::where('hsn_code', $hsn)->first();
             if ($existingByHsn) {
                 return $existingByHsn;
@@ -182,7 +184,7 @@ class GeneralProductImporter
             ['name' => $name],
             [
                 'hsn_code' => $hsn,
-                'tax_percentage' => floatval(str_replace('%', '', $tax ?? 0))
+                'tax_percentage' => floatval(str_replace('%', '', $tax ?? 0)),
             ]
         );
     }
@@ -194,7 +196,7 @@ class GeneralProductImporter
         return AttributeValue::firstOrCreate(
             [
                 'attribute_id' => $attribute->id,
-                'value' => $value
+                'value' => $value,
             ],
             [
                 'code' => Str::upper(Str::slug($value)),
@@ -209,6 +211,7 @@ class GeneralProductImporter
         }
 
         $cleaned = preg_replace('/[^0-9.]/', '', $price);
-        return !empty($cleaned) ? floatval($cleaned) : null;
+
+        return ! empty($cleaned) ? floatval($cleaned) : null;
     }
 }

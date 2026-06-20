@@ -49,31 +49,31 @@ class CouponApiController extends Controller
     {
         $request->validate([
             'code' => 'required|string',
-            'cart' => 'required|array'
+            'cart' => 'required|array',
         ]);
 
         $coupon = Coupon::where('code', strtoupper($request->code))->first();
 
-        if (!$coupon) {
+        if (! $coupon) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid coupon code.'
+                'message' => 'Invalid coupon code.',
             ], 404);
         }
 
         $result = $this->couponService->validateAndCalculate($coupon, $request->cart, $request->user('sanctum'));
 
-        if (!$result['valid']) {
+        if (! $result['valid']) {
             return response()->json([
                 'success' => false,
-                'message' => $result['error']
+                'message' => $result['error'],
             ], 400);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Coupon applied successfully.',
-            'data' => $result
+            'data' => $result,
         ]);
     }
 }

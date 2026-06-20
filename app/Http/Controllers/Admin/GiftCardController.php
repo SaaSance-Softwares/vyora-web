@@ -35,6 +35,7 @@ class GiftCardController extends Controller
     public function create()
     {
         $users = User::select('id', 'name', 'email', 'phone')->orderBy('name')->get();
+
         return view('admin.gift-cards.create', compact('users'));
     }
 
@@ -45,13 +46,13 @@ class GiftCardController extends Controller
         if ($type === 'direct') {
             // Admin-to-user direct gift
             $request->validate([
-                'amount'      => 'required|numeric|min:1',
+                'amount' => 'required|numeric|min:1',
                 'assigned_to' => 'required|exists:users,id',
             ]);
 
             $this->service->createDirectCard(
-                amount:     (float) $request->amount,
-                createdBy:  Auth::id(),
+                amount: (float) $request->amount,
+                createdBy: Auth::id(),
                 assignedTo: (int) $request->assigned_to,
             );
 
@@ -61,17 +62,17 @@ class GiftCardController extends Controller
 
         // Storefront template
         $request->validate([
-            'amount'       => 'required|numeric|min:1',
-            'name'         => 'nullable|string|max:100',
-            'description'  => 'nullable|string|max:500',
-            'validity_days'=> 'nullable|integer|min:1',
+            'amount' => 'required|numeric|min:1',
+            'name' => 'nullable|string|max:100',
+            'description' => 'nullable|string|max:500',
+            'validity_days' => 'nullable|integer|min:1',
         ]);
 
         $this->service->createTemplate(
-            amount:       (float) $request->amount,
-            createdBy:    Auth::id(),
-            name:         $request->name,
-            description:  $request->description,
+            amount: (float) $request->amount,
+            createdBy: Auth::id(),
+            name: $request->name,
+            description: $request->description,
             validityDays: $request->validity_days ? (int) $request->validity_days : null,
         );
 
@@ -93,8 +94,9 @@ class GiftCardController extends Controller
 
     public function toggleTemplate(GiftCardTemplate $giftCard)
     {
-        $giftCard->update(['is_active' => !$giftCard->is_active]);
+        $giftCard->update(['is_active' => ! $giftCard->is_active]);
         $state = $giftCard->is_active ? 'visible' : 'hidden';
+
         return back()->with('success', "Gift card template is now {$state} on the storefront.");
     }
 
@@ -105,6 +107,7 @@ class GiftCardController extends Controller
             return back()->with('error', 'Cannot delete a template that has issued cards.');
         }
         $giftCard->delete();
+
         return redirect()->route('admin.online-store.gift-cards.index')
             ->with('success', 'Template deleted.');
     }
@@ -114,12 +117,13 @@ class GiftCardController extends Controller
     public function showCard(GiftCard $card)
     {
         $card->load(['purchaser', 'recipient', 'transactions.performer', 'template']);
+
         return view('admin.gift-cards.show-card', compact('card'));
     }
 
     public function withdraw(Request $request, GiftCard $card)
     {
-        if (!in_array($card->status, ['active', 'partially_used', 'assigned'])) {
+        if (! in_array($card->status, ['active', 'partially_used', 'assigned'])) {
             return back()->with('error', 'This card cannot be withdrawn in its current state.');
         }
         if ($card->remaining_amount <= 0) {

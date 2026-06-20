@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\CmsPage;
+use Illuminate\Http\Request;
 
 class PageController extends Controller
 {
@@ -12,7 +12,7 @@ class PageController extends Controller
     {
         $page = CmsPage::where('is_home', true)->where('is_active', true)->first();
 
-        if (!$page) {
+        if (! $page) {
             return response()->json(['message' => 'No home page configured'], 404);
         }
 
@@ -29,7 +29,7 @@ class PageController extends Controller
     {
         $page = CmsPage::where('slug', $slug)->where('is_active', true)->first();
 
-        if (!$page) {
+        if (! $page) {
             return response()->json(['message' => 'Page not found'], 404);
         }
 

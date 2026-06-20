@@ -26,8 +26,6 @@ class Sku extends Model
         return $this->belongsTo(Product::class);
     }
 
-
-
     public function attributeValues()
     {
         return $this->belongsToMany(AttributeValue::class, 'sku_attribute_values');

@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Notifications\OrderShippedNotification;
+use App\Services\TwilioSmsService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
     /* ------------------------------------------------------------------ */
-    /*  Index — Orders List                                                 */
+    /*  Index — Orders List */
     /* ------------------------------------------------------------------ */
 
     public function index(Request $request)
@@ -23,11 +26,11 @@ class OrderController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('shippingAddress', function ($q2) use ($search) {
-                      $q2->where('name', 'like', "%{$search}%")
-                         ->orWhere('email', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('shippingAddress', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -64,7 +67,7 @@ class OrderController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Show — Order Detail                                                 */
+    /*  Show — Order Detail */
     /* ------------------------------------------------------------------ */
 
     public function show(Order $order)
@@ -81,17 +84,17 @@ class OrderController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Update Status                                                       */
+    /*  Update Status */
     /* ------------------------------------------------------------------ */
 
     public function updateStatus(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status'          => 'required|in:pending,processing,shipped,delivered,cancelled,refunded',
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled,refunded',
             'courier_partner' => 'nullable|string|max:255',
             'tracking_number' => 'nullable|string|max:255',
-            'tracking_url'    => 'nullable|url|max:2048',
-            'notes'           => 'nullable|string',
+            'tracking_url' => 'nullable|url|max:2048',
+            'notes' => 'nullable|string',
         ]);
 
         $previousStatus = $order->status;
@@ -129,15 +132,15 @@ class OrderController extends Controller
 
         // Fire cancelled SMS and WhatsApp
         if ($validated['status'] === 'cancelled' && $previousStatus !== 'cancelled') {
-            app(\App\Services\TwilioSmsService::class)->sendEventSms('cancelled', $order);
-            app(\App\Services\WhatsAppService::class)->sendEventWhatsApp('cancelled', $order);
+            app(TwilioSmsService::class)->sendEventSms('cancelled', $order);
+            app(WhatsAppService::class)->sendEventWhatsApp('cancelled', $order);
         }
 
         return back()->with('success', 'Order updated successfully.');
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Update Tracking (dedicated endpoint)                                */
+    /*  Update Tracking (dedicated endpoint) */
     /* ------------------------------------------------------------------ */
 
     public function updateTracking(Request $request, Order $order)
@@ -145,7 +148,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'courier_partner' => 'nullable|string|max:255',
             'tracking_number' => 'nullable|string|max:255',
-            'tracking_url'    => 'nullable|url|max:2048',
+            'tracking_url' => 'nullable|url|max:2048',
         ]);
 
         $order->update($validated);
@@ -159,7 +162,7 @@ class OrderController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Private helpers                                                     */
+    /*  Private helpers */
     /* ------------------------------------------------------------------ */
 
     private function fireShippedNotification(Order $order): void
@@ -170,9 +173,9 @@ class OrderController extends Controller
             // Email to the customer (via user account or shipping address email)
             $notifiable = $order->user;
 
-            if (!$notifiable && $order->shippingAddress?->email) {
+            if (! $notifiable && $order->shippingAddress?->email) {
                 // Create an anonymous notifiable with an email
-                $notifiable = new \Illuminate\Notifications\AnonymousNotifiable();
+                $notifiable = new AnonymousNotifiable;
                 $notifiable->route('mail', $order->shippingAddress->email);
                 $notifiable->notify(new OrderShippedNotification($order));
             } elseif ($notifiable) {
@@ -182,15 +185,15 @@ class OrderController extends Controller
             // SMS + WhatsApp stubs (log only — wire to real provider later)
             // OrderShippedNotification::sendSmsStub($order);
             // OrderShippedNotification::sendWhatsAppStub($order);
-            
+
             // Dispatch Twilio SMS and WhatsApp
-            app(\App\Services\TwilioSmsService::class)->sendEventSms('shipped', $order);
-            app(\App\Services\WhatsAppService::class)->sendEventWhatsApp('shipped', $order);
+            app(TwilioSmsService::class)->sendEventSms('shipped', $order);
+            app(WhatsAppService::class)->sendEventWhatsApp('shipped', $order);
 
         } catch (\Exception $e) {
             Log::error('Failed to send OrderShippedNotification', [
                 'order_id' => $order->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

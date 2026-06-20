@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Coupon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,17 +24,17 @@ class ProductListResource extends JsonResource
         if ($request->filled('category') && $this->relationLoaded('categoryMasterImages') && $this->relationLoaded('categories')) {
             $requestedSlugs = explode(',', $request->category);
             $matchedCategories = $this->categories->whereIn('slug', $requestedSlugs);
-            
+
             foreach ($matchedCategories as $cat) {
                 $catImage = null;
                 $current = $cat;
-                
+
                 // Walk up the category tree to find an image
-                while ($current && !$catImage) {
+                while ($current && ! $catImage) {
                     $catImage = $this->categoryMasterImages->where('category_id', $current->id)->first();
                     $current = $current->parent;
                 }
-                
+
                 if ($catImage && $catImage->image_path) {
                     $imageUrl = $catImage->image_url;
                     break;
@@ -44,9 +45,9 @@ class ProductListResource extends JsonResource
         // Magic Coupon Logic
         static $magicCoupon = null;
         static $magicCouponFetched = false;
-        
-        if (!$magicCouponFetched) {
-            $magicCoupon = \App\Models\Coupon::where('is_active', true)
+
+        if (! $magicCouponFetched) {
+            $magicCoupon = Coupon::where('is_active', true)
                 ->where('is_default_magic', true)
                 ->where(function ($q) {
                     $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
@@ -61,7 +62,7 @@ class ProductListResource extends JsonResource
         $couponPrice = null;
         if ($magicCoupon && $minPrice > 0) {
             $isEligible = true;
-            
+
             // Exclude sale items check
             if ($magicCoupon->exclude_sale_items && $mrp > $minPrice) {
                 $isEligible = false;
@@ -74,13 +75,13 @@ class ProductListResource extends JsonResource
 
             // Product/Category inclusions and exclusions
             if ($isEligible) {
-                if (!empty($magicCoupon->applicable_product_ids) && !in_array($this->id, $magicCoupon->applicable_product_ids)) {
+                if (! empty($magicCoupon->applicable_product_ids) && ! in_array($this->id, $magicCoupon->applicable_product_ids)) {
                     $isEligible = false;
                 }
-                if ($isEligible && !empty($magicCoupon->excluded_product_ids) && in_array($this->id, $magicCoupon->excluded_product_ids)) {
+                if ($isEligible && ! empty($magicCoupon->excluded_product_ids) && in_array($this->id, $magicCoupon->excluded_product_ids)) {
                     $isEligible = false;
                 }
-                if ($isEligible && !empty($magicCoupon->applicable_category_ids)) {
+                if ($isEligible && ! empty($magicCoupon->applicable_category_ids)) {
                     $productCategoryIds = $this->categories->pluck('id')->toArray();
                     if (empty(array_intersect($productCategoryIds, $magicCoupon->applicable_category_ids))) {
                         $isEligible = false;
@@ -111,7 +112,7 @@ class ProductListResource extends JsonResource
             'slug' => $this->slug,
             'brand' => $this->brand_name,
             'price' => (float) $minPrice,
-            'price_formatted' => '₹' . number_format($minPrice),
+            'price_formatted' => '₹'.number_format($minPrice),
             'mrp' => (float) $mrp,
             'coupon_price' => $couponPrice ? (float) $couponPrice : null,
             // Calculate Discount %

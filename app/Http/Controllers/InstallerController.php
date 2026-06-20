@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class InstallerController extends Controller
 {
@@ -26,8 +26,8 @@ class InstallerController extends Controller
             'XML' => extension_loaded('xml'),
             'Symlink Function' => function_exists('symlink'),
         ];
-        
-        $allMet = !in_array(false, $requirements);
+
+        $allMet = ! in_array(false, $requirements);
 
         return view('install.welcome', compact('requirements', 'allMet'));
     }
@@ -54,7 +54,7 @@ class InstallerController extends Controller
                 $request->db_password
             );
         } catch (\Exception $e) {
-            return back()->withErrors(['connection' => 'Could not connect to database: ' . $e->getMessage()])->withInput();
+            return back()->withErrors(['connection' => 'Could not connect to database: '.$e->getMessage()])->withInput();
         }
 
         // Dynamically update config for this request so migrations use the new DB
@@ -134,7 +134,7 @@ class InstallerController extends Controller
         // Mark installed
         File::put(storage_path('installed'), 'installed');
 
-        return redirect('/' . $request->admin_path . '/login')->with('success', 'Installation Complete! Please login.');
+        return redirect('/'.$request->admin_path.'/login')->with('success', 'Installation Complete! Please login.');
     }
 
     private function updateEnv($data)

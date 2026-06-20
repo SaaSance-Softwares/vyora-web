@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\GiftCardTemplate;
 use App\Models\Order;
 use App\Models\ThemeSetting;
+use App\Services\TwilioSmsService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -19,22 +21,30 @@ class PaymentController extends Controller
      */
     private function razorpay(): Api
     {
-        $rows      = ThemeSetting::where('group', 'integration.razorpay')->get()->keyBy('key');
-        $keyId     = $this->decrypt($rows->get('key_id')?->value) ?: env('RAZORPAY_KEY');
+        $rows = ThemeSetting::where('group', 'integration.razorpay')->get()->keyBy('key');
+        $keyId = $this->decrypt($rows->get('key_id')?->value) ?: env('RAZORPAY_KEY');
         $keySecret = $this->decrypt($rows->get('key_secret')?->value) ?: env('RAZORPAY_SECRET');
+
         return new Api($keyId, $keySecret);
     }
 
     private function razorpayKeyId(): string
     {
         $row = ThemeSetting::where('group', 'integration.razorpay')->where('key', 'key_id')->first();
+
         return $this->decrypt($row?->value) ?: env('RAZORPAY_KEY', '');
     }
 
     private function decrypt(?string $val): string
     {
-        if (!$val) return '';
-        try { return Crypt::decryptString($val); } catch (\Exception) { return $val; }
+        if (! $val) {
+            return '';
+        }
+        try {
+            return Crypt::decryptString($val);
+        } catch (\Exception) {
+            return $val;
+        }
     }
 
     public function initiate(Request $request)
@@ -42,7 +52,7 @@ class PaymentController extends Controller
         $rows = ThemeSetting::where('group', 'integration.razorpay')->get()->keyBy('key');
         $isEnabled = ($rows->get('enabled')?->value ?? '0') === '1';
 
-        if (!$isEnabled) {
+        if (! $isEnabled) {
             return response()->json(['success' => false, 'message' => 'Razorpay payment is currently disabled.'], 422);
         }
 
@@ -57,22 +67,22 @@ class PaymentController extends Controller
 
             $template = GiftCardTemplate::find($request->template_id);
 
-            if (!$template->is_active) {
+            if (! $template->is_active) {
                 return response()->json(['success' => false, 'message' => 'This gift card is no longer available.'], 422);
             }
 
             $razorpayOrder = $this->razorpay()->order->create([
-                'receipt'         => 'gc-' . Str::random(8),
-                'amount'          => (int) ($template->amount * 100),
-                'currency'        => 'INR',
+                'receipt' => 'gc-'.Str::random(8),
+                'amount' => (int) ($template->amount * 100),
+                'currency' => 'INR',
                 'payment_capture' => 1,
             ]);
 
             return response()->json([
-                'order_id'    => $razorpayOrder['id'],
-                'amount'      => $razorpayOrder['amount'],
-                'key'         => $this->razorpayKeyId(),
-                'name'        => $storeName,
+                'order_id' => $razorpayOrder['id'],
+                'amount' => $razorpayOrder['amount'],
+                'key' => $this->razorpayKeyId(),
+                'name' => $storeName,
                 'description' => "Gift Card – ₹{$template->amount}",
             ]);
         }
@@ -85,21 +95,21 @@ class PaymentController extends Controller
         $order = Order::where('uuid', $request->order_uuid)->firstOrFail();
 
         $razorpayOrder = $this->razorpay()->order->create([
-            'receipt'         => $order->order_number,
-            'amount'          => (int) ($order->total_amount * 100),
-            'currency'        => 'INR',
+            'receipt' => $order->order_number,
+            'amount' => (int) ($order->total_amount * 100),
+            'currency' => 'INR',
             'payment_capture' => 1,
         ]);
 
         return response()->json([
-            'order_id'    => $razorpayOrder['id'],
-            'amount'      => $razorpayOrder['amount'],
-            'key'         => $this->razorpayKeyId(),
-            'name'        => $storeName,
-            'description' => 'Order #' . $order->order_number,
-            'prefill'     => [
-                'name'    => $order->shippingAddress?->name,
-                'email'   => $order->shippingAddress?->email,
+            'order_id' => $razorpayOrder['id'],
+            'amount' => $razorpayOrder['amount'],
+            'key' => $this->razorpayKeyId(),
+            'name' => $storeName,
+            'description' => 'Order #'.$order->order_number,
+            'prefill' => [
+                'name' => $order->shippingAddress?->name,
+                'email' => $order->shippingAddress?->email,
                 'contact' => $order->shippingAddress?->phone,
             ],
         ]);
@@ -111,20 +121,20 @@ class PaymentController extends Controller
 
         $request->validate([
             'razorpay_payment_id' => 'required',
-            'razorpay_order_id'   => 'required',
-            'razorpay_signature'  => 'required',
+            'razorpay_order_id' => 'required',
+            'razorpay_signature' => 'required',
         ]);
 
         $attributes = [
-            'razorpay_order_id'   => $request->razorpay_order_id,
+            'razorpay_order_id' => $request->razorpay_order_id,
             'razorpay_payment_id' => $request->razorpay_payment_id,
-            'razorpay_signature'  => $request->razorpay_signature,
+            'razorpay_signature' => $request->razorpay_signature,
         ];
 
         try {
             $this->razorpay()->utility->verifyPaymentSignature($attributes);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Payment verification failed: ' . $e->getMessage()], 400);
+            return response()->json(['success' => false, 'message' => 'Payment verification failed: '.$e->getMessage()], 400);
         }
 
         // ── Gift Card: signature verified — activation is done separately via /activate ──
@@ -140,13 +150,13 @@ class PaymentController extends Controller
         $order = Order::where('uuid', $request->order_uuid)->firstOrFail();
         $order->update([
             'payment_status' => 'paid',
-            'status'         => 'processing',
+            'status' => 'processing',
             'transaction_id' => $request->razorpay_payment_id,
             'payment_method' => 'Razorpay',
         ]);
 
-        app(\App\Services\TwilioSmsService::class)->sendEventSms('confirmed', $order);
-        app(\App\Services\WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
+        app(TwilioSmsService::class)->sendEventSms('confirmed', $order);
+        app(WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
 
         return response()->json(['success' => true, 'message' => 'Payment verified successfully.']);
     }

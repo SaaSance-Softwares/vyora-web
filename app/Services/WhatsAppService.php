@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Order;
 use App\Models\ThemeSetting;
+use App\Models\User;
 use App\Models\WhatsappConversation;
 use App\Models\WhatsappMessage;
 use Illuminate\Support\Facades\Crypt;
@@ -12,10 +14,15 @@ use Illuminate\Support\Facades\Log;
 class WhatsAppService
 {
     private $accessToken;
+
     private $phoneId;
+
     private $wabaId;
+
     private $enabled;
+
     private $apiVersion = 'v19.0';
+
     private $apiUrl = 'https://graph.facebook.com';
 
     public function __construct()
@@ -33,7 +40,7 @@ class WhatsAppService
 
     public function isEnabled(): bool
     {
-        return $this->enabled && !empty($this->accessToken) && !empty($this->phoneId);
+        return $this->enabled && ! empty($this->accessToken) && ! empty($this->phoneId);
     }
 
     /**
@@ -43,6 +50,7 @@ class WhatsAppService
     {
         $key = "whatsapp_template_{$event}";
         $val = ThemeSetting::where('group', 'integration.whatsapp')->where('key', $key)->value('value');
+
         return $val ? Crypt::decryptString($val) : null;
     }
 
@@ -51,7 +59,9 @@ class WhatsAppService
      */
     public function sendTemplate(string $to, string $templateName, string $languageCode = 'en_US', array $components = [])
     {
-        if (!$this->isEnabled()) return false;
+        if (! $this->isEnabled()) {
+            return false;
+        }
 
         $to = $this->formatPhoneNumber($to);
 
@@ -62,10 +72,10 @@ class WhatsAppService
             'template' => [
                 'name' => $templateName,
                 'language' => ['code' => $languageCode],
-            ]
+            ],
         ];
 
-        if (!empty($components)) {
+        if (! empty($components)) {
             $payload['template']['components'] = $components;
         }
 
@@ -77,13 +87,16 @@ class WhatsAppService
                 $data = $response->json();
                 $messageId = $data['messages'][0]['id'] ?? null;
                 $this->logMessage($to, $templateName, 'template', $messageId);
+
                 return true;
             }
 
-            Log::error("WhatsApp Template Error: " . $response->body());
+            Log::error('WhatsApp Template Error: '.$response->body());
+
             return false;
         } catch (\Exception $e) {
-            Log::error("WhatsApp API Exception: " . $e->getMessage());
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
             return false;
         }
     }
@@ -93,7 +106,7 @@ class WhatsAppService
      */
     public function getTemplatesFromMeta()
     {
-        if (!$this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
+        if (! $this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
             return ['error' => 'Integration disabled or missing WABA ID / Access Token.'];
         }
 
@@ -105,10 +118,12 @@ class WhatsAppService
                 return $response->json();
             }
 
-            Log::error("WhatsApp Get Templates Error: " . $response->body());
+            Log::error('WhatsApp Get Templates Error: '.$response->body());
+
             return ['error' => 'Failed to fetch templates from Meta.'];
         } catch (\Exception $e) {
-            Log::error("WhatsApp API Exception: " . $e->getMessage());
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
             return ['error' => $e->getMessage()];
         }
     }
@@ -118,7 +133,7 @@ class WhatsAppService
      */
     public function createTemplateToMeta(array $data)
     {
-        if (!$this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
+        if (! $this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
             return ['error' => 'Integration disabled or missing WABA ID / Access Token.'];
         }
 
@@ -130,12 +145,14 @@ class WhatsAppService
                 return ['success' => true, 'data' => $response->json()];
             }
 
-            Log::error("WhatsApp Create Template Error: " . $response->body());
+            Log::error('WhatsApp Create Template Error: '.$response->body());
             $errorData = $response->json();
             $msg = $errorData['error']['message'] ?? 'Failed to create template on Meta.';
+
             return ['error' => $msg];
         } catch (\Exception $e) {
-            Log::error("WhatsApp API Exception: " . $e->getMessage());
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
             return ['error' => $e->getMessage()];
         }
     }
@@ -145,42 +162,48 @@ class WhatsAppService
      */
     public function sendEventWhatsApp(string $event, $target)
     {
-        if (!$this->isEnabled()) return false;
+        if (! $this->isEnabled()) {
+            return false;
+        }
 
         $templateName = $this->getTemplateName($event);
-        if (!$templateName) return false;
+        if (! $templateName) {
+            return false;
+        }
 
         $phone = null;
         $components = [];
 
         // Order Events
-        if (in_array($event, ['confirmed', 'shipped', 'cancelled']) && $target instanceof \App\Models\Order) {
+        if (in_array($event, ['confirmed', 'shipped', 'cancelled']) && $target instanceof Order) {
             $phone = $target->shipping_phone ?? $target->billing_phone;
             // Example basic components: You might need to adjust based on actual template placeholders
             $components = [
                 [
                     'type' => 'body',
                     'parameters' => [
-                        ['type' => 'text', 'text' => $target->order_number]
-                    ]
-                ]
+                        ['type' => 'text', 'text' => $target->order_number],
+                    ],
+                ],
             ];
         }
-        
+
         // Account Events
-        if (in_array($event, ['account_created', 'password_updated']) && $target instanceof \App\Models\User) {
+        if (in_array($event, ['account_created', 'password_updated']) && $target instanceof User) {
             $phone = $target->phone;
             $components = [
                 [
                     'type' => 'body',
                     'parameters' => [
-                        ['type' => 'text', 'text' => $target->first_name]
-                    ]
-                ]
+                        ['type' => 'text', 'text' => $target->first_name],
+                    ],
+                ],
             ];
         }
 
-        if (!$phone) return false;
+        if (! $phone) {
+            return false;
+        }
 
         return $this->sendTemplate($phone, $templateName, 'en_US', $components);
     }
@@ -190,7 +213,9 @@ class WhatsAppService
      */
     public function sendText(string $to, string $text)
     {
-        if (!$this->isEnabled()) return false;
+        if (! $this->isEnabled()) {
+            return false;
+        }
 
         $to = $this->formatPhoneNumber($to);
 
@@ -202,7 +227,7 @@ class WhatsAppService
             'text' => [
                 'preview_url' => false,
                 'body' => $text,
-            ]
+            ],
         ];
 
         try {
@@ -213,13 +238,16 @@ class WhatsAppService
                 $data = $response->json();
                 $messageId = $data['messages'][0]['id'] ?? null;
                 $this->logMessage($to, $text, 'text', $messageId);
+
                 return true;
             }
 
-            Log::error("WhatsApp Text Error: " . $response->body());
+            Log::error('WhatsApp Text Error: '.$response->body());
+
             return false;
         } catch (\Exception $e) {
-            Log::error("WhatsApp API Exception: " . $e->getMessage());
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
             return false;
         }
     }
@@ -254,14 +282,14 @@ class WhatsAppService
             ['phone_number' => $customerPhone],
             ['customer_name' => $customerName, 'last_message_at' => now()]
         );
-        
+
         $conversation->update([
             'customer_name' => $customerName,
-            'last_message_at' => now()
+            'last_message_at' => now(),
         ]);
 
         $type = $message['type'] ?? 'text';
-        $body = $message['text']['body'] ?? "[Media/Unsupported Type]";
+        $body = $message['text']['body'] ?? '[Media/Unsupported Type]';
         $messageId = $message['id'] ?? null;
 
         // Ensure we don't save duplicates from retries
@@ -284,17 +312,17 @@ class WhatsAppService
      */
     public function sendOtpWhatsApp(string $to, string $otp): bool
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             return false;
         }
 
         // Fetch custom template name from Auth Settings
         $authFields = ThemeSetting::where('group', 'auth_settings')->where('key', 'auth_fields')->value('value');
         $templateName = 'user_verification_otp'; // Default fallback
-        
+
         if ($authFields) {
             $decoded = json_decode($authFields, true);
-            if (!empty($decoded['phone']['whatsapp_template'])) {
+            if (! empty($decoded['phone']['whatsapp_template'])) {
                 $templateName = $decoded['phone']['whatsapp_template'];
             }
         }
@@ -306,9 +334,9 @@ class WhatsAppService
                 'parameters' => [
                     [
                         'type' => 'text',
-                        'text' => $otp
-                    ]
-                ]
+                        'text' => $otp,
+                    ],
+                ],
             ],
             [
                 'type' => 'button',
@@ -317,14 +345,14 @@ class WhatsAppService
                 'parameters' => [
                     [
                         'type' => 'text',
-                        'text' => $otp
-                    ]
-                ]
-            ]
+                        'text' => $otp,
+                    ],
+                ],
+            ],
         ];
 
-        // We try with body parameter and button parameter, as OTP templates often use both. 
-        // A simple sendTemplate call will ignore unused components in Meta API usually, 
+        // We try with body parameter and button parameter, as OTP templates often use both.
+        // A simple sendTemplate call will ignore unused components in Meta API usually,
         // but to be safe, we will just send body parameters which is the standard for text-based templates.
         $safeComponents = [
             [
@@ -332,10 +360,10 @@ class WhatsAppService
                 'parameters' => [
                     [
                         'type' => 'text',
-                        'text' => $otp
-                    ]
-                ]
-            ]
+                        'text' => $otp,
+                    ],
+                ],
+            ],
         ];
 
         return $this->sendTemplate($to, $templateName, 'en_US', $safeComponents);
@@ -349,6 +377,7 @@ class WhatsAppService
         if (str_starts_with($number, '00')) {
             $number = substr($number, 2);
         }
+
         return $number;
     }
 }

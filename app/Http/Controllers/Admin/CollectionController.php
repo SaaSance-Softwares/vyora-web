@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Collection;
 use Illuminate\Http\Request;
 
 class CollectionController extends Controller
 {
     public function index()
     {
-        $collections = \App\Models\Collection::latest()->get();
+        $collections = Collection::latest()->get();
         $stats = [
-            'total' => \App\Models\Collection::count(),
-            'active' => \App\Models\Collection::where('is_active', true)->count(),
+            'total' => Collection::count(),
+            'active' => Collection::where('is_active', true)->count(),
         ];
+
         return view('admin.collections.index', compact('collections', 'stats'));
     }
 
@@ -31,22 +33,23 @@ class CollectionController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        \App\Models\Collection::create($request->all());
+        Collection::create($request->all());
 
         return redirect()->route('admin.collections.index')->with('success', 'Collection created successfully.');
     }
 
-    public function edit(\App\Models\Collection $collection)
+    public function edit(Collection $collection)
     {
         $collection->load('products');
+
         return view('admin.collections.edit', compact('collection'));
     }
 
-    public function update(Request $request, \App\Models\Collection $collection)
+    public function update(Request $request, Collection $collection)
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:collections,slug,' . $collection->id,
+            'slug' => 'required|string|max:255|unique:collections,slug,'.$collection->id,
             'description' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
@@ -67,9 +70,10 @@ class CollectionController extends Controller
         return redirect()->route('admin.collections.index')->with('success', 'Collection updated successfully.');
     }
 
-    public function destroy(\App\Models\Collection $collection)
+    public function destroy(Collection $collection)
     {
         $collection->delete();
+
         return redirect()->route('admin.collections.index')->with('success', 'Collection deleted successfully.');
     }
 }

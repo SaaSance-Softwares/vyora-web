@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 
 class AuthSettingsController extends Controller
 {
@@ -19,12 +18,12 @@ class AuthSettingsController extends Controller
             'name' => ['visible' => true, 'required' => true, 'auth_type' => 'data_entry'],
             'email' => ['visible' => true, 'required' => true, 'auth_type' => 'data_entry'],
             'phone' => [
-                'visible' => true, 
-                'required' => false, 
+                'visible' => true,
+                'required' => false,
                 'auth_type' => 'data_entry',
                 'sms_template' => 'Your Dope Style login OTP is {otp}. Valid for 5 minutes.',
-                'whatsapp_template' => 'user_verification_otp'
-            ]
+                'whatsapp_template' => 'user_verification_otp',
+            ],
         ];
 
         // Merge defaults carefully with DB value
@@ -66,15 +65,15 @@ class AuthSettingsController extends Controller
                 if (is_string($newValue)) {
                     $newValue = json_decode($newValue, true);
                 }
-                
+
                 // Fetch existing to merge (important for preserving image paths)
                 $existing = ThemeSetting::where('key', $field)->first();
                 $existingVal = json_decode($existing?->value ?? '{}', true);
-                
+
                 $finalValue = array_merge($existingVal, is_array($newValue) ? $newValue : []);
 
                 if ($field === 'auth_header' && isset($finalValue['order']) && is_array($finalValue['order'])) {
-                    $finalValue['order'] = array_values(array_unique(array_filter($finalValue['order'], fn($v) => in_array($v, ['image', 'text']))));
+                    $finalValue['order'] = array_values(array_unique(array_filter($finalValue['order'], fn ($v) => in_array($v, ['image', 'text']))));
                     if (empty($finalValue['order'])) {
                         $finalValue['order'] = ['image', 'text'];
                     }
@@ -97,8 +96,8 @@ class AuthSettingsController extends Controller
     {
         if ($request->hasFile($fileKey)) {
             $file = $request->file($fileKey);
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = 'uploads/auth/' . $filename;
+            $filename = time().'_'.$file->getClientOriginalName();
+            $path = 'uploads/auth/'.$filename;
 
             // Save to backend public
             $file->move(public_path('uploads/auth'), $filename);
@@ -106,8 +105,8 @@ class AuthSettingsController extends Controller
             // Update JSON setting
             $setting = ThemeSetting::where('key', $settingKey)->first();
             $val = json_decode($setting?->value ?? '{}', true);
-            $val['image'] = '/' . $path;
-            
+            $val['image'] = '/'.$path;
+
             ThemeSetting::updateOrCreate(
                 ['key' => $settingKey],
                 ['value' => json_encode($val), 'group' => self::GROUP]

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Coupon;
-use Carbon\Carbon;
 
 class CouponService
 {
@@ -13,7 +12,7 @@ class CouponService
     public function validateAndCalculate(Coupon $coupon, array $cartData, $user = null): array
     {
         // 1. ACTIVE & BASIC TIME CHECKS
-        if (!$coupon->is_active) {
+        if (! $coupon->is_active) {
             return ['valid' => false, 'error' => 'Coupon is not active.'];
         }
         if ($coupon->starts_at && $coupon->starts_at->isFuture()) {
@@ -29,22 +28,22 @@ class CouponService
         }
 
         // TODO: usage_limit_per_user (Requires Order tracking by user ID or email)
-        
+
         // 3. CART CONSTRAINTS
         $cartSubtotal = $cartData['subtotal'] ?? 0;
         $cartItems = $cartData['items'] ?? [];
         $totalQuantity = array_sum(array_column($cartItems, 'quantity'));
 
         if ($coupon->min_cart_value && $cartSubtotal < $coupon->min_cart_value) {
-            return ['valid' => false, 'error' => 'Minimum cart value of ₹' . $coupon->min_cart_value . ' not met.'];
+            return ['valid' => false, 'error' => 'Minimum cart value of ₹'.$coupon->min_cart_value.' not met.'];
         }
         if ($coupon->min_item_quantity && $totalQuantity < $coupon->min_item_quantity) {
-            return ['valid' => false, 'error' => 'Minimum order quantity of ' . $coupon->min_item_quantity . ' not met.'];
+            return ['valid' => false, 'error' => 'Minimum order quantity of '.$coupon->min_item_quantity.' not met.'];
         }
 
         // 4. ADVANCED RESTRAINTS
         if ($coupon->first_time_users_only) {
-            if (!$user || $user->orders()->count() > 0) {
+            if (! $user || $user->orders()->count() > 0) {
                 return ['valid' => false, 'error' => 'This coupon is for first-time buyers only.'];
             }
         }
@@ -57,21 +56,25 @@ class CouponService
 
         foreach ($cartItems as $item) {
             // Check Exclusions First
-            if (in_array((string)$item['product_id'], $excludedProductIds)) continue;
-            
+            if (in_array((string) $item['product_id'], $excludedProductIds)) {
+                continue;
+            }
+
             // Check Sale Exclusion
             $isOnSale = $item['original_price'] > $item['price'];
-            if ($coupon->exclude_sale_items && $isOnSale) continue;
+            if ($coupon->exclude_sale_items && $isOnSale) {
+                continue;
+            }
 
             // Check Inclusion (if applicable sets exist, item must match one)
             $isEligible = true;
-            if (!empty($applicableProductIds) || !empty($applicableCategoryIds)) {
+            if (! empty($applicableProductIds) || ! empty($applicableCategoryIds)) {
                 $isEligible = false;
-                if (in_array((string)$item['product_id'], $applicableProductIds)) {
+                if (in_array((string) $item['product_id'], $applicableProductIds)) {
                     $isEligible = true;
                 }
                 // (Assumes category is passed in cart or fetched)
-                if (isset($item['category_id']) && in_array((string)$item['category_id'], $applicableCategoryIds)) {
+                if (isset($item['category_id']) && in_array((string) $item['category_id'], $applicableCategoryIds)) {
                     $isEligible = true;
                 }
             }
@@ -101,19 +104,27 @@ class CouponService
             // "Buy X Get Y Free" logic
             $buyQty = $coupon->bogo_buy_qty ?? 1;
             $getQty = $coupon->bogo_get_qty ?? 1;
-            
+
             // Flatten all eligible items into individual units to easily extract the cheapest Y items for every X+Y group
             $eligibleUnits = [];
             foreach ($cartItems as $item) {
                 // We re-check basic eligibility for BOGO items
-                if (in_array((string)$item['product_id'], $excludedProductIds)) continue;
-                if ($coupon->exclude_sale_items && $item['original_price'] > $item['price']) continue;
-                
+                if (in_array((string) $item['product_id'], $excludedProductIds)) {
+                    continue;
+                }
+                if ($coupon->exclude_sale_items && $item['original_price'] > $item['price']) {
+                    continue;
+                }
+
                 $isEligible = true;
-                if (!empty($applicableProductIds) || !empty($applicableCategoryIds)) {
+                if (! empty($applicableProductIds) || ! empty($applicableCategoryIds)) {
                     $isEligible = false;
-                    if (in_array((string)$item['product_id'], $applicableProductIds)) $isEligible = true;
-                    if (isset($item['category_id']) && in_array((string)$item['category_id'], $applicableCategoryIds)) $isEligible = true;
+                    if (in_array((string) $item['product_id'], $applicableProductIds)) {
+                        $isEligible = true;
+                    }
+                    if (isset($item['category_id']) && in_array((string) $item['category_id'], $applicableCategoryIds)) {
+                        $isEligible = true;
+                    }
                 }
 
                 if ($isEligible) {
@@ -135,7 +146,7 @@ class CouponService
                 $startIndex = ($g * $groupSize) + $buyQty;
                 for ($i = 0; $i < $getQty; $i++) {
                     $freeItemPrice = $eligibleUnits[$startIndex + $i];
-                    
+
                     // Cap the free item value if a bogo_max_discount is set
                     if ($coupon->bogo_max_discount && $freeItemPrice > $coupon->bogo_max_discount) {
                         $discountAmount += $coupon->bogo_max_discount;
@@ -149,7 +160,7 @@ class CouponService
         return [
             'valid' => true,
             'discount_amount' => $discountAmount,
-            'coupon' => $coupon->only(['code', 'name', 'type', 'discount_amount', 'can_combine'])
+            'coupon' => $coupon->only(['code', 'name', 'type', 'discount_amount', 'can_combine']),
         ];
     }
 }

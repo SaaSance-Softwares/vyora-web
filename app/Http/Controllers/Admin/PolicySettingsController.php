@@ -25,7 +25,7 @@ class PolicySettingsController extends Controller
         $rows = ThemeSetting::where('group', self::GROUP)->get()->keyBy('key');
 
         // Build a simple key→value array for the view
-        $settings = collect(self::KEYS)->mapWithKeys(fn($k) => [$k => $rows->get($k)?->value ?? '']);
+        $settings = collect(self::KEYS)->mapWithKeys(fn ($k) => [$k => $rows->get($k)?->value ?? '']);
 
         return view('admin.policy-settings.index', compact('settings'));
     }

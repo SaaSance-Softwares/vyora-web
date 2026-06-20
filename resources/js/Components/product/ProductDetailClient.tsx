@@ -160,7 +160,33 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
 
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
-    const [pincode, setPincode] = useState('');
+    const [pincode, setPincode] = useState(auth?.user?.default_pincode || '');
+    const [pincodeResult, setPincodeResult] = useState<{available: boolean, message: string} | null>(null);
+    const [isCheckingPincode, setIsCheckingPincode] = useState(false);
+
+    const checkPincode = async (code: string) => {
+        if (!code || code.trim().length < 3) return;
+        setIsCheckingPincode(true);
+        try {
+            const res = await fetch('/api/check-delivery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ pincode: code.trim() })
+            });
+            const data = await res.json();
+            setPincodeResult(data);
+        } catch (e) {
+            setPincodeResult({ available: false, message: 'Could not verify PIN code.' });
+        } finally {
+            setIsCheckingPincode(false);
+        }
+    };
+
+    useEffect(() => {
+        if (auth?.user?.default_pincode) {
+            checkPincode(auth.user.default_pincode);
+        }
+    }, [auth?.user?.default_pincode]);
 
     // Dynamic Filter Engine: Renders all images on load, tightly filters by matching Attribute Value ID on Color Select
     const displayedImages = useMemo(() => {
@@ -596,7 +622,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                         <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 space-y-3 mt-8">
                             <div className="flex items-center gap-2 text-sm font-bold text-gray-900 uppercase tracking-widest">
                                 <Truck className="w-4 h-4" />
-                                <span>Check Delivery Setup</span>
+                                <span>Check Delivery Pincode</span>
                             </div>
                             <div className="flex shadow-sm rounded-lg overflow-hidden">
                                 <input
@@ -604,13 +630,24 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                     placeholder="Enter PIN Code"
                                     value={pincode}
                                     onChange={(e) => setPincode(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && checkPincode(pincode)}
                                     className="flex-1 bg-white border border-gray-200 border-r-0 px-4 py-3 text-sm focus:outline-none focus:bg-gray-50 transition-colors font-medium text-gray-900"
                                 />
-                                <button className="bg-black text-white px-6 font-bold text-xs tracking-widest hover:bg-gray-800 transition-colors active:scale-95 origin-right">
-                                    CHECK
+                                <button 
+                                    onClick={() => checkPincode(pincode)}
+                                    disabled={isCheckingPincode || !pincode}
+                                    className="bg-black text-white px-6 font-bold text-xs tracking-widest hover:bg-gray-800 transition-colors active:scale-95 origin-right disabled:opacity-70"
+                                >
+                                    {isCheckingPincode ? 'CHECKING...' : 'CHECK'}
                                 </button>
                             </div>
-                            <p className="text-[11px] text-gray-500 font-medium">Please enter PIN code to check delivery time & Pay on Delivery availability.</p>
+                            {pincodeResult ? (
+                                <p className={`text-[12px] font-bold ${pincodeResult.available ? 'text-green-600' : 'text-red-600'}`}>
+                                    {pincodeResult.message}
+                                </p>
+                            ) : (
+                                <p className="text-[11px] text-gray-500 font-medium">Please enter PIN code to check delivery time & availability.</p>
+                            )}
                         </div>
 
                         {/* 11-14. Accordions */}

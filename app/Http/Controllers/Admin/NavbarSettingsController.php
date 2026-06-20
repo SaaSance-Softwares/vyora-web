@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\CmsPage;
+use App\Models\Collection;
 use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -10,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 class NavbarSettingsController extends Controller
 {
     const GROUP = 'navbar';
+
     const KEYS = ['navbar_style', 'nav_alignment', 'nav_position', 'nav_hover_style', 'menu_structure'];
 
     public function index()
@@ -29,33 +33,33 @@ class NavbarSettingsController extends Controller
         $settings['menu_structure'] = $settings['menu_structure'] ?? '[]';
 
         // Fetch all categories for the dropdown, formatted hierarchically
-        $allCats = \App\Models\Category::orderBy('sort_order')->get();
+        $allCats = Category::orderBy('sort_order')->get();
         // Flatten into hierarchy name
         $categories = collect();
         foreach ($allCats->whereNull('parent_id') as $root) {
-            $categories->push((object)[
+            $categories->push((object) [
                 'id' => $root->id,
                 'slug' => $root->slug,
-                'name' => $root->name
+                'name' => $root->name,
             ]);
             foreach ($allCats->where('parent_id', $root->id) as $sub) {
-                $categories->push((object)[
+                $categories->push((object) [
                     'id' => $sub->id,
                     'slug' => $sub->slug,
-                    'name' => $root->name . ' > ' . $sub->name
+                    'name' => $root->name.' > '.$sub->name,
                 ]);
                 foreach ($allCats->where('parent_id', $sub->id) as $deep) {
-                    $categories->push((object)[
+                    $categories->push((object) [
                         'id' => $deep->id,
                         'slug' => $deep->slug,
-                        'name' => $root->name . ' > ' . $sub->name . ' > ' . $deep->name
+                        'name' => $root->name.' > '.$sub->name.' > '.$deep->name,
                     ]);
                 }
             }
         }
 
-        $collections = \App\Models\Collection::all();
-        $pages = \App\Models\CmsPage::all();
+        $collections = Collection::all();
+        $pages = CmsPage::all();
 
         return view('admin.navbar-settings.index', compact('settings', 'categories', 'collections', 'pages'));
     }
@@ -82,4 +86,3 @@ class NavbarSettingsController extends Controller
         return redirect()->back()->with('success', 'Navbar settings updated successfully.');
     }
 }
-

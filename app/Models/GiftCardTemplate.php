@@ -19,9 +19,9 @@ class GiftCardTemplate extends Model
     ];
 
     protected $casts = [
-        'amount'       => 'float',
-        'is_active'    => 'boolean',
-        'validity_days'=> 'integer',
+        'amount' => 'float',
+        'is_active' => 'boolean',
+        'validity_days' => 'integer',
     ];
 
     // ── Relationships ──────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ class GiftCardTemplate extends Model
 
     public function displayName(): string
     {
-        return $this->name ?? '₹' . number_format($this->amount, 0) . ' Gift Card';
+        return $this->name ?? '₹'.number_format($this->amount, 0).' Gift Card';
     }
 
     public function purchasedCount(): int

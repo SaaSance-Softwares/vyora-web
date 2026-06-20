@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\ThemeSetting;
+use Illuminate\Http\Request;
 
 class PdpSettingsController extends Controller
 {
     public function index()
     {
         $settings = ThemeSetting::all()->groupBy('group');
+
         return view('admin.pdp-settings.index', compact('settings'));
     }
 
@@ -23,7 +24,7 @@ class PdpSettingsController extends Controller
                 ['key' => $key],
                 [
                     'value' => $value,
-                    'group' => $this->getGroupForKey($key)
+                    'group' => $this->getGroupForKey($key),
                 ]
             );
         }
@@ -36,7 +37,7 @@ class PdpSettingsController extends Controller
         if (str_starts_with($key, 'mega_deal_')) {
             return 'mega_deal';
         }
-        
+
         return 'pdp';
     }
 }

@@ -27,15 +27,25 @@ class Shortlink extends Model
     {
         $url = $this->actual_link;
         $params = [];
-        if ($this->utm_source) $params['utm_source'] = $this->utm_source;
-        if ($this->utm_medium) $params['utm_medium'] = $this->utm_medium;
-        if ($this->utm_campaign) $params['utm_campaign'] = $this->utm_campaign;
-        if ($this->utm_term) $params['utm_term'] = $this->utm_term;
-        if ($this->utm_content) $params['utm_content'] = $this->utm_content;
+        if ($this->utm_source) {
+            $params['utm_source'] = $this->utm_source;
+        }
+        if ($this->utm_medium) {
+            $params['utm_medium'] = $this->utm_medium;
+        }
+        if ($this->utm_campaign) {
+            $params['utm_campaign'] = $this->utm_campaign;
+        }
+        if ($this->utm_term) {
+            $params['utm_term'] = $this->utm_term;
+        }
+        if ($this->utm_content) {
+            $params['utm_content'] = $this->utm_content;
+        }
 
-        if (!empty($params)) {
+        if (! empty($params)) {
             $separator = str_contains($url, '?') ? '&' : '?';
-            $url .= $separator . http_build_query($params);
+            $url .= $separator.http_build_query($params);
         }
 
         return $url;

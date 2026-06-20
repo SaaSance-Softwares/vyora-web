@@ -41,7 +41,7 @@ class GeneralSettingsController extends Controller
     {
         // Load general settings
         $rows = ThemeSetting::where('group', self::GROUP)->get()->keyBy('key');
-        $settings = collect(self::KEYS)->mapWithKeys(fn($k) => [$k => $rows->get($k)?->value ?? '']);
+        $settings = collect(self::KEYS)->mapWithKeys(fn ($k) => [$k => $rows->get($k)?->value ?? '']);
 
         // Load all theme settings (for colors, typography, logos)
         $themeSettings = ThemeSetting::all()->groupBy('group');
@@ -59,6 +59,7 @@ class GeneralSettingsController extends Controller
             } catch (\Exception $e) {
                 // Ignore and fall back to defaults
             }
+
             return ['Inter', 'Roboto', 'Open Sans', 'Montserrat', 'Playfair Display'];
         });
 
@@ -70,7 +71,7 @@ class GeneralSettingsController extends Controller
             $timezones[] = [
                 'id' => $tz,
                 'label' => "({$offsetLabel}) {$tz}",
-                'offset' => $offsetSeconds
+                'offset' => $offsetSeconds,
             ];
         }
 
@@ -109,7 +110,7 @@ class GeneralSettingsController extends Controller
                 ['key' => $key],
                 [
                     'value' => $value,
-                    'group' => $this->getGroupForKey($key)
+                    'group' => $this->getGroupForKey($key),
                 ]
             );
         }
@@ -117,10 +118,10 @@ class GeneralSettingsController extends Controller
         // 3. Handle File Uploads (Logos)
         if ($request->hasFile('logos')) {
             foreach ($request->file('logos') as $key => $file) {
-                $fileName = time() . '_' . $key . '.' . $file->getClientOriginalExtension();
-                $relativePath = "storage/theme/logos";
+                $fileName = time().'_'.$key.'.'.$file->getClientOriginalExtension();
+                $relativePath = 'storage/theme/logos';
                 $backendPath = public_path($relativePath);
-                if (!file_exists($backendPath)) {
+                if (! file_exists($backendPath)) {
                     mkdir($backendPath, 0755, true);
                 }
 
@@ -131,7 +132,7 @@ class GeneralSettingsController extends Controller
                     ['key' => $key],
                     [
                         'value' => $finalPath,
-                        'group' => 'logos'
+                        'group' => 'logos',
                     ]
                 );
 
@@ -146,21 +147,28 @@ class GeneralSettingsController extends Controller
 
     private function getGroupForKey($key)
     {
-        if (str_starts_with($key, 'mega_deal_'))
+        if (str_starts_with($key, 'mega_deal_')) {
             return 'mega_deal';
-        if (str_contains($key, 'color'))
+        }
+        if (str_contains($key, 'color')) {
             return 'colors';
-        if (str_contains($key, 'font'))
+        }
+        if (str_contains($key, 'font')) {
             return 'typography';
-        if (str_starts_with($key, 'social_'))
+        }
+        if (str_starts_with($key, 'social_')) {
             return 'social';
-        if (str_starts_with($key, 'contact_'))
+        }
+        if (str_starts_with($key, 'contact_')) {
             return 'contact';
-        if (str_starts_with($key, 'store_'))
+        }
+        if (str_starts_with($key, 'store_')) {
             return 'store_info';
-        if (str_contains($key, 'layout'))
+        }
+        if (str_contains($key, 'layout')) {
             return 'layout';
-        
+        }
+
         return 'general';
     }
 }

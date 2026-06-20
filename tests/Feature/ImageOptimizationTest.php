@@ -16,7 +16,7 @@ class ImageOptimizationTest extends TestCase
         // Create a fake JPG image
         $file = UploadedFile::fake()->image('test_product.jpg', 600, 600);
 
-        $service = new ImageOptimizer();
+        $service = new ImageOptimizer;
         $path = $service->storeAndOptimize($file, 'products');
 
         // Assert path ends in .webp

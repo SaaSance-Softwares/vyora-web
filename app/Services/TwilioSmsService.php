@@ -2,16 +2,19 @@
 
 namespace App\Services;
 
-use Twilio\Rest\Client;
+use App\Models\Order;
 use App\Models\ThemeSetting;
+use Exception;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Exception;
+use Twilio\Rest\Client;
 
 class TwilioSmsService
 {
     private $client;
+
     private $fromNumber;
+
     private $enabled;
 
     public function __construct()
@@ -30,7 +33,7 @@ class TwilioSmsService
                     $this->client = new Client($sid, $token);
                 }
             } catch (Exception $e) {
-                Log::error('Twilio Integration Decryption Failed: ' . $e->getMessage());
+                Log::error('Twilio Integration Decryption Failed: '.$e->getMessage());
                 $this->enabled = false;
             }
         }
@@ -39,14 +42,15 @@ class TwilioSmsService
     /**
      * Send an SMS message.
      *
-     * @param string $to Phone number in E.164 format (+14155552671)
-     * @param string $message The body of the text message
+     * @param  string  $to  Phone number in E.164 format (+14155552671)
+     * @param  string  $message  The body of the text message
      * @return bool True if successful, false otherwise
      */
     public function sendSms(string $to, string $message): bool
     {
-        if (!$this->enabled || !$this->client || empty($to) || empty($message)) {
-            Log::info("Twilio SMS ignored: Integration not enabled or missing credentials/number/message.");
+        if (! $this->enabled || ! $this->client || empty($to) || empty($message)) {
+            Log::info('Twilio SMS ignored: Integration not enabled or missing credentials/number/message.');
+
             return false;
         }
 
@@ -56,18 +60,18 @@ class TwilioSmsService
 
             if ($hasPlus) {
                 // If they explicitly provided a country code, respect it entirely.
-                $to = '+' . $cleanPhone;
+                $to = '+'.$cleanPhone;
             } else {
                 // If no country code was provided, we assume the store's primary local context (India)
                 if (strlen($cleanPhone) === 10) {
-                    $to = '+91' . $cleanPhone;
+                    $to = '+91'.$cleanPhone;
                 } elseif (strlen($cleanPhone) === 11 && str_starts_with($cleanPhone, '0')) {
-                    $to = '+91' . substr($cleanPhone, 1);
+                    $to = '+91'.substr($cleanPhone, 1);
                 } elseif (strlen($cleanPhone) === 12 && str_starts_with($cleanPhone, '91')) {
-                    $to = '+' . $cleanPhone;
+                    $to = '+'.$cleanPhone;
                 } else {
                     // Fallback
-                    $to = '+' . $cleanPhone;
+                    $to = '+'.$cleanPhone;
                 }
             }
 
@@ -75,13 +79,14 @@ class TwilioSmsService
                 $to,
                 [
                     'from' => $this->fromNumber,
-                    'body' => $message
+                    'body' => $message,
                 ]
             );
 
             return true;
         } catch (Exception $e) {
-            Log::error('Twilio SMS Sending Failed: ' . $e->getMessage() . " | To: {$to}");
+            Log::error('Twilio SMS Sending Failed: '.$e->getMessage()." | To: {$to}");
+
             return false;
         }
     }
@@ -93,29 +98,33 @@ class TwilioSmsService
     {
         $parsed = $template;
         foreach ($variables as $key => $value) {
-            $parsed = str_replace('{' . $key . '}', $value, $parsed);
+            $parsed = str_replace('{'.$key.'}', $value, $parsed);
         }
+
         return $parsed;
     }
 
     /**
      * Helper to send an event-based SMS for an order.
-     * 
-     * @param string $event 'confirmed', 'shipped', 'cancelled'
-     * @param \App\Models\Order $order
+     *
+     * @param  string  $event  'confirmed', 'shipped', 'cancelled'
      */
-    public function sendEventSms(string $event, \App\Models\Order $order): bool
+    public function sendEventSms(string $event, Order $order): bool
     {
-        if (!$this->enabled) return false;
+        if (! $this->enabled) {
+            return false;
+        }
 
         $order->loadMissing(['shippingAddress', 'items.sku.product']);
         $phone = $order->shippingAddress?->phone;
-        
-        if (!$phone) return false;
+
+        if (! $phone) {
+            return false;
+        }
 
         $defaultTemplates = [
             'confirmed' => 'Hi {name}, your order #{order_id} for {items} has been confirmed. Thank you for shopping with us!',
-            'shipped'   => 'Hi {name}, your order #{order_id} has been shipped! Track here: {tracking_url}',
+            'shipped' => 'Hi {name}, your order #{order_id} has been shipped! Track here: {tracking_url}',
             'cancelled' => 'Hi {name}, your order #{order_id} has been cancelled. If you have questions, please contact support.',
         ];
 
@@ -135,10 +144,13 @@ class TwilioSmsService
             $template = $defaultTemplates[$event] ?? '';
         }
 
-        if (empty($template)) return false;
+        if (empty($template)) {
+            return false;
+        }
 
-        $itemsSummary = $order->items->map(function($item) {
+        $itemsSummary = $order->items->map(function ($item) {
             $productName = $item->product_name ?? ($item->sku->product->name ?? 'Item');
+
             return "{$item->quantity}x {$productName}";
         })->join(', ');
 
@@ -146,7 +158,7 @@ class TwilioSmsService
             'name' => $order->shippingAddress->name ?? 'Customer',
             'order_id' => $order->order_number ?? explode('-', $order->uuid)[0] ?? $order->id,
             'tracking_url' => $order->tracking_url ?? 'N/A',
-            'items' => $itemsSummary ?: 'Your items'
+            'items' => $itemsSummary ?: 'Your items',
         ]);
 
         return $this->sendSms($phone, $message);
@@ -157,22 +169,23 @@ class TwilioSmsService
      */
     public function sendOtpSms(string $to, string $otp): bool
     {
-        if (!$this->enabled || !$this->client) {
+        if (! $this->enabled || ! $this->client) {
             return false;
         }
 
         // Fetch custom template from Auth Settings
         $authFields = ThemeSetting::where('group', 'auth_settings')->where('key', 'auth_fields')->value('value');
         $template = 'Your Dope Style login OTP is {otp}. Valid for 5 minutes.'; // Default fallback
-        
+
         if ($authFields) {
             $decoded = json_decode($authFields, true);
-            if (!empty($decoded['phone']['sms_template'])) {
+            if (! empty($decoded['phone']['sms_template'])) {
                 $template = $decoded['phone']['sms_template'];
             }
         }
 
         $message = $this->parseTemplate($template, ['otp' => $otp]);
+
         return $this->sendSms($to, $message);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Product;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -8,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('debug:cats', function () {
-    $product = \App\Models\Product::with(['categories', 'categoryMasterImages'])->find(21);
+    $product = Product::with(['categories', 'categoryMasterImages'])->find(21);
     $this->info(json_encode([
         'categories' => $product->categories->toArray(),
         'images' => $product->categoryMasterImages->toArray(),

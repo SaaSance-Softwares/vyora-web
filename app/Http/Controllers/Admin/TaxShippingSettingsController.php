@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
 
 class TaxShippingSettingsController extends Controller
@@ -11,7 +12,7 @@ class TaxShippingSettingsController extends Controller
 
     public function index()
     {
-        $rows = \App\Models\ThemeSetting::where('group', self::GROUP)->get()->keyBy('key');
+        $rows = ThemeSetting::where('group', self::GROUP)->get()->keyBy('key');
 
         $settings = [
             'is_tax_enabled' => $rows->get('is_tax_enabled')?->value ?? '1',
@@ -43,7 +44,7 @@ class TaxShippingSettingsController extends Controller
                                 $tiers = array_values($val[$method]['tiers']);
                                 // Sort by up_to ascending
                                 usort($tiers, function ($a, $b) {
-                                    return (float)($a['up_to'] ?? 0) <=> (float)($b['up_to'] ?? 0);
+                                    return (float) ($a['up_to'] ?? 0) <=> (float) ($b['up_to'] ?? 0);
                                 });
                                 $val[$method]['tiers'] = $tiers;
                             }
@@ -51,7 +52,7 @@ class TaxShippingSettingsController extends Controller
                     }
                     $val = json_encode($val);
                 }
-                \App\Models\ThemeSetting::updateOrCreate(
+                ThemeSetting::updateOrCreate(
                     ['key' => $key],
                     ['value' => $val, 'group' => self::GROUP]
                 );

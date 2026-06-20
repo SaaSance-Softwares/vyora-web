@@ -3,30 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     protected $guarded = [];
 
     protected $casts = [
-        'shipped_at'   => 'datetime',
+        'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
     ];
 
     protected static function booted()
     {
         static::creating(function ($order) {
-            if (!$order->uuid) {
-                $order->uuid = (string) \Illuminate\Support\Str::uuid();
+            if (! $order->uuid) {
+                $order->uuid = (string) Str::uuid();
             }
-            if (!$order->order_number) {
-                $order->order_number = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(8));
+            if (! $order->order_number) {
+                $order->order_number = 'ORD-'.strtoupper(Str::random(8));
             }
         });
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Relations                                                           */
+    /*  Relations */
     /* ------------------------------------------------------------------ */
 
     public function items()
@@ -50,7 +51,7 @@ class Order extends Model
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Accessors                                                           */
+    /*  Accessors */
     /* ------------------------------------------------------------------ */
 
     /**
@@ -58,7 +59,7 @@ class Order extends Model
      */
     public function getSubtotalAttribute(): float
     {
-        return $this->items->sum(function($item) {
+        return $this->items->sum(function ($item) {
             return $item->price * $item->quantity;
         });
     }
@@ -68,7 +69,7 @@ class Order extends Model
      */
     public function getHasTrackingAttribute(): bool
     {
-        return !empty($this->tracking_url) || !empty($this->tracking_number);
+        return ! empty($this->tracking_url) || ! empty($this->tracking_number);
     }
 
     /**
@@ -77,13 +78,13 @@ class Order extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            'pending'    => 'Pending',
+            'pending' => 'Pending',
             'processing' => 'Processing',
-            'shipped'    => 'Shipped',
-            'delivered'  => 'Delivered',
-            'cancelled'  => 'Cancelled',
-            'refunded'   => 'Refunded',
-            default      => ucfirst($this->status),
+            'shipped' => 'Shipped',
+            'delivered' => 'Delivered',
+            'cancelled' => 'Cancelled',
+            'refunded' => 'Refunded',
+            default => ucfirst($this->status),
         };
     }
 
@@ -101,10 +102,12 @@ class Order extends Model
 
         $order = ['pending', 'processing', 'shipped', 'delivered'];
         $currentIdx = array_search($this->status, $order);
-        if ($currentIdx === false) $currentIdx = -1;
+        if ($currentIdx === false) {
+            $currentIdx = -1;
+        }
 
         foreach ($steps as $i => &$step) {
-            $step['done']    = $i <= $currentIdx;
+            $step['done'] = $i <= $currentIdx;
             $step['current'] = $i === $currentIdx;
         }
 

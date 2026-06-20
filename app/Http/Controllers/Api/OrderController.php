@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Address;
+use App\Models\Coupon;
+use App\Models\GiftCard;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Sku;
-use App\Models\Coupon;
 use App\Models\ThemeSetting;
+use App\Services\CouponService;
 use App\Services\GiftCardService;
+use App\Services\QikinkOrderService;
+use App\Services\TwilioSmsService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,24 +23,25 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
-        $orders = Order::where(function($query) use ($user) {
-                $query->where('user_id', $user->id)
-                      ->orWhereHas('shippingAddress', function($q) use ($user) {
-                          $q->where('email', $user->email);
-                      });
-            })
-            ->with(['items' => function($query) {
+
+        $orders = Order::where(function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                ->orWhereHas('shippingAddress', function ($q) use ($user) {
+                    $q->where('email', $user->email);
+                });
+        })
+            ->with(['items' => function ($query) {
                 $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price']);
             }])
             ->latest()
             ->paginate(10);
 
-        $orders->getCollection()->transform(function($order) {
-            $order->items_count   = $order->items->sum('quantity');
-            $order->tracking_url  = $order->tracking_url;
-            $order->has_tracking  = $order->has_tracking;
+        $orders->getCollection()->transform(function ($order) {
+            $order->items_count = $order->items->sum('quantity');
+            $order->tracking_url = $order->tracking_url;
+            $order->has_tracking = $order->has_tracking;
             $order->courier_partner = $order->courier_partner;
+
             return $order;
         });
 
@@ -87,8 +93,8 @@ class OrderController extends Controller
                 // Validate and calculate subtotal
                 foreach ($request->input('items') as $item) {
                     $sku = Sku::lockForUpdate()->with('product')->find($item['sku_id']);
-                    if (!$sku || $sku->stock < $item['quantity']) {
-                        throw new \Exception("Insufficient stock for SKU " . ($sku ? $sku->code : $item['sku_id']));
+                    if (! $sku || $sku->stock < $item['quantity']) {
+                        throw new \Exception('Insufficient stock for SKU '.($sku ? $sku->code : $item['sku_id']));
                     }
                     $lineTotal = $sku->price * $item['quantity'];
                     $subtotal += $lineTotal;
@@ -98,7 +104,7 @@ class OrderController extends Controller
                         'qty' => $item['quantity'],
                         'price' => $sku->price,
                         'total' => $lineTotal,
-                        'image_url' => $item['image'] ?? null
+                        'image_url' => $item['image'] ?? null,
                     ];
                 }
 
@@ -108,7 +114,7 @@ class OrderController extends Controller
                 if ($couponCode) {
                     $coupon = Coupon::where('code', $couponCode)->where('is_active', true)->first();
                     if ($coupon) {
-                        $couponService = app(\App\Services\CouponService::class);
+                        $couponService = app(CouponService::class);
                         $cartDataForCoupon = [
                             'subtotal' => $subtotal,
                             'items' => array_map(function ($data) {
@@ -118,7 +124,7 @@ class OrderController extends Controller
                                     'original_price' => $data['sku']->mrp ?? $data['price'],
                                     'quantity' => $data['qty'],
                                 ];
-                            }, $skusToProcess)
+                            }, $skusToProcess),
                         ];
 
                         $couponResult = $couponService->validateAndCalculate($coupon, $cartDataForCoupon, $request->user());
@@ -131,7 +137,7 @@ class OrderController extends Controller
                 $subtotalAfterDiscount = max(0, $subtotal - $discountAmount);
 
                 // Fetch Tax & Shipping Settings
-                $settings = \App\Models\ThemeSetting::where('group', 'tax_shipping')->pluck('value', 'key');
+                $settings = ThemeSetting::where('group', 'tax_shipping')->pluck('value', 'key');
                 $taxInclusive = ($settings->get('tax_inclusion') ?? 'exclude') === 'include';
                 $isTaxEnabled = ($settings->get('is_tax_enabled') ?? '1') === '1';
                 $taxes = json_decode($settings->get('taxes') ?? '[]', true);
@@ -163,13 +169,13 @@ class OrderController extends Controller
                                 break;
                             }
                         }
-                        if (!$applied && count($tiers) > 0) {
+                        if (! $applied && count($tiers) > 0) {
                             $matchedFee = floatval($tiers[count($tiers) - 1]['fee'] ?? 0);
                         }
                         $shippingAmount = $matchedFee;
                     }
 
-                    if (!$isCod) {
+                    if (! $isCod) {
                         if (($activeRule['discount_type'] ?? '') === 'percent') {
                             $prepaidDiscount = ($subtotalAfterDiscount * floatval($activeRule['discount_value'] ?? 0)) / 100;
                         } elseif (($activeRule['discount_type'] ?? '') === 'flat') {
@@ -184,12 +190,12 @@ class OrderController extends Controller
                 $giftCardService = app(GiftCardService::class);
 
                 if ($giftCardCode) {
-                    $giftCardValidation = \App\Models\GiftCard::whereIn('status', ['active', 'partially_used'])->get()
-                        ->first(fn($gc) => $gc->plain_code === strtoupper($giftCardCode));
+                    $giftCardValidation = GiftCard::whereIn('status', ['active', 'partially_used'])->get()
+                        ->first(fn ($gc) => $gc->plain_code === strtoupper($giftCardCode));
 
                     if ($giftCardValidation && $giftCardValidation->isRedeemable()) {
                         if ($giftCardValidation->assigned_to && $giftCardValidation->assigned_to !== $request->user()?->id) {
-                            throw new \Exception("This gift card is not assigned to your account.");
+                            throw new \Exception('This gift card is not assigned to your account.');
                         }
                         $giftCardDiscount = min($giftCardValidation->remaining_amount, $subtotalAfterDiscount + $shippingAmount - $prepaidDiscount);
                     }
@@ -210,7 +216,9 @@ class OrderController extends Controller
                         $taxRate = 0;
                         if ($data['sku']->product && $data['sku']->product->tax_class) {
                             $t = collect($taxes)->firstWhere('id', $data['sku']->product->tax_class);
-                            if ($t) $taxRate = floatval($t['rate']);
+                            if ($t) {
+                                $taxRate = floatval($t['rate']);
+                            }
                         }
 
                         if ($taxRate > 0) {
@@ -223,16 +231,18 @@ class OrderController extends Controller
                                 $trueItemTotal = $data['total'];
                                 $itemTax = $itemFinal * ($taxRate / 100);
                             }
-                            
-                            $rateKey = (string)$taxRate;
-                            if (!isset($taxBreakdown[$rateKey])) $taxBreakdown[$rateKey] = 0;
+
+                            $rateKey = (string) $taxRate;
+                            if (! isset($taxBreakdown[$rateKey])) {
+                                $taxBreakdown[$rateKey] = 0;
+                            }
                             $taxBreakdown[$rateKey] += $itemTax;
                             $totalTaxAmount += $itemTax;
                         } else {
                             $trueItemFinal = $itemFinal;
                             $trueItemTotal = $data['total'];
                         }
-                        
+
                         $trueSubtotalAfterDiscount += $trueItemFinal;
                         $trueSubtotalBeforeDiscount += $trueItemTotal;
                     } else {
@@ -256,8 +266,10 @@ class OrderController extends Controller
                             $trueShippingAmount = $shippingAmount;
                             $shippingTax = $shippingAmount * ($shippingTaxRate / 100);
                         }
-                        $rateKey = (string)$shippingTaxRate;
-                        if (!isset($taxBreakdown[$rateKey])) $taxBreakdown[$rateKey] = 0;
+                        $rateKey = (string) $shippingTaxRate;
+                        if (! isset($taxBreakdown[$rateKey])) {
+                            $taxBreakdown[$rateKey] = 0;
+                        }
                         $taxBreakdown[$rateKey] += $shippingTax;
                         $totalTaxAmount += $shippingTax;
                     }
@@ -310,19 +322,19 @@ class OrderController extends Controller
             });
 
             // Dispatch Qikink order processing asynchronously if possible, or inline
-            $qikinkService = app(\App\Services\QikinkOrderService::class);
+            $qikinkService = app(QikinkOrderService::class);
             $qikinkService->processOrder($order);
 
             // Dispatch Twilio SMS for COD/Free orders (already confirmed)
             if ($order->status === 'processing') {
-                app(\App\Services\TwilioSmsService::class)->sendEventSms('confirmed', $order);
-                app(\App\Services\WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
+                app(TwilioSmsService::class)->sendEventSms('confirmed', $order);
+                app(WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
             }
 
             return response()->json([
                 'success' => true,
                 'order_uuid' => $order->uuid,
-                'message' => 'Order placed successfully!'
+                'message' => 'Order placed successfully!',
             ], 201);
 
         } catch (\Exception $e) {
@@ -333,22 +345,22 @@ class OrderController extends Controller
     public function show(Request $request, $uuid)
     {
         $user = $request->user();
-        
+
         $order = Order::where('uuid', $uuid)
-            ->where(function($query) use ($user) {
+            ->where(function ($query) use ($user) {
                 $query->where('user_id', $user->id)
-                      ->orWhereHas('shippingAddress', function($q) use ($user) {
-                          $q->where('email', $user->email);
-                      });
+                    ->orWhereHas('shippingAddress', function ($q) use ($user) {
+                        $q->where('email', $user->email);
+                    });
             })
             ->with(['items.sku.product', 'shippingAddress'])
             ->firstOrFail();
 
         $data = $order->toArray();
-        $data['tracking_url']    = $order->tracking_url;
+        $data['tracking_url'] = $order->tracking_url;
         $data['tracking_number'] = $order->tracking_number;
         $data['courier_partner'] = $order->courier_partner;
-        $data['has_tracking']    = $order->has_tracking;
+        $data['has_tracking'] = $order->has_tracking;
         $data['shipping_address'] = $order->shippingAddress;
         $data['tax_breakdown'] = json_decode($order->tax_breakdown ?? '{}', true);
 

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\Sku;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -20,12 +22,12 @@ class ProductController extends Controller
         if ($request->has('slugs')) {
             $slugs = explode(',', $request->slugs);
             $query->whereIn('slug', $slugs);
-            if (!empty($slugs)) {
-                $orderByRaw = "CASE slug ";
+            if (! empty($slugs)) {
+                $orderByRaw = 'CASE slug ';
                 foreach ($slugs as $index => $slug) {
-                    $orderByRaw .= "WHEN '" . addslashes($slug) . "' THEN $index ";
+                    $orderByRaw .= "WHEN '".addslashes($slug)."' THEN $index ";
                 }
-                $orderByRaw .= "ELSE " . count($slugs) . " END";
+                $orderByRaw .= 'ELSE '.count($slugs).' END';
                 $query->orderByRaw($orderByRaw);
             }
         }
@@ -35,7 +37,7 @@ class ProductController extends Controller
             $categorySlugs = explode(',', $request->category);
 
             // Fetch the requested categories
-            $categoriesToSearch = \App\Models\Category::whereIn('slug', $categorySlugs)->get();
+            $categoriesToSearch = Category::whereIn('slug', $categorySlugs)->get();
             $allCategoryIds = [];
 
             foreach ($categoriesToSearch as $cat) {
@@ -51,7 +53,7 @@ class ProductController extends Controller
             }
             $allCategoryIds = array_unique($allCategoryIds);
 
-            if (!empty($allCategoryIds)) {
+            if (! empty($allCategoryIds)) {
                 $query->whereHas('categories', function ($q) use ($allCategoryIds) {
                     $q->whereIn('categories.id', $allCategoryIds);
                 });
@@ -133,8 +135,8 @@ class ProductController extends Controller
         // For price sorting, we join the skus table to get the minimum price per product
         if ($sort === 'price_low_high' || $sort === 'price_high_low') {
             $query->addSelect([
-                'min_sku_price' => \App\Models\Sku::selectRaw('min(price)')
-                    ->whereColumn('product_id', 'products.id')
+                'min_sku_price' => Sku::selectRaw('min(price)')
+                    ->whereColumn('product_id', 'products.id'),
             ]);
         }
 
@@ -163,7 +165,7 @@ class ProductController extends Controller
                 break;
             case 'new':
             default:
-                if (!$request->has('slugs')) {
+                if (! $request->has('slugs')) {
                     $query->latest();
                 }
                 break;
@@ -191,7 +193,7 @@ class ProductController extends Controller
                 $current = $cat;
 
                 // Walk up the category tree to find an image
-                while ($current && !$catImage) {
+                while ($current && ! $catImage) {
                     $catImage = $product->categoryMasterImages->where('category_id', $current->id)->first();
                     $current = $current->parent;
                 }

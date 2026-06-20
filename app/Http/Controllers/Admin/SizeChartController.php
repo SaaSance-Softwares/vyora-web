@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Size;
 use App\Models\SizeChart;
 use App\Models\SizeChartData;
 use Illuminate\Http\Request;
@@ -12,12 +13,14 @@ class SizeChartController extends Controller
     public function index()
     {
         $sizeCharts = SizeChart::withCount('products')->latest()->get();
+
         return view('admin.size-charts.index', compact('sizeCharts'));
     }
 
     public function create()
     {
-        $sizes = \App\Models\Size::all();
+        $sizes = Size::all();
+
         return view('admin.size-charts.create', compact('sizes'));
     }
 
@@ -51,7 +54,8 @@ class SizeChartController extends Controller
     public function edit(SizeChart $sizeChart)
     {
         $sizeChart->load('data', 'products');
-        $sizes = \App\Models\Size::all();
+        $sizes = Size::all();
+
         return view('admin.size-charts.edit', compact('sizeChart', 'sizes'));
     }
 
@@ -92,6 +96,7 @@ class SizeChartController extends Controller
     public function destroy(SizeChart $sizeChart)
     {
         $sizeChart->delete();
+
         return redirect()->route('admin.attributes.index')->withFragment('size-chart')->with('success', 'Size chart deleted successfully.');
     }
 }

@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('coupons', function (Blueprint $table) {
             $table->id();
-            
+
             // Basics
             $table->string('code')->unique();
             $table->string('name')->nullable(); // Internal reference name
             $table->enum('type', ['percentage', 'fixed', 'free_shipping', 'bogo'])->default('percentage');
             $table->decimal('discount_amount', 10, 2)->nullable();
-            
+
             // Status & Display
             $table->boolean('is_active')->default(true);
             $table->boolean('is_default_magic')->default(false); // Auto apply logic
@@ -37,11 +37,11 @@ return new class extends Migration
             // Advanced Constraints
             $table->decimal('min_cart_value', 10, 2)->nullable();
             $table->integer('min_item_quantity')->nullable();
-            
+
             $table->boolean('exclude_sale_items')->default(false);
             $table->boolean('first_time_users_only')->default(false);
             $table->boolean('can_combine')->default(false); // Can stack with other coupons
-            
+
             // JSON targets for specific Products or Categories (nullable if storewide)
             $table->json('applicable_product_ids')->nullable();
             $table->json('applicable_category_ids')->nullable();

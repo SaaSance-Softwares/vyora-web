@@ -29,18 +29,20 @@ class DeliveryPinController extends Controller
 
     private function savePins($input, $type)
     {
-        if (empty($input)) return;
+        if (empty($input)) {
+            return;
+        }
 
         // Split by comma, space or newline and filter empties
         $pins = collect(preg_split('/[\s,]+/', $input))
-            ->map(fn($p) => trim($p))
+            ->map(fn ($p) => trim($p))
             ->filter()
             ->unique();
 
         foreach ($pins as $pin) {
             DeliveryPincode::create([
                 'pincode' => $pin,
-                'type' => $type
+                'type' => $type,
             ]);
         }
     }

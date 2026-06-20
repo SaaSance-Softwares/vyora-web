@@ -17,7 +17,7 @@ class TrackingController extends Controller
             'custom_data' => 'nullable|array',
         ]);
 
-        if (!$capiService->isConfigured()) {
+        if (! $capiService->isConfigured()) {
             return response()->json(['success' => false, 'message' => 'CAPI not configured']);
         }
 

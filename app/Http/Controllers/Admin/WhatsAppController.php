@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\WhatsappConversation;
 use App\Models\WhatsappMessage;
+use App\Models\WhatsappTemplate;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 
@@ -13,7 +15,8 @@ class WhatsAppController extends Controller
     public function index()
     {
         $conversations = WhatsappConversation::orderBy('last_message_at', 'desc')->get();
-        $templates = \App\Models\WhatsappTemplate::where('status', 'APPROVED')->get();
+        $templates = WhatsappTemplate::where('status', 'APPROVED')->get();
+
         return view('admin.whatsapp.index', compact('conversations', 'templates'));
     }
 
@@ -23,9 +26,9 @@ class WhatsAppController extends Controller
         $conversation->messages()->where('direction', 'inbound')->where('status', '!=', 'read')->update(['status' => 'read']);
 
         $messages = $conversation->messages()->orderBy('created_at', 'asc')->get();
-        
+
         return response()->json([
-            'messages' => $messages->map(function($msg) {
+            'messages' => $messages->map(function ($msg) {
                 return [
                     'id' => $msg->id,
                     'direction' => $msg->direction,
@@ -34,14 +37,14 @@ class WhatsAppController extends Controller
                     'status' => $msg->status,
                     'created_at' => $msg->created_at->format('M d, H:i'),
                 ];
-            })
+            }),
         ]);
     }
 
     public function sendMessage(Request $request, WhatsappConversation $conversation)
     {
         $request->validate([
-            'message' => 'required|string'
+            'message' => 'required|string',
         ]);
 
         $service = app(WhatsAppService::class);
@@ -57,11 +60,11 @@ class WhatsAppController extends Controller
     public function sendTemplate(Request $request, WhatsappConversation $conversation)
     {
         $request->validate([
-            'template_name' => 'required|string'
+            'template_name' => 'required|string',
         ]);
 
         $service = app(WhatsAppService::class);
-        // By default, manual templates are sent in en_US without components. 
+        // By default, manual templates are sent in en_US without components.
         // More complex manual templates would require a form to fill variables.
         $success = $service->sendTemplate($conversation->phone_number, $request->template_name, 'en_US', []);
 
@@ -76,16 +79,18 @@ class WhatsAppController extends Controller
     {
         $query = $request->get('q');
         $fetchAll = $request->get('all') == '1';
-        
-        if (!$fetchAll && strlen($query) < 2) return response()->json([]);
 
-        $customersQuery = \App\Models\User::where('role', 'user')
+        if (! $fetchAll && strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $customersQuery = User::where('role', 'user')
             ->whereNotNull('phone');
-            
-        if (!$fetchAll) {
-            $customersQuery->where(function($q) use ($query) {
+
+        if (! $fetchAll) {
+            $customersQuery->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('phone', 'like', "%{$query}%");
+                    ->orWhere('phone', 'like', "%{$query}%");
             });
         }
 
@@ -93,11 +98,11 @@ class WhatsAppController extends Controller
             ->orderBy('id', 'desc')
             ->limit($fetchAll ? 50 : 10)
             ->get()
-            ->map(function($user) {
+            ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'phone' => $user->phone
+                    'phone' => $user->phone,
                 ];
             });
 
@@ -124,14 +129,15 @@ class WhatsAppController extends Controller
             'conversation' => [
                 'id' => $conversation->id,
                 'name' => $conversation->customer_name,
-                'phone' => $conversation->phone_number
-            ]
+                'phone' => $conversation->phone_number,
+            ],
         ]);
     }
 
     public function unreadCount()
     {
-        $count = \App\Models\WhatsappMessage::where('direction', 'inbound')->where('status', '!=', 'read')->count();
+        $count = WhatsappMessage::where('direction', 'inbound')->where('status', '!=', 'read')->count();
+
         return response()->json(['count' => $count]);
     }
 }

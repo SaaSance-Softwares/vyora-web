@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Coupon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,9 +16,9 @@ class ProductResource extends JsonResource
         // Fetch Magic Coupon once per request
         static $magicCoupon = null;
         static $magicCouponFetched = false;
-        
-        if (!$magicCouponFetched) {
-            $magicCoupon = \App\Models\Coupon::where('is_active', true)
+
+        if (! $magicCouponFetched) {
+            $magicCoupon = Coupon::where('is_active', true)
                 ->where('is_default_magic', true)
                 ->where(function ($q) {
                     $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
@@ -32,7 +33,7 @@ class ProductResource extends JsonResource
         $couponPrice = null;
         if ($magicCoupon && $minPrice > 0) {
             $isEligible = true;
-            
+
             // Exclude sale items check
             if ($magicCoupon->exclude_sale_items && $mrp > $minPrice) {
                 $isEligible = false;
@@ -45,13 +46,13 @@ class ProductResource extends JsonResource
 
             // Product/Category inclusions and exclusions
             if ($isEligible) {
-                if (!empty($magicCoupon->applicable_product_ids) && !in_array($this->id, $magicCoupon->applicable_product_ids)) {
+                if (! empty($magicCoupon->applicable_product_ids) && ! in_array($this->id, $magicCoupon->applicable_product_ids)) {
                     $isEligible = false;
                 }
-                if ($isEligible && !empty($magicCoupon->excluded_product_ids) && in_array($this->id, $magicCoupon->excluded_product_ids)) {
+                if ($isEligible && ! empty($magicCoupon->excluded_product_ids) && in_array($this->id, $magicCoupon->excluded_product_ids)) {
                     $isEligible = false;
                 }
-                if ($isEligible && !empty($magicCoupon->applicable_category_ids)) {
+                if ($isEligible && ! empty($magicCoupon->applicable_category_ids)) {
                     $productCategoryIds = $this->categories->pluck('id')->toArray();
                     if (empty(array_intersect($productCategoryIds, $magicCoupon->applicable_category_ids))) {
                         $isEligible = false;
@@ -75,7 +76,7 @@ class ProductResource extends JsonResource
                 }
             }
         }
-        
+
         $imageUrl = $this->image_url;
         // The product model lacks video_url accessor, we must construct it if video is just a filename
         $videoUrl = null;
@@ -88,7 +89,7 @@ class ProductResource extends JsonResource
                 if (str_starts_with($cleanPath, 'storage/') || str_starts_with($cleanPath, 'uploads/')) {
                     $videoUrl = asset($cleanPath);
                 } else {
-                    $videoUrl = asset('storage/' . $cleanPath);
+                    $videoUrl = asset('storage/'.$cleanPath);
                 }
             }
         }
@@ -97,17 +98,17 @@ class ProductResource extends JsonResource
             $this->loadMissing('categoryMasterImages');
             $requestedSlugs = explode(',', $request->category);
             $matchedCategories = $this->categories->whereIn('slug', $requestedSlugs);
-            
+
             foreach ($matchedCategories as $cat) {
                 $catImage = null;
                 $current = $cat;
-                
+
                 // Walk up the category tree to find an image/video
-                while ($current && !$catImage) {
+                while ($current && ! $catImage) {
                     $catImage = $this->categoryMasterImages->where('category_id', $current->id)->first();
                     $current = $current->parent;
                 }
-                
+
                 if ($catImage) {
                     if ($catImage->image_path) {
                         $imageUrl = $catImage->image_url;
@@ -134,7 +135,7 @@ class ProductResource extends JsonResource
 
             // Global List Properties mapping securely
             'price' => (float) $minPrice,
-            'price_formatted' => '₹' . number_format($minPrice),
+            'price_formatted' => '₹'.number_format($minPrice),
             'mrp' => (float) $mrp,
             'coupon_price' => $couponPrice ? (float) $couponPrice : null,
             'discount_percentage' => ($mrp > $minPrice) ? round((($mrp - $minPrice) / $mrp) * 100) : 0,
@@ -144,10 +145,10 @@ class ProductResource extends JsonResource
             'is_new' => $this->created_at->diffInDays(now()) < 7,
 
             // Categories
-            'categories' => $this->categories->map(fn($c) => ['id' => $c->id, 'name' => $c->name, 'slug' => $c->slug]),
+            'categories' => $this->categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'slug' => $c->slug]),
 
             // Images — ordered by sort_order via the model relation
-            'images' => $this->images->map(fn($img) => [
+            'images' => $this->images->map(fn ($img) => [
                 'id' => $img->id,
                 'url' => $img->url, // uses accessor
                 'is_primary' => $img->is_primary,
@@ -157,7 +158,7 @@ class ProductResource extends JsonResource
             ]),
 
             // SKUs (Variants)
-            'variants' => $this->skus->map(fn($sku) => [
+            'variants' => $this->skus->map(fn ($sku) => [
                 'id' => $sku->id,
                 'code' => $sku->code ?? $sku->sku,
                 'price' => (float) $sku->price,
@@ -187,7 +188,7 @@ class ProductResource extends JsonResource
                 'title' => $this->seo_title,
                 'description' => $this->seo_description,
             ],
-            
+
             // Size Chart
             'size_chart' => $this->sizeChart->first() ? [
                 'id' => $this->sizeChart->first()->id,
@@ -201,7 +202,7 @@ class ProductResource extends JsonResource
                 'average_rating' => $this->reviews->avg('rating') ? round($this->reviews->avg('rating'), 1) : 0,
                 'total_reviews' => $this->reviews->count(),
             ],
-            'reviews' => $this->reviews->map(fn($r) => [
+            'reviews' => $this->reviews->map(fn ($r) => [
                 'id' => $r->id,
                 'user' => [
                     'name' => $r->user->name,
@@ -210,10 +211,10 @@ class ProductResource extends JsonResource
                 'comment' => $r->comment,
                 'admin_reply' => $r->admin_reply,
                 'created_at' => $r->created_at->format('M d, Y'),
-                'images' => $r->images->map(fn($img) => [
+                'images' => $r->images->map(fn ($img) => [
                     'id' => $img->id,
-                    'url' => str_starts_with($img->image_path, 'storage/') || str_starts_with($img->image_path, 'uploads/') ? asset($img->image_path) : asset('storage/' . $img->image_path),
-                ])
+                    'url' => str_starts_with($img->image_path, 'storage/') || str_starts_with($img->image_path, 'uploads/') ? asset($img->image_path) : asset('storage/'.$img->image_path),
+                ]),
             ])->values(),
         ];
     }

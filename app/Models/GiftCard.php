@@ -28,10 +28,10 @@ class GiftCard extends Model
     ];
 
     protected $casts = [
-        'amount'           => 'float',
-        'used_amount'      => 'float',
+        'amount' => 'float',
+        'used_amount' => 'float',
         'remaining_amount' => 'float',
-        'expires_at'       => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -81,13 +81,13 @@ class GiftCard extends Model
     public function getStatusBadgeAttribute(): array
     {
         return match ($this->status) {
-            'created'        => ['label' => 'Created',        'class' => 'bg-gray-100 text-gray-600'],
-            'assigned'       => ['label' => 'Assigned',       'class' => 'bg-blue-100 text-blue-700'],
-            'active'         => ['label' => 'Active',         'class' => 'bg-green-100 text-green-700'],
+            'created' => ['label' => 'Created',        'class' => 'bg-gray-100 text-gray-600'],
+            'assigned' => ['label' => 'Assigned',       'class' => 'bg-blue-100 text-blue-700'],
+            'active' => ['label' => 'Active',         'class' => 'bg-green-100 text-green-700'],
             'partially_used' => ['label' => 'Partially Used', 'class' => 'bg-yellow-100 text-yellow-700'],
-            'used'           => ['label' => 'Used',           'class' => 'bg-gray-200 text-gray-500'],
-            'withdrawn'      => ['label' => 'Withdrawn',      'class' => 'bg-red-100 text-red-600'],
-            default          => ['label' => ucfirst($this->status), 'class' => 'bg-gray-100 text-gray-500'],
+            'used' => ['label' => 'Used',           'class' => 'bg-gray-200 text-gray-500'],
+            'withdrawn' => ['label' => 'Withdrawn',      'class' => 'bg-red-100 text-red-600'],
+            default => ['label' => ucfirst($this->status), 'class' => 'bg-gray-100 text-gray-500'],
         };
     }
 

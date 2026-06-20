@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Category;
 use App\Models\Collection;
-use Illuminate\Http\Request;
+use App\Models\Product;
 
 class SitemapController extends Controller
 {
@@ -22,12 +21,12 @@ class SitemapController extends Controller
             '/search',
             '/cart',
             '/checkout',
-            '/wishlist'
+            '/wishlist',
         ];
 
         foreach ($staticPages as $page) {
             $url = $xml->addChild('url');
-            $url->addChild('loc', $appUrl . $page);
+            $url->addChild('loc', $appUrl.$page);
             $url->addChild('changefreq', 'daily');
             $url->addChild('priority', $page === '/' ? '1.0' : '0.8');
         }
@@ -36,7 +35,7 @@ class SitemapController extends Controller
         $products = Product::where('is_active', true)->select('slug', 'updated_at')->get();
         foreach ($products as $product) {
             $url = $xml->addChild('url');
-            $url->addChild('loc', $appUrl . '/product/' . $product->slug);
+            $url->addChild('loc', $appUrl.'/product/'.$product->slug);
             $url->addChild('lastmod', $product->updated_at->toAtomString());
             $url->addChild('changefreq', 'daily');
             $url->addChild('priority', '0.9');
@@ -46,7 +45,7 @@ class SitemapController extends Controller
         $categories = Category::select('slug', 'updated_at')->get();
         foreach ($categories as $category) {
             $url = $xml->addChild('url');
-            $url->addChild('loc', $appUrl . '/category/' . $category->slug);
+            $url->addChild('loc', $appUrl.'/category/'.$category->slug);
             $url->addChild('lastmod', $category->updated_at->toAtomString());
             $url->addChild('changefreq', 'weekly');
             $url->addChild('priority', '0.7');
@@ -57,7 +56,7 @@ class SitemapController extends Controller
             $collections = Collection::select('slug', 'updated_at')->get();
             foreach ($collections as $collection) {
                 $url = $xml->addChild('url');
-                $url->addChild('loc', $appUrl . '/collection/' . $collection->slug);
+                $url->addChild('loc', $appUrl.'/collection/'.$collection->slug);
                 $url->addChild('lastmod', $collection->updated_at->toAtomString());
                 $url->addChild('changefreq', 'weekly');
                 $url->addChild('priority', '0.7');
@@ -65,7 +64,7 @@ class SitemapController extends Controller
         }
 
         return response($xml->asXML(), 200, [
-            'Content-Type' => 'application/xml'
+            'Content-Type' => 'application/xml',
         ]);
     }
 }

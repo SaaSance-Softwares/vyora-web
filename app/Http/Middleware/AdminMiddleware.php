@@ -11,14 +11,14 @@ class AdminMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         // Define which roles are considered "Admin"
         $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
 
-        if (!auth()->check() || !in_array(auth()->user()->role, $adminRoles)) {
+        if (! auth()->check() || ! in_array(auth()->user()->role, $adminRoles)) {
             // If they are logged in but not an admin, log them out
             if (auth()->check()) {
                 auth()->logout();

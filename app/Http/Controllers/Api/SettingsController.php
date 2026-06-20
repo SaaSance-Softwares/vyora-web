@@ -12,20 +12,21 @@ class SettingsController extends Controller
         $all = ThemeSetting::all();
 
         // 1. Separate integration settings from general ones
-        $integrationSettings = $all->filter(fn($s) => str_starts_with($s->group, 'integration.'))
+        $integrationSettings = $all->filter(fn ($s) => str_starts_with($s->group, 'integration.'))
             ->groupBy('group')
             ->map(function ($groupSettings) {
                 return $groupSettings->keyBy('key')->map(function ($s) {
                     // Exclude sensitive keys
-                    if (in_array($s->key, ['key_id', 'key_secret', 'smtp_password'])) {
+                    if (in_array($s->key, ['key_id', 'key_secret', 'smtp_password', 'access_token'])) {
                         return null;
                     }
+
                     return $s->value;
                 })->filter()->toArray();
             });
 
         // 2. Map standard settings (excluding integrations handled above)
-        $allData = $all->filter(fn($s) => !str_starts_with($s->group, 'integration.'))
+        $allData = $all->filter(fn ($s) => ! str_starts_with($s->group, 'integration.'))
             ->pluck('value', 'key')->toArray();
 
         if (isset($allData['taxes'])) {
@@ -38,7 +39,7 @@ class SettingsController extends Controller
         // Convert image paths to full URLs
         $imageKeys = ['favicon', 'logo'];
         foreach ($imageKeys as $key) {
-            if (isset($allData[$key]) && !str_starts_with($allData[$key], 'http')) {
+            if (isset($allData[$key]) && ! str_starts_with($allData[$key], 'http')) {
                 $allData[$key] = asset(ltrim($allData[$key], '/'));
             }
         }
@@ -59,14 +60,14 @@ class SettingsController extends Controller
         ];
 
         $policies = $all->whereIn('key', $policyKeys)->pluck('value', 'key');
-        $general  = $all->whereIn('key', $generalKeys)->pluck('value', 'key');
+        $general = $all->whereIn('key', $generalKeys)->pluck('value', 'key');
 
         return response()->json(array_merge(
             $allData,
             [
                 'integrations' => $integrationSettings,
-                'policies'     => $policies,
-                'general'      => $general
+                'policies' => $policies,
+                'general' => $general,
             ]
         ));
     }

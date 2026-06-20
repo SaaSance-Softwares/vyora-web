@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\WhatsappTemplate;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class WhatsAppTemplateController extends Controller
 {
     public function index()
     {
         $templates = WhatsappTemplate::orderBy('name')->get();
+
         return view('admin.whatsapp.templates.index', compact('templates'));
     }
 
@@ -30,7 +30,7 @@ class WhatsAppTemplateController extends Controller
                 WhatsappTemplate::updateOrCreate(
                     [
                         'name' => $template['name'],
-                        'language' => $template['language']
+                        'language' => $template['language'],
                     ],
                     [
                         'category' => $template['category'],
@@ -40,6 +40,7 @@ class WhatsAppTemplateController extends Controller
                 );
                 $syncedCount++;
             }
+
             return back()->with('success', "Successfully synced {$syncedCount} templates from Meta.");
         }
 
@@ -72,7 +73,7 @@ class WhatsAppTemplateController extends Controller
             $header = [
                 'type' => 'HEADER',
                 'format' => 'TEXT',
-                'text' => $request->header_text
+                'text' => $request->header_text,
             ];
             // Check for variable in header
             if (preg_match('/\{\{1\}\}/', $request->header_text) && $request->filled('header_example')) {
@@ -84,9 +85,9 @@ class WhatsAppTemplateController extends Controller
         // Body Component
         $body = [
             'type' => 'BODY',
-            'text' => $request->body_text
+            'text' => $request->body_text,
         ];
-        if (!empty($request->body_examples)) {
+        if (! empty($request->body_examples)) {
             $body['example'] = ['body_text' => [array_values($request->body_examples)]];
         }
         $components[] = $body;
@@ -95,27 +96,27 @@ class WhatsAppTemplateController extends Controller
         if ($request->filled('footer_text')) {
             $components[] = [
                 'type' => 'FOOTER',
-                'text' => $request->footer_text
+                'text' => $request->footer_text,
             ];
         }
 
         // Buttons Component
-        if (!empty($request->buttons)) {
+        if (! empty($request->buttons)) {
             $buttons = [];
             foreach ($request->buttons as $btn) {
                 if ($btn['type'] === 'QUICK_REPLY') {
                     $buttons[] = [
                         'type' => 'QUICK_REPLY',
-                        'text' => $btn['text']
+                        'text' => $btn['text'],
                     ];
                 } elseif ($btn['type'] === 'URL') {
                     $button = [
                         'type' => 'URL',
                         'text' => $btn['text'],
-                        'url' => $btn['url']
+                        'url' => $btn['url'],
                     ];
                     // If URL is dynamic (contains {{1}}), add example
-                    if (preg_match('/\{\{1\}\}/', $btn['url']) && !empty($btn['url_example'])) {
+                    if (preg_match('/\{\{1\}\}/', $btn['url']) && ! empty($btn['url_example'])) {
                         $button['example'] = [$btn['url_example']];
                     }
                     $buttons[] = $button;
@@ -123,14 +124,14 @@ class WhatsAppTemplateController extends Controller
                     $buttons[] = [
                         'type' => 'PHONE_NUMBER',
                         'text' => $btn['text'],
-                        'phone_number' => $btn['phone_number']
+                        'phone_number' => $btn['phone_number'],
                     ];
                 }
             }
-            if (!empty($buttons)) {
+            if (! empty($buttons)) {
                 $components[] = [
                     'type' => 'BUTTONS',
-                    'buttons' => $buttons
+                    'buttons' => $buttons,
                 ];
             }
         }
@@ -139,7 +140,7 @@ class WhatsAppTemplateController extends Controller
             'name' => $request->name,
             'language' => $request->language,
             'category' => $request->category,
-            'components' => $components
+            'components' => $components,
         ];
 
         $response = $service->createTemplateToMeta($payload);
@@ -148,8 +149,8 @@ class WhatsAppTemplateController extends Controller
             return back()->with('error', $response['error'])->withInput();
         }
 
-        $service->getTemplatesFromMeta(); 
-        
+        $service->getTemplatesFromMeta();
+
         return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template created successfully and submitted to Meta for approval. Please Sync to see updates.');
     }
 }

@@ -16,6 +16,7 @@ class AdminSettingController extends Controller
     public function index()
     {
         $user = auth()->user();
+
         return view('admin.settings.index', compact('user'));
     }
 
@@ -54,19 +55,19 @@ class AdminSettingController extends Controller
     {
         $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
         $users = User::whereIn('role', $adminRoles)->get();
-        
+
         $roles = [
             'administrator' => 'Administrator (Full Access)',
             'editor' => 'Editor (Content & Pages)',
             'manager' => 'Manager (Orders & Inventory)',
-            'customer_service' => 'Customer Service (Support & Orders)'
+            'customer_service' => 'Customer Service (Support & Orders)',
         ];
 
         $modules = [
             'Inventory' => 'Inventory (Products, Categories, Size Charts, Bulk Upload)',
             'Marketing & Sales' => 'Marketing & Sales (Orders, Coupons, Gift Cards)',
             'Customize Store' => 'Customize Store (Pages, Navbar, Theme, Brand, Policies)',
-            'Settings' => 'Settings (Store, Taxes, Delivery PINs, Integrations)'
+            'Settings' => 'Settings (Store, Taxes, Delivery PINs, Integrations)',
         ];
 
         return view('admin.settings.users', compact('users', 'roles', 'modules'));

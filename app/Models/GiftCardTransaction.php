@@ -20,7 +20,7 @@ class GiftCardTransaction extends Model
     ];
 
     protected $casts = [
-        'amount_used'      => 'float',
+        'amount_used' => 'float',
         'transaction_date' => 'datetime',
     ];
 
@@ -42,12 +42,12 @@ class GiftCardTransaction extends Model
     public function getTypeLabelAttribute(): string
     {
         return match ($this->type) {
-            'creation'   => 'Card Created',
-            'purchase'   => 'Purchased',
+            'creation' => 'Card Created',
+            'purchase' => 'Purchased',
             'assignment' => 'Assigned',
             'redemption' => 'Redeemed',
             'withdrawal' => 'Withdrawn by Admin',
-            default      => ucfirst($this->type),
+            default => ucfirst($this->type),
         };
     }
 }

@@ -20,11 +20,11 @@ class ReviewController extends Controller
     public function reply(Request $request, Review $review)
     {
         $request->validate([
-            'admin_reply' => 'nullable|string'
+            'admin_reply' => 'nullable|string',
         ]);
 
         $review->update([
-            'admin_reply' => $request->admin_reply
+            'admin_reply' => $request->admin_reply,
         ]);
 
         return back()->with('success', 'Reply updated successfully.');
@@ -39,7 +39,7 @@ class ReviewController extends Controller
                 @unlink($path);
             }
         }
-        
+
         $review->delete();
 
         return back()->with('success', 'Review deleted successfully.');

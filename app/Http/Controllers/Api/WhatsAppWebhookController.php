@@ -7,7 +7,6 @@ use App\Models\ThemeSetting;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
@@ -27,6 +26,7 @@ class WhatsAppWebhookController extends Controller
             if ($mode === 'subscribe' && $token === $savedToken) {
                 return response($challenge, 200);
             }
+
             return response('Forbidden', 403);
         }
 
@@ -41,11 +41,11 @@ class WhatsAppWebhookController extends Controller
         $payload = $request->all();
 
         if (isset($payload['object']) && $payload['object'] === 'whatsapp_business_account') {
-            
+
             foreach ($payload['entry'] as $entry) {
                 foreach ($entry['changes'] as $change) {
                     if ($change['value']['messaging_product'] === 'whatsapp') {
-                        
+
                         // Check if it's an incoming message
                         if (isset($change['value']['messages'])) {
                             $messages = $change['value']['messages'];
@@ -64,6 +64,7 @@ class WhatsAppWebhookController extends Controller
                     }
                 }
             }
+
             return response('EVENT_RECEIVED', 200);
         }
 

@@ -16,24 +16,26 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'max:128'],
         ]);
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
-            
-            if (!in_array($user->role, $adminRoles)) {
+
+            if (! in_array($user->role, $adminRoles)) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+
                 return back()->withErrors([
                     'email' => 'Access Denied: You do not have administrative privileges.',
                 ])->onlyInput('email');
             }
 
             $request->session()->regenerate();
+
             return redirect()->intended(route('admin.dashboard'));
         }
 
@@ -47,6 +49,7 @@ class LoginController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/login');
     }
 }

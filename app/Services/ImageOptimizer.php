@@ -2,28 +2,28 @@
 
 namespace App\Services;
 
-use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Laravel\Facades\Image;
 
 class ImageOptimizer
 {
     /**
      * Store and Optimize an Image.
-     * 
+     *
      * 1. Reads the file.
      * 2. Converts to WebP.
      * 3. Saves to 'public/products' directory.
      * 4. Returns relative path.
-     * 
+     *
      * Note: Since we are using Storage::put, Laravel handles the file handling.
      * But to convert, we need to process the stream.
      */
     public function storeAndOptimize(UploadedFile $file, $directory = 'products')
     {
-        $filename = Str::uuid() . '.webp';
-        $path = $directory . '/' . $filename;
+        $filename = Str::uuid().'.webp';
+        $path = $directory.'/'.$filename;
 
         // Read image
         $image = Image::read($file);

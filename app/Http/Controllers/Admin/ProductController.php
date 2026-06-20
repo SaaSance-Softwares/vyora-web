@@ -3,19 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Collection;
+use App\Models\Color;
+use App\Models\Product;
+use App\Models\ProductType;
+use App\Models\Size;
+use App\Models\SizeChart;
+use App\Models\Sku;
+use App\Models\ThemeSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        $products = \App\Models\Product::with('skus')->latest()->paginate(10);
-        
+        $products = Product::with('skus')->latest()->paginate(10);
+
         $stats = [
-            'total' => \App\Models\Product::count(),
-            'active' => \App\Models\Product::where('is_active', true)->count(),
-            'low_stock' => \App\Models\Sku::where('stock', '<=', 5)->count(),
-            'out_of_stock' => \App\Models\Sku::where('stock', 0)->count(),
+            'total' => Product::count(),
+            'active' => Product::where('is_active', true)->count(),
+            'low_stock' => Sku::where('stock', '<=', 5)->count(),
+            'out_of_stock' => Sku::where('stock', 0)->count(),
         ];
 
         return view('admin.products.index', compact('products', 'stats'));
@@ -24,14 +35,15 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('query');
-        $products = \App\Models\Product::where('name', 'like', "%{$query}%")
+        $products = Product::where('name', 'like', "%{$query}%")
             ->select('id', 'name', 'preview_image')
             ->limit(20)
             ->get();
 
         // Transform image URL
         $products->transform(function ($product) {
-            $product->image_url = $product->preview_image ? '/' . $product->preview_image : null;
+            $product->image_url = $product->preview_image ? '/'.$product->preview_image : null;
+
             return $product;
         });
 
@@ -40,14 +52,14 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = \App\Models\Category::whereNull('parent_id')->with('children.children')->get();
-        $collections = \App\Models\Collection::where('is_active', true)->get();
-        $productTypes = \App\Models\ProductType::all();
-        $sizeCharts = \App\Models\SizeChart::where('is_active', true)->orderBy('name')->get();
-        $colors = \App\Models\Color::orderBy('name')->get();
-        $sizes = \App\Models\Size::orderBy('name')->get();
+        $categories = Category::whereNull('parent_id')->with('children.children')->get();
+        $collections = Collection::where('is_active', true)->get();
+        $productTypes = ProductType::all();
+        $sizeCharts = SizeChart::where('is_active', true)->orderBy('name')->get();
+        $colors = Color::orderBy('name')->get();
+        $sizes = Size::orderBy('name')->get();
 
-        $taxRows = \App\Models\ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
+        $taxRows = ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
         $taxes = json_decode($taxRows->get('taxes')?->value ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true);
 
         return view('admin.products.create', compact('categories', 'collections', 'productTypes', 'sizeCharts', 'colors', 'sizes', 'taxes'));
@@ -57,7 +69,7 @@ class ProductController extends Controller
     {
         // Enforce slug formatting
         $request->merge([
-            'slug' => \Illuminate\Support\Str::slug($request->slug ?? $request->name)
+            'slug' => Str::slug($request->slug ?? $request->name),
         ]);
 
         $request->validate([
@@ -86,10 +98,10 @@ class ProductController extends Controller
         // Handle preview image upload
         if ($request->hasFile('preview_image')) {
             $file = $request->file('preview_image');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $relativePath = "storage/products/preview";
+            $fileName = time().'_'.$file->getClientOriginalName();
+            $relativePath = 'storage/products/preview';
             $destinationPath = public_path($relativePath);
-            if (!file_exists($destinationPath)) {
+            if (! file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
 
@@ -97,7 +109,7 @@ class ProductController extends Controller
             $data['preview_image'] = "{$relativePath}/{$fileName}";
         }
 
-        $product = \App\Models\Product::create($data);
+        $product = Product::create($data);
 
         // Sync associations
         if ($request->has('categories')) {
@@ -115,10 +127,10 @@ class ProductController extends Controller
         // Create new SKUs if provided
         if ($request->has('new_skus')) {
             foreach ($request->new_skus as $newSku) {
-                if (!empty($newSku['code']) && isset($newSku['stock'])) {
+                if (! empty($newSku['code']) && isset($newSku['stock'])) {
                     $sizeId = null;
-                    if (!empty($newSku['size'])) {
-                        $size = \App\Models\Size::firstOrCreate(
+                    if (! empty($newSku['size'])) {
+                        $size = Size::firstOrCreate(
                             ['name' => trim($newSku['size'])],
                             ['code' => strtoupper(trim($newSku['size']))]
                         );
@@ -128,7 +140,7 @@ class ProductController extends Controller
                     $product->skus()->create([
                         'code' => $newSku['code'],
                         'price' => $newSku['price'] ?: 0,
-                        'mrp' => !empty($newSku['mrp']) ? $newSku['mrp'] : null,
+                        'mrp' => ! empty($newSku['mrp']) ? $newSku['mrp'] : null,
                         'stock' => $newSku['stock'],
                         'color_id' => $newSku['color_id'] ?: null,
                         'size_id' => $sizeId,
@@ -138,12 +150,13 @@ class ProductController extends Controller
         }
 
         $tab = $request->input('redirect_tab', 'info');
+
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'Product created successfully')
             ->withFragment($tab);
     }
 
-    public function edit(\App\Models\Product $product)
+    public function edit(Product $product)
     {
         $product->load([
             'skus.color',
@@ -156,12 +169,12 @@ class ProductController extends Controller
             'images.color',
             'productType',
             'categoryMasterImages',
-            'shortlinks'
+            'shortlinks',
         ]);
 
-        $categories = \App\Models\Category::whereNull('parent_id')->with('children.children')->get();
-        $collections = \App\Models\Collection::where('is_active', true)->get();
-        $productTypes = \App\Models\ProductType::all();
+        $categories = Category::whereNull('parent_id')->with('children.children')->get();
+        $collections = Collection::where('is_active', true)->get();
+        $productTypes = ProductType::all();
 
         $productParentCategories = $product->categories->whereNull('parent_id');
 
@@ -172,28 +185,28 @@ class ProductController extends Controller
         $mediaByColor = $product->images->groupBy('color_id');
 
         // Get all active size charts
-        $sizeCharts = \App\Models\SizeChart::where('is_active', true)->orderBy('name')->get();
+        $sizeCharts = SizeChart::where('is_active', true)->orderBy('name')->get();
 
         // Get available attributes for new variants
-        $colors = \App\Models\Color::orderBy('name')->get();
-        $sizes = \App\Models\Size::orderBy('name')->get();
+        $colors = Color::orderBy('name')->get();
+        $sizes = Size::orderBy('name')->get();
 
-        $taxRows = \App\Models\ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
+        $taxRows = ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
         $taxes = json_decode($taxRows->get('taxes')?->value ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true);
 
         return view('admin.products.edit', compact('product', 'categories', 'collections', 'productTypes', 'productColors', 'mediaByColor', 'sizeCharts', 'colors', 'sizes', 'productParentCategories', 'taxes'));
     }
 
-    public function update(Request $request, \App\Models\Product $product)
+    public function update(Request $request, Product $product)
     {
         // Enforce slug formatting
         $request->merge([
-            'slug' => \Illuminate\Support\Str::slug($request->slug)
+            'slug' => Str::slug($request->slug),
         ]);
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'required|string|max:255|unique:products,slug,'.$product->id,
             'skus' => 'nullable|array',
             'skus.*.code' => 'required|string|max:255',
             'skus.*.price' => 'required|numeric|min:0',
@@ -235,20 +248,20 @@ class ProductController extends Controller
             }
 
             $file = $request->file('preview_image');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $relativePath = "storage/products/preview";
+            $fileName = time().'_'.$file->getClientOriginalName();
+            $relativePath = 'storage/products/preview';
             $destinationPath = public_path($relativePath);
-            if (!file_exists($destinationPath)) {
+            if (! file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
 
             $file->move($destinationPath, $fileName);
             $data['preview_image'] = "{$relativePath}/{$fileName}";
-        } elseif ($request->file('preview_image') && !$request->file('preview_image')->isValid()) {
+        } elseif ($request->file('preview_image') && ! $request->file('preview_image')->isValid()) {
             return redirect()->back()
                 ->withInput()
                 ->withFragment($request->input('redirect_tab', 'media'))
-                ->withErrors(['preview_image' => 'Upload failed: ' . $request->file('preview_image')->getErrorMessage()]);
+                ->withErrors(['preview_image' => 'Upload failed: '.$request->file('preview_image')->getErrorMessage()]);
         }
 
         $product->update($data);
@@ -280,15 +293,15 @@ class ProductController extends Controller
                 $sku = $product->skus()->find($skuId);
                 if ($sku) {
                     $skuDataToUpdate = [
-                        'code'        => $skuData['code'],
-                        'price'       => $skuData['price'],
-                        'stock'       => $skuData['stock'],
-                        'design_sku'  => $skuData['design_sku']  ?? null,
+                        'code' => $skuData['code'],
+                        'price' => $skuData['price'],
+                        'stock' => $skuData['stock'],
+                        'design_sku' => $skuData['design_sku'] ?? null,
                         'product_sku' => $skuData['product_sku'] ?? null,
-                        'weight'      => isset($skuData['weight']) && $skuData['weight'] !== '' ? $skuData['weight'] : null,
-                        'width'       => isset($skuData['width']) && $skuData['width'] !== '' ? $skuData['width'] : null,
-                        'height'      => isset($skuData['height']) && $skuData['height'] !== '' ? $skuData['height'] : null,
-                        'length'      => isset($skuData['length']) && $skuData['length'] !== '' ? $skuData['length'] : null,
+                        'weight' => isset($skuData['weight']) && $skuData['weight'] !== '' ? $skuData['weight'] : null,
+                        'width' => isset($skuData['width']) && $skuData['width'] !== '' ? $skuData['width'] : null,
+                        'height' => isset($skuData['height']) && $skuData['height'] !== '' ? $skuData['height'] : null,
+                        'length' => isset($skuData['length']) && $skuData['length'] !== '' ? $skuData['length'] : null,
                     ];
                     if (array_key_exists('mrp', $skuData)) {
                         $skuDataToUpdate['mrp'] = $skuData['mrp'] !== null && $skuData['mrp'] !== '' ? $skuData['mrp'] : null;
@@ -302,11 +315,11 @@ class ProductController extends Controller
         if ($request->has('new_skus')) {
             foreach ($request->new_skus as $newSku) {
                 // Validate basic required fields for a new SKU
-                if (!empty($newSku['code']) && isset($newSku['stock'])) {
+                if (! empty($newSku['code']) && isset($newSku['stock'])) {
                     // Handle manual size entry - find or create the size
                     $sizeId = null;
-                    if (!empty($newSku['size'])) {
-                        $size = \App\Models\Size::firstOrCreate(
+                    if (! empty($newSku['size'])) {
+                        $size = Size::firstOrCreate(
                             ['name' => trim($newSku['size'])],
                             ['code' => strtoupper(trim($newSku['size']))]
                         );
@@ -314,33 +327,35 @@ class ProductController extends Controller
                     }
 
                     $product->skus()->create([
-                        'code'        => $newSku['code'],
-                        'price'       => $newSku['price'] ?: 0,
-                        'mrp'         => !empty($newSku['mrp']) ? $newSku['mrp'] : null,
-                        'stock'       => $newSku['stock'],
-                        'color_id'    => $newSku['color_id'] ?: null,
-                        'size_id'     => $sizeId,
-                        'design_sku'  => $newSku['design_sku']  ?? null,
+                        'code' => $newSku['code'],
+                        'price' => $newSku['price'] ?: 0,
+                        'mrp' => ! empty($newSku['mrp']) ? $newSku['mrp'] : null,
+                        'stock' => $newSku['stock'],
+                        'color_id' => $newSku['color_id'] ?: null,
+                        'size_id' => $sizeId,
+                        'design_sku' => $newSku['design_sku'] ?? null,
                         'product_sku' => $newSku['product_sku'] ?? null,
-                        'weight'      => isset($newSku['weight']) && $newSku['weight'] !== '' ? $newSku['weight'] : null,
-                        'width'       => isset($newSku['width']) && $newSku['width'] !== '' ? $newSku['width'] : null,
-                        'height'      => isset($newSku['height']) && $newSku['height'] !== '' ? $newSku['height'] : null,
-                        'length'      => isset($newSku['length']) && $newSku['length'] !== '' ? $newSku['length'] : null,
+                        'weight' => isset($newSku['weight']) && $newSku['weight'] !== '' ? $newSku['weight'] : null,
+                        'width' => isset($newSku['width']) && $newSku['width'] !== '' ? $newSku['width'] : null,
+                        'height' => isset($newSku['height']) && $newSku['height'] !== '' ? $newSku['height'] : null,
+                        'length' => isset($newSku['length']) && $newSku['length'] !== '' ? $newSku['length'] : null,
                     ]);
                 }
             }
         }
 
         $tab = $request->input('redirect_tab', 'info');
+
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'Product updated successfully')
             ->withFragment($tab);
     }
-    public function destroy(\App\Models\Product $product)
+
+    public function destroy(Product $product)
     {
         // Check if product has any orders
         // Assuming relationship or direct query. Let's use direct query to be safe if relation is missing.
-        $hasOrders = \Illuminate\Support\Facades\DB::table('order_items')->where('product_id', $product->id)->exists();
+        $hasOrders = DB::table('order_items')->where('product_id', $product->id)->exists();
 
         if ($hasOrders) {
             return back()->with('error', 'Cannot delete product: There are existing purchases associated with it.');

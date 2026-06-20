@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
+use App\Models\ThemeSetting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,9 +32,12 @@ class AppServiceProvider extends ServiceProvider
                         ->get('https://api.github.com/repos/WitReach/vyora-api/releases/latest');
                     if ($response->successful()) {
                         $release = $response->json();
+
                         return str_replace('v', '', $release['tag_name'] ?? '1.0.0');
                     }
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                }
+
                 return config('app.version', '1.0.0');
             });
 
@@ -40,17 +46,17 @@ class AppServiceProvider extends ServiceProvider
         });
 
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('theme_settings')) {
-                $enabled = \App\Models\ThemeSetting::where('group', 'integration.algolia')->where('key', 'enabled')->value('value');
+            if (Schema::hasTable('theme_settings')) {
+                $enabled = ThemeSetting::where('group', 'integration.algolia')->where('key', 'enabled')->value('value');
                 if ($enabled === '1') {
-                    $appId = \App\Models\ThemeSetting::where('group', 'integration.algolia')->where('key', 'app_id')->value('value');
-                    $apiKey = \App\Models\ThemeSetting::where('group', 'integration.algolia')->where('key', 'admin_api_key')->value('value');
-                    
+                    $appId = ThemeSetting::where('group', 'integration.algolia')->where('key', 'app_id')->value('value');
+                    $apiKey = ThemeSetting::where('group', 'integration.algolia')->where('key', 'admin_api_key')->value('value');
+
                     if ($appId && $apiKey) {
                         try {
-                            $appId = \Illuminate\Support\Facades\Crypt::decryptString($appId);
-                            $apiKey = \Illuminate\Support\Facades\Crypt::decryptString($apiKey);
-                            
+                            $appId = Crypt::decryptString($appId);
+                            $apiKey = Crypt::decryptString($apiKey);
+
                             config([
                                 'scout.driver' => 'algolia',
                                 'scout.algolia.id' => $appId,
