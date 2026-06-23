@@ -40,6 +40,21 @@ class ShortlinkController extends Controller
             $url .= $separator.http_build_query($params);
         }
 
-        return redirect()->away($url);
+        $canonicalUrl = $shortlink->actual_link;
+
+        $meta = null;
+        if ($shortlink->product) {
+            $meta = [
+                'title' => $shortlink->product->seo_title ?: $shortlink->product->name,
+                'description' => $shortlink->product->seo_description ?: $shortlink->product->short_description,
+                'image' => $shortlink->product->image_url,
+            ];
+        }
+
+        return view('frontend.shortlink', [
+            'redirectUrl' => $url,
+            'canonicalUrl' => $canonicalUrl,
+            'meta' => $meta
+        ]);
     }
 }
