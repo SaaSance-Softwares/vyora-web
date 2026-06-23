@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import api from '@/lib/api';
 
 export interface CartItem {
     skuId: number;
@@ -27,6 +28,9 @@ interface CartState {
     total: () => number;
     appliedCoupon: { code: string; discountAmount: number } | null;
     setAppliedCoupon: (coupon: { code: string; discountAmount: number } | null) => void;
+    cartToken: string;
+    guestEmail: string | null;
+    setGuestEmail: (email: string | null) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -34,7 +38,10 @@ export const useCartStore = create<CartState>()(
         (set, get) => ({
             items: [],
             appliedCoupon: null,
+            cartToken: crypto.randomUUID(),
+            guestEmail: null,
 
+            setGuestEmail: (email) => set({ guestEmail: email }),
             setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
             addItem: (newItem) => set((state) => {
@@ -73,3 +80,19 @@ export const useCartStore = create<CartState>()(
         }
     )
 );
+
+// Subscribe to store changes and sync with backend
+let syncTimeout: any;
+useCartStore.subscribe((state, prevState) => {
+    // Only sync if items or guestEmail changed
+    if (state.items !== prevState.items || state.guestEmail !== prevState.guestEmail) {
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            api.post('/api/cart/sync', {
+                cart_token: state.cartToken,
+                guest_email: state.guestEmail,
+                items: state.items
+            }).catch(e => console.error("Cart sync failed:", e));
+        }, 1000); // debounce 1 second
+    }
+});

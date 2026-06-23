@@ -298,6 +298,9 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
         // Customers
         Route::resource('customers', CustomerController::class)->only(['index', 'show']);
 
+        // Abandoned Carts
+        Route::get('/abandoned-carts', [\App\Http\Controllers\Admin\AbandonedCartController::class, 'index'])->name('abandoned-carts.index');
+
         // Reviews
         Route::get('/reviews', [App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('reviews.index');
         Route::post('/reviews/{review}/reply', [App\Http\Controllers\Admin\ReviewController::class, 'reply'])->name('reviews.reply');
@@ -307,6 +310,8 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
         Route::prefix('settings')->name('settings.')->group(function () {
             Route::get('/admin', [AdminSettingController::class, 'index'])->name('index');
             Route::put('/admin', [AdminSettingController::class, 'update'])->name('update');
+
+            Route::get('/cron', [\App\Http\Controllers\Admin\CronJobController::class, 'index'])->name('cron');
 
             Route::get('/users', [AdminSettingController::class, 'users'])->name('users');
             Route::post('/users', [AdminSettingController::class, 'storeUser'])->name('users.store');

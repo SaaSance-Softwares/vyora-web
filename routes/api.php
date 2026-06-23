@@ -107,3 +107,4 @@ Route::get('/maintenance-status', function () {
 
 // Delivery Pincode Check
 Route::post('/check-delivery', [DeliveryPinApiController::class, 'check']);
+Route::post('/cart/sync', [\App\Http\Controllers\Api\CartController::class, 'sync']);

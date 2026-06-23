@@ -15,3 +15,8 @@ Artisan::command('debug:cats', function () {
         'images' => $product->categoryMasterImages->toArray(),
     ], JSON_PRETTY_PRINT));
 });
+
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('cart:abandoned-emails')->everyFifteenMinutes();
+

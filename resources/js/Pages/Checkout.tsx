@@ -215,6 +215,13 @@ export default function CheckoutPage() {
         }).catch(() => { });
     }, []);
 
+    // Sync guest email to cart store for abandoned carts
+    useEffect(() => {
+        if (guest.email && guest.email.includes('@')) {
+            cart.setGuestEmail(guest.email);
+        }
+    }, [guest.email]);
+
     const handleApplyCoupon = async (code: string) => {
         const c = (code || couponInput).trim().toUpperCase();
         if (!c) return;
