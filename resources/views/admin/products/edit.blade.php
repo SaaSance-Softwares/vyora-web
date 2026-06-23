@@ -828,6 +828,9 @@
                             const errorMsg = data.errors && Object.values(data.errors)[0] ? Object.values(data.errors)[0][0] : data.message;
                             alert('Validation failed: ' + errorMsg);
                             overlay.style.opacity = '0';
+                        } else if (xhr.status === 413) {
+                            alert('Upload failed: The file is too large. It exceeds the server\'s maximum upload limit (e.g. 2MB or 8MB).');
+                            overlay.style.opacity = '0';
                         } else {
                             alert('Upload failed: ' + (data.message || xhr.statusText));
                             overlay.style.opacity = '0';
@@ -917,6 +920,9 @@
                             const errorMsg = data.errors && Object.values(data.errors)[0] ? Object.values(data.errors)[0][0] : data.message;
                             alert('Validation failed: ' + errorMsg);
                             overlay.style.opacity = '0';
+                        } else if (xhr.status === 413) {
+                            alert('Upload failed: The file is too large. It exceeds the server\'s maximum upload limit (e.g. 2MB or 8MB).');
+                            overlay.style.opacity = '0';
                         } else {
                             alert('Upload failed: ' + (data.message || xhr.statusText));
                             overlay.style.opacity = '0';
@@ -977,6 +983,9 @@
                         } else if (xhr.status === 422) {
                             const errorMsg = data.errors && Object.values(data.errors)[0] ? Object.values(data.errors)[0][0] : data.message;
                             alert('Validation failed: ' + errorMsg);
+                            overlay.style.opacity = '0';
+                        } else if (xhr.status === 413) {
+                            alert('Upload failed: The file is too large. It exceeds the server\'s maximum upload limit (e.g. 2MB or 8MB).');
                             overlay.style.opacity = '0';
                         } else {
                             alert('Upload failed: ' + (data.message || xhr.statusText));
