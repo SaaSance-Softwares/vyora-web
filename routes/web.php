@@ -116,6 +116,8 @@ Route::prefix('install')->name('install.')->group(function () {
 });
 
 // Frontend Auth Routes
+Route::get('/s/{short_code}', [App\Http\Controllers\Frontend\ShortlinkController::class, 'resolve'])->name('frontend.shortlink.resolve');
+
 Route::get('/login', function () {
     return Inertia::render('Auth/Login');
 })->name('login');
