@@ -444,14 +444,27 @@
                 activateTab('info');
             }
 
-            // Slug formatting
+            // Slug formatting and auto-generation
+            const nameInput = document.querySelector('input[name="name"]');
             const slugInput = document.querySelector('input[name="slug"]');
+            let isSlugEdited = false;
+
             if (slugInput) {
                 slugInput.addEventListener('input', function (e) {
+                    isSlugEdited = true;
                     let value = e.target.value;
-                    value = value.toLowerCase();
-                    value = value.replace(/\\s+/g, '-');
+                    value = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                     e.target.value = value;
+                });
+            }
+
+            if (nameInput && slugInput) {
+                nameInput.addEventListener('input', function (e) {
+                    if (!isSlugEdited) {
+                        let value = e.target.value;
+                        value = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        slugInput.value = value;
+                    }
                 });
             }
 
