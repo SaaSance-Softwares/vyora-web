@@ -26,7 +26,7 @@ class ProductMediaController extends Controller
         }
 
         $file = $request->file('file');
-        $fileName = time().'_'.$file->getClientOriginalName();
+        $fileName = time().'_'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
         $relativePath = 'uploads/products/preview'; // Use uploads for consistency
 
         $backendPath = public_path($relativePath);
@@ -38,6 +38,13 @@ class ProductMediaController extends Controller
 
         // Move to backend
         $file->move($backendPath, $fileName);
+
+        try {
+            $image = Image::read($backendPath.'/'.$fileName);
+            $image->toWebp(85)->save($backendPath.'/'.$fileName);
+        } catch (\Exception $e) {
+            \Log::warning('WebP conversion failed: '.$e->getMessage());
+        }
 
         $product->update(['preview_image' => "/{$relativePath}/{$fileName}"]);
 
@@ -113,8 +120,15 @@ class ProductMediaController extends Controller
                 $file->move($backendPath, $fileName);
             }
         } else {
-            $fileName = time().'_'.$file->getClientOriginalName();
+            $fileName = time().'_'.pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.webp';
             $file->move($backendPath, $fileName);
+
+            try {
+                $image = Image::read($backendPath.'/'.$fileName);
+                $image->toWebp(85)->save($backendPath.'/'.$fileName);
+            } catch (\Exception $e) {
+                \Log::warning('WebP conversion failed: '.$e->getMessage());
+            }
         }
 
         ProductCategoryMasterImage::updateOrCreate(
