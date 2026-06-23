@@ -1084,9 +1084,10 @@
                                         class="text-sm font-semibold text-gray-700 ml-1">Object
                                         Fit</label>
                                     <select
-                                        class="split-object-fit w-full bg-white border border-gray-100 rounded px-4 py-3 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none appearance-none">
-                                        <option value="cover">Cover</option>
-                                        <option value="contain">Contain</option>
+                                        class="split-object-fit w-full bg-white border border-gray-100 rounded px-4 py-3 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none appearance-none cursor-pointer">
+                                        <option value="cover">Fill Container (Cover)</option>
+                                        <option value="contain">Show Entire Image (Contain)</option>
+                                        <option value="none">Original Size (None)</option>
                                     </select>
                                 </div>
                             </div>

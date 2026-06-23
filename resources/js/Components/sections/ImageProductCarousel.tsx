@@ -81,7 +81,12 @@ export default function ImageProductCarousel({ data, isFluid, settings }: { data
                 {/* Column 2: Product Carousel */}
                 <div className="w-full relative px-2">
                     <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Feature Collection</h3>
+                        <h3 
+                            className={`text-2xl font-bold tracking-tight ${data.text_color ? '' : 'text-gray-900'}`}
+                            style={data.text_color ? { color: data.text_color } : undefined}
+                        >
+                            Feature Collection
+                        </h3>
                         <div className="flex items-center gap-2">
                             <button className={`prev-${sectionId} w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-black hover:text-white hover:border-black transition-all`}>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>

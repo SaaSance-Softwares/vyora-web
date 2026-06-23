@@ -4,7 +4,7 @@ export default function SplitBanner({ data, isFluid, sectionBg }: { data: any; i
     if (!data?.image && !data?.title) return null;
 
     const imageOnRight = data.image_side === 'right';
-    const fitClass = data.object_fit === 'contain' ? 'object-contain' : 'object-cover';
+    const fitClass = data.object_fit === 'contain' ? 'object-contain' : (data.object_fit === 'none' ? 'object-none' : 'object-cover');
     const textBg = sectionBg || data.text_bg || data.text_bg_color || '#ffffff';
 
     const textSide = (

@@ -11,7 +11,7 @@ export default function FeatureHighlights({ data, isFluid, sectionBg }: { data: 
     const descColor = data.text_color ? textColor : undefined;
 
     return (
-        <section className="border-y border-gray-100" style={{ backgroundColor: sectionBg || '#ffffff' }}>
+        <section style={{ backgroundColor: sectionBg || '#ffffff' }}>
             <div className={containerClass}>
                 <div className={`grid ${gridCols} gap-6 md:gap-10`}>
                     {data.items.map((item: any, idx: number) => (

@@ -87,3 +87,8 @@ a, p, span, li, td, th, blockquote, figcaption {
   animation: float 6s ease-in-out infinite;
 }
 
+
+/* Quill alignments */
+.ql-align-center { text-align: center; }
+.ql-align-right { text-align: right; }
+.ql-align-justify { text-align: justify; }
