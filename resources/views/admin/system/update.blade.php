@@ -140,7 +140,7 @@
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-gray-900 leading-tight">Dope Style Platform</h3>
-                            <p class="text-xs text-gray-500 font-medium mt-1">WitReach/vyora-api</p>
+                            <p class="text-xs text-gray-500 font-medium mt-1">SaaSance-Softwares/vyora-web</p>
                         </div>
                     </div>
                     <div class="px-4 py-1.5 bg-gray-100 border border-gray-200/60 rounded-full text-xs font-bold text-gray-600 shadow-sm">v{{ $backendCurrent }}</div>

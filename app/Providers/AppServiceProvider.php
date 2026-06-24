@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
             $latestVersion = Cache::remember('vyora_latest_version', 43200, function () {
                 try {
                     $response = Http::timeout(5)->withHeaders(['Accept' => 'application/vnd.github.v3+json'])
-                        ->get('https://api.github.com/repos/WitReach/vyora-api/releases/latest');
+                        ->get('https://api.github.com/repos/SaaSance-Softwares/vyora-web/releases/latest');
                     if ($response->successful()) {
                         $release = $response->json();
 
