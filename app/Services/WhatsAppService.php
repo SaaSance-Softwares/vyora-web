@@ -219,6 +219,7 @@ class WhatsAppService
 
     /**
      * Helper to send event-based WhatsApp templates
+     */
     public function sendEventWhatsApp(string $event, $target)
     {
         if (! $this->isEnabled()) {
