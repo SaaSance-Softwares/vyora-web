@@ -45,7 +45,7 @@ export default function AuthModal() {
 
             {/* Modal Card */}
             <div 
-                className="relative w-full max-w-[440px] bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300"
+                className="relative w-full max-w-[440px] bg-white shadow-2xl animate-in fade-in zoom-in duration-300"
                 style={{ 
                     borderRadius: authAppearance.border_radius ? `${authAppearance.border_radius}px` : '24px',
                     borderColor: authAppearance.border_color,
@@ -60,7 +60,7 @@ export default function AuthModal() {
                     <X className="w-5 h-5" />
                 </button>
 
-                <div className="p-8 max-h-[90vh] overflow-y-auto">
+                <div className="p-8">
                     {authView === 'login' ? (
                         <LoginForm 
                             settings={settings} 
