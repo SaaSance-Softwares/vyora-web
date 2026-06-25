@@ -192,6 +192,7 @@
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_name}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_number}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_total}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{product_names}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{tracking_url}</li>
                                 </ul>
                             </div>

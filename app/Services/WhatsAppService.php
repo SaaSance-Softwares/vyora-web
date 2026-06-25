@@ -456,6 +456,11 @@ class WhatsAppService
                     return $target->order_number ?? '';
                 case 'order_total':
                     return $target->total ? number_format($target->total, 2) : '';
+                case 'product_names':
+                    if ($target->items && $target->items->count() > 0) {
+                        return $target->items->pluck('product_name')->implode(', ');
+                    }
+                    return 'Products';
                 case 'tracking_url':
                     return $target->tracking_url ?? 'N/A';
             }
