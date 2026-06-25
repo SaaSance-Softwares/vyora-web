@@ -171,41 +171,87 @@ class WhatsAppService
             return false;
         }
 
+        $template = \App\Models\WhatsappTemplate::where('name', $templateName)->first();
+        $mapping = $template ? $template->variables_mapping : null;
+
         $phone = null;
-        $components = [];
 
-        // Order Events
-        if (in_array($event, ['confirmed', 'shipped', 'cancelled']) && $target instanceof Order) {
+        // Determine target phone
+        if (in_array($event, ['confirmed', 'shipped', 'cancelled', 'abandoned_cart']) && $target instanceof Order) {
             $phone = $target->shipping_phone ?? $target->billing_phone;
-            // Example basic components: You might need to adjust based on actual template placeholders
-            $components = [
-                [
-                    'type' => 'body',
-                    'parameters' => [
-                        ['type' => 'text', 'text' => $target->order_number],
-                    ],
-                ],
-            ];
-        }
-
-        // Account Events
-        if (in_array($event, ['account_created', 'password_updated']) && $target instanceof User) {
+        } elseif (in_array($event, ['account_created', 'password_updated']) && $target instanceof User) {
             $phone = $target->phone;
-            $components = [
-                [
-                    'type' => 'body',
-                    'parameters' => [
-                        ['type' => 'text', 'text' => $target->first_name],
-                    ],
-                ],
-            ];
         }
 
         if (! $phone) {
             return false;
         }
 
-        return $this->sendTemplate($phone, $templateName, 'en_US', $components);
+        $components = [];
+
+        if (!empty($mapping) && is_array($mapping)) {
+            // Header
+            if (isset($mapping['header']) && is_array($mapping['header'])) {
+                $params = [];
+                foreach ($mapping['header'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $target)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'header', 'parameters' => $params];
+                }
+            }
+            // Body
+            if (isset($mapping['body']) && is_array($mapping['body'])) {
+                $params = [];
+                foreach ($mapping['body'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $target)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'body', 'parameters' => $params];
+                }
+            }
+            // Buttons
+            if (isset($mapping['buttons']) && is_array($mapping['buttons'])) {
+                foreach ($mapping['buttons'] as $btnIndex => $vars) {
+                    $params = [];
+                    foreach ($vars as $varName) {
+                        $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $target)];
+                    }
+                    if (!empty($params)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string)$btnIndex,
+                            'parameters' => $params
+                        ];
+                    }
+                }
+            }
+        } else {
+            // Fallback for hardcoded old templates
+            if (in_array($event, ['confirmed', 'shipped', 'cancelled']) && $target instanceof Order) {
+                $components = [
+                    [
+                        'type' => 'body',
+                        'parameters' => [
+                            ['type' => 'text', 'text' => $target->order_number],
+                        ],
+                    ],
+                ];
+            }
+            if (in_array($event, ['account_created', 'password_updated']) && $target instanceof User) {
+                $components = [
+                    [
+                        'type' => 'body',
+                        'parameters' => [
+                            ['type' => 'text', 'text' => $target->first_name],
+                        ],
+                    ],
+                ];
+            }
+        }
+
+        return $this->sendTemplate($phone, $templateName, $template ? $template->language : 'en_US', $components);
     }
 
     /**
@@ -327,46 +373,65 @@ class WhatsAppService
             }
         }
 
-        // OTP is usually the 1st parameter in the template
-        $components = [
-            [
-                'type' => 'body',
-                'parameters' => [
-                    [
-                        'type' => 'text',
-                        'text' => $otp,
-                    ],
-                ],
-            ],
-            [
-                'type' => 'button',
-                'sub_type' => 'url',
-                'index' => '0',
-                'parameters' => [
-                    [
-                        'type' => 'text',
-                        'text' => $otp,
-                    ],
-                ],
-            ],
-        ];
+        $template = \App\Models\WhatsappTemplate::where('name', $templateName)->first();
+        $mapping = $template ? $template->variables_mapping : null;
 
-        // We try with body parameter and button parameter, as OTP templates often use both.
-        // A simple sendTemplate call will ignore unused components in Meta API usually,
-        // but to be safe, we will just send body parameters which is the standard for text-based templates.
-        $safeComponents = [
-            [
-                'type' => 'body',
-                'parameters' => [
-                    [
-                        'type' => 'text',
-                        'text' => $otp,
+        $components = [];
+
+        if (!empty($mapping) && is_array($mapping)) {
+            // Header
+            if (isset($mapping['header']) && is_array($mapping['header'])) {
+                $params = [];
+                foreach ($mapping['header'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $otp)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'header', 'parameters' => $params];
+                }
+            }
+            // Body
+            if (isset($mapping['body']) && is_array($mapping['body'])) {
+                $params = [];
+                foreach ($mapping['body'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $otp)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'body', 'parameters' => $params];
+                }
+            }
+            // Buttons
+            if (isset($mapping['buttons']) && is_array($mapping['buttons'])) {
+                foreach ($mapping['buttons'] as $btnIndex => $vars) {
+                    $params = [];
+                    foreach ($vars as $varName) {
+                        $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $otp)];
+                    }
+                    if (!empty($params)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string)$btnIndex,
+                            'parameters' => $params
+                        ];
+                    }
+                }
+            }
+        } else {
+            // Fallback
+            $components = [
+                [
+                    'type' => 'body',
+                    'parameters' => [
+                        [
+                            'type' => 'text',
+                            'text' => $otp,
+                        ],
                     ],
                 ],
-            ],
-        ];
+            ];
+        }
 
-        return $this->sendTemplate($to, $templateName, 'en_US', $safeComponents);
+        return $this->sendTemplate($to, $templateName, $template ? $template->language : 'en_US', $components);
     }
 
     private function formatPhoneNumber(string $number): string
@@ -379,5 +444,37 @@ class WhatsAppService
         }
 
         return $number;
+    }
+
+    private function resolveVariable(string $varName, $target): string
+    {
+        if ($target instanceof Order) {
+            switch ($varName) {
+                case 'customer_name':
+                    return $target->customer_name ?? $target->billing_first_name ?? 'Customer';
+                case 'order_number':
+                    return $target->order_number ?? '';
+                case 'order_total':
+                    return $target->total ? number_format($target->total, 2) : '';
+                case 'tracking_url':
+                    return $target->tracking_url ?? 'N/A';
+            }
+        } elseif ($target instanceof User) {
+            switch ($varName) {
+                case 'customer_name':
+                    return $target->first_name ?? 'Customer';
+                case 'customer_email':
+                    return $target->email ?? '';
+                case 'customer_phone':
+                    return $target->phone ?? '';
+            }
+        } elseif (is_string($target)) {
+            // For OTP
+            if ($varName === 'otp') {
+                return $target;
+            }
+        }
+
+        return '';
     }
 }

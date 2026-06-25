@@ -20,8 +20,12 @@
         </div>
         @endif
 
-        <form action="{{ route('admin.whatsapp.templates.store') }}" method="POST" class="p-6 space-y-8" id="templateForm">
+        <form action="{{ route('admin.whatsapp.templates.store') }}" method="POST" id="templateForm">
             @csrf
+
+            <div class="flex flex-col lg:flex-row gap-6 p-6">
+                {{-- Main Form --}}
+                <div class="flex-1 space-y-8">
 
             {{-- Basic Info --}}
             <div class="space-y-6">
@@ -77,11 +81,11 @@
                     <div x-show="headerType === 'TEXT'" class="space-y-4" style="display: none;">
                         <input type="text" name="header_text" x-model="headerText"
                             class="w-full bg-white border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm text-gray-900"
-                            placeholder="e.g. Hello @{{1}}">
-                        <p class="text-[10px] text-gray-500">Max 60 chars. Supports 1 variable @{{1}}.</p>
+                            placeholder="e.g. Hello {customer_name}">
+                        <p class="text-[10px] text-gray-500">Max 60 chars. Supports 1 variable (e.g. {customer_name}).</p>
                         
-                        <div x-show="headerText.includes('@{{1}}')" class="p-3 bg-blue-50/50 rounded-xl border border-blue-100" style="display: none;">
-                            <label class="block text-[10px] font-bold text-blue-800 mb-1">Example for Header Variable @{{1}}</label>
+                        <div x-show="headerText.includes('{') && headerText.includes('}')" class="p-3 bg-blue-50/50 rounded-xl border border-blue-100" style="display: none;">
+                            <label class="block text-[10px] font-bold text-blue-800 mb-1">Example for Header Variable</label>
                             <input type="text" name="header_example" class="w-full bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="e.g. Karan">
                         </div>
                     </div>
@@ -92,15 +96,15 @@
                     <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Body Text <span class="text-red-500">*</span></label>
                     <textarea name="body_text" x-model="bodyText" rows="5" 
                         class="w-full bg-white border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm text-gray-900"
-                        placeholder="Hi @{{1}}, your order @{{2}} has shipped!" required></textarea>
-                    <p class="mt-2 text-[10px] text-gray-500">Max 1024 chars. Use @{{1}}, @{{2}} for variables.</p>
+                        placeholder="Hi {customer_name}, your order {order_number} has shipped!" required></textarea>
+                    <p class="mt-2 text-[10px] text-gray-500">Max 1024 chars. Use {variable_name} syntax for dynamic data. E.g. {customer_name}</p>
                     
                     {{-- Dynamic Body Examples --}}
                     <div x-show="bodyVariables.length > 0" class="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3" style="display: none;">
                         <p class="text-[10px] font-bold text-blue-800 uppercase tracking-wider">Provide Examples for Variables</p>
                         <template x-for="varName in bodyVariables" :key="varName">
                             <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold text-blue-900 w-12" x-text="'@{{'+varName+'}}'"></span>
+                                <span class="text-xs font-bold text-blue-900 w-auto min-w-[80px]" x-text="'{'+varName+'}'"></span>
                                 <input type="text" :name="'body_examples['+varName+']'" required
                                     class="flex-1 bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" 
                                     :placeholder="'Example for ' + varName">
@@ -152,10 +156,10 @@
                                     <div>
                                         <label class="block text-[10px] font-bold text-gray-500 mb-1">URL</label>
                                         <input type="text" x-model="btn.url" :name="'buttons['+index+'][url]'"
-                                            class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="https://vyora.com/track/@{{1}}">
-                                        <p class="mt-1 text-[10px] text-gray-500">Supports 1 variable at the end: @{{1}}</p>
+                                            class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="https://vyora.com/track/{tracking_url}">
+                                        <p class="mt-1 text-[10px] text-gray-500">Supports 1 variable at the end: {tracking_url}</p>
                                     </div>
-                                    <div x-show="btn.url && btn.url.includes('@{{1}}')" style="display: none;">
+                                    <div x-show="btn.url && btn.url.includes('{') && btn.url.includes('}')" style="display: none;">
                                         <label class="block text-[10px] font-bold text-blue-800 mb-1">URL Example</label>
                                         <input type="text" :name="'buttons['+index+'][url_example]'"
                                             class="w-full bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="e.g. 123456">
@@ -172,10 +176,47 @@
                         <p x-show="buttons.length === 0" class="text-xs text-gray-400 italic">No buttons added.</p>
                     </div>
                 </div>
+                    </div>
+                </div>
+                
+                {{-- Sidebar Cheat Sheet --}}
+                <div class="w-full lg:w-80 space-y-6">
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-blue-800 mb-3">Dynamic Variables</h3>
+                        <p class="text-xs text-blue-900/80 mb-4">Use these variables in your template to inject real data automatically.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Order Events</h4>
+                                <ul class="space-y-1">
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_name}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_number}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_total}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{tracking_url}</li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Account Events</h4>
+                                <ul class="space-y-1">
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_email}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_phone}</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Authentication</h4>
+                                <ul class="space-y-1">
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{otp}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {{-- Action Buttons --}}
-            <div class="pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50">
                 <a href="{{ route('admin.whatsapp.templates.index') }}" class="px-5 py-3 border border-gray-200 text-sm font-bold rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
                     Cancel
                 </a>
@@ -196,11 +237,11 @@ document.addEventListener('alpine:init', () => {
         buttons: [],
         
         get bodyVariables() {
-            // Find all instances of variables like brackets-n-brackets
-            const regex = /\{\{(\d+)\}\}/g;
+            // Find all instances of {variable}
+            const regex = /\{([a-zA-Z0-9_]+)\}/g;
             const matches = [...this.bodyText.matchAll(regex)];
-            // Extract the numbers, make unique, sort
-            const vars = [...new Set(matches.map(m => m[1]))].sort((a, b) => parseInt(a) - parseInt(b));
+            // Extract the variable names, make unique
+            const vars = [...new Set(matches.map(m => m[1]))];
             return vars;
         },
 

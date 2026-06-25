@@ -67,28 +67,58 @@ class WhatsAppTemplateController extends Controller
         ]);
 
         $components = [];
+        $variablesMapping = [];
 
         // Header Component
         if ($request->header_type === 'TEXT') {
+            $headerText = $request->header_text;
             $header = [
                 'type' => 'HEADER',
                 'format' => 'TEXT',
-                'text' => $request->header_text,
+                'text' => $headerText,
             ];
+
             // Check for variable in header
-            if (preg_match('/\{\{1\}\}/', $request->header_text) && $request->filled('header_example')) {
-                $header['example'] = ['header_text' => [$request->header_example]];
+            if (preg_match('/\{([a-zA-Z0-9_]+)\}/', $headerText, $matches)) {
+                $varName = $matches[1];
+                $variablesMapping['header'] = [$varName];
+                $header['text'] = str_replace('{' . $varName . '}', '{{1}}', $headerText);
+
+                if ($request->filled('header_example')) {
+                    $header['example'] = ['header_text' => [$request->header_example]];
+                }
             }
             $components[] = $header;
         }
 
         // Body Component
+        $bodyText = $request->body_text;
+        $bodyVars = [];
+        
+        if (preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $bodyText, $matches)) {
+            $uniqueVars = array_values(array_unique($matches[1]));
+            $varIndex = 1;
+            foreach ($uniqueVars as $varName) {
+                $bodyVars[] = $varName;
+                $bodyText = str_replace('{' . $varName . '}', '{{' . $varIndex . '}}', $bodyText);
+                $varIndex++;
+            }
+            $variablesMapping['body'] = $bodyVars;
+        }
+
         $body = [
             'type' => 'BODY',
-            'text' => $request->body_text,
+            'text' => $bodyText,
         ];
-        if (! empty($request->body_examples)) {
-            $body['example'] = ['body_text' => [array_values($request->body_examples)]];
+
+        if (! empty($request->body_examples) && ! empty($bodyVars)) {
+            $examplesArray = [];
+            foreach ($bodyVars as $varName) {
+                $examplesArray[] = $request->body_examples[$varName] ?? 'Example';
+            }
+            if (!empty($examplesArray)) {
+                $body['example'] = ['body_text' => [$examplesArray]];
+            }
         }
         $components[] = $body;
 
@@ -103,6 +133,7 @@ class WhatsAppTemplateController extends Controller
         // Buttons Component
         if (! empty($request->buttons)) {
             $buttons = [];
+            $btnIndex = 0;
             foreach ($request->buttons as $btn) {
                 if ($btn['type'] === 'QUICK_REPLY') {
                     $buttons[] = [
@@ -110,14 +141,24 @@ class WhatsAppTemplateController extends Controller
                         'text' => $btn['text'],
                     ];
                 } elseif ($btn['type'] === 'URL') {
+                    $btnUrl = $btn['url'];
                     $button = [
                         'type' => 'URL',
                         'text' => $btn['text'],
-                        'url' => $btn['url'],
+                        'url' => $btnUrl,
                     ];
-                    // If URL is dynamic (contains {{1}}), add example
-                    if (preg_match('/\{\{1\}\}/', $btn['url']) && ! empty($btn['url_example'])) {
-                        $button['example'] = [$btn['url_example']];
+                    
+                    if (preg_match('/\{([a-zA-Z0-9_]+)\}/', $btnUrl, $matches)) {
+                        $varName = $matches[1];
+                        if (!isset($variablesMapping['buttons'])) {
+                            $variablesMapping['buttons'] = [];
+                        }
+                        $variablesMapping['buttons'][$btnIndex] = [$varName];
+                        $button['url'] = str_replace('{' . $varName . '}', '{{1}}', $btnUrl);
+                        
+                        if (! empty($btn['url_example'])) {
+                            $button['example'] = [$btn['url_example']];
+                        }
                     }
                     $buttons[] = $button;
                 } elseif ($btn['type'] === 'PHONE_NUMBER') {
@@ -127,6 +168,7 @@ class WhatsAppTemplateController extends Controller
                         'phone_number' => $btn['phone_number'],
                     ];
                 }
+                $btnIndex++;
             }
             if (! empty($buttons)) {
                 $components[] = [
@@ -149,8 +191,20 @@ class WhatsAppTemplateController extends Controller
             return back()->with('error', $response['error'])->withInput();
         }
 
-        $service->getTemplatesFromMeta();
+        // Save mapping to database so it's not lost when we sync
+        WhatsappTemplate::updateOrCreate(
+            [
+                'name' => $request->name,
+                'language' => $request->language,
+            ],
+            [
+                'category' => $request->category,
+                'status' => 'PENDING',
+                'components' => $components,
+                'variables_mapping' => empty($variablesMapping) ? null : $variablesMapping,
+            ]
+        );
 
-        return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template created successfully and submitted to Meta for approval. Please Sync to see updates.');
+        return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template created successfully and submitted to Meta for approval.');
     }
 }

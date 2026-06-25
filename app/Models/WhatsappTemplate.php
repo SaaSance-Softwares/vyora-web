@@ -15,9 +15,11 @@ class WhatsappTemplate extends Model
         'status',
         'category',
         'components',
+        'variables_mapping',
     ];
 
     protected $casts = [
         'components' => 'array',
+        'variables_mapping' => 'array',
     ];
 }
