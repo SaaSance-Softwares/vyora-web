@@ -156,7 +156,7 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
                                 {authFields.phone.auth_type === 'sms_otp' && <span className="text-[10px] text-gray-300 ml-2">(SMS OTP)</span>}
                                 {authFields.phone.auth_type === 'whatsapp_otp' && <span className="text-[10px] text-gray-300 ml-2">(WhatsApp OTP)</span>}
                             </label>
-                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all overflow-hidden group">
+                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all group">
                                 <CountryCodePicker value={countryCode} onChange={setCountryCode} />
                                 <div className="relative flex-1">
                                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />

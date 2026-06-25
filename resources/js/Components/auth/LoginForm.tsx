@@ -22,6 +22,7 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
     const [countryCode, setCountryCode] = useState('+91');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
 
     // Parse structured settings
     const parse = (val: any) => {
@@ -55,13 +56,22 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
     let FieldIcon = Mail;
     
     if (isEmailVisible && isPhoneVisible) {
-        fieldLabel = 'Email or Phone Number';
-        fieldPlaceholder = 'name@example.com or 555 000 0000';
-        FieldIcon = Mail;
+        if (loginMethod === 'email') {
+            fieldLabel = 'Email Address';
+            fieldPlaceholder = 'name@example.com';
+            FieldIcon = Mail;
+        } else {
+            fieldLabel = 'Phone Number';
+            fieldPlaceholder = '555 000 0000';
+            FieldIcon = Phone;
+        }
     } else if (isPhoneVisible && !isEmailVisible) {
         fieldLabel = 'Phone Number';
         fieldPlaceholder = '555 000 0000';
         FieldIcon = Phone;
+        if (loginMethod !== 'phone') setLoginMethod('phone');
+    } else {
+        if (loginMethod !== 'email') setLoginMethod('email');
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -71,8 +81,8 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
 
         try {
             let finalIdentifier = identifier.trim();
-            // If phone login is allowed and the identifier does not contain an '@' symbol
-            if (isPhoneVisible && finalIdentifier && !finalIdentifier.includes('@')) {
+            // If phone login is allowed and the loginMethod is phone
+            if (isPhoneVisible && loginMethod === 'phone' && finalIdentifier) {
                 if (finalIdentifier.startsWith('+')) {
                     finalIdentifier = finalIdentifier.substring(1);
                 }
@@ -131,15 +141,34 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {isEmailVisible && isPhoneVisible && (
+                        <div className="flex p-1 bg-gray-100/80 rounded-xl mb-4 relative z-0">
+                            <button
+                                type="button"
+                                onClick={() => { setLoginMethod('email'); setIdentifier(''); }}
+                                className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${loginMethod === 'email' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                Email
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setLoginMethod('phone'); setIdentifier(''); }}
+                                className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${loginMethod === 'phone' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                Phone
+                            </button>
+                        </div>
+                    )}
+
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">{fieldLabel}</label>
-                        {isPhoneVisible ? (
-                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all overflow-hidden group">
+                        {loginMethod === 'phone' ? (
+                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all group">
                                 <CountryCodePicker value={countryCode} onChange={setCountryCode} />
                                 <div className="relative flex-1">
                                     <FieldIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
                                     <input
-                                        type="text" required
+                                        type="tel" required
                                         placeholder={fieldPlaceholder}
                                         className="w-full bg-transparent pl-9 pr-4 py-3 text-sm font-medium text-gray-900 focus:outline-none"
                                         value={identifier}
@@ -151,7 +180,7 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                             <div className="relative group">
                                 <FieldIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
                                 <input
-                                    type="text" required
+                                    type="email" required
                                     placeholder={fieldPlaceholder}
                                     className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none"
                                     value={identifier}
