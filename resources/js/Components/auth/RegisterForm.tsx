@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api';
 import { router } from '@inertiajs/react';
 import { User, Mail, Lock, Phone } from 'lucide-react';
+import CountryCodePicker from './CountryCodePicker';
 
 interface RegisterFormProps {
     settings: any;
@@ -46,6 +47,7 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
     const isNameVisible = authFields.name.visible !== false;
 
     const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', password_confirmation: '' });
+    const [countryCode, setCountryCode] = useState('+91');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -55,7 +57,20 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
         setLoading(true);
 
         try {
-            const res = await api.post('/api/register', form);
+            let finalPhone = form.phone.trim();
+            if (finalPhone) {
+                // Strip leading plus
+                if (finalPhone.startsWith('+')) {
+                    finalPhone = finalPhone.substring(1);
+                }
+                const rawCode = countryCode.replace('+', '');
+                if (finalPhone.startsWith(rawCode)) {
+                    finalPhone = finalPhone.substring(rawCode.length);
+                }
+                finalPhone = `${countryCode}${finalPhone}`;
+            }
+
+            const res = await api.post('/api/register', { ...form, phone: finalPhone });
             login(res.data.access_token, res.data.user);
             if (onSuccess) onSuccess();
             else router.visit('/');
@@ -141,16 +156,19 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
                                 {authFields.phone.auth_type === 'sms_otp' && <span className="text-[10px] text-gray-300 ml-2">(SMS OTP)</span>}
                                 {authFields.phone.auth_type === 'whatsapp_otp' && <span className="text-[10px] text-gray-300 ml-2">(WhatsApp OTP)</span>}
                             </label>
-                            <div className="relative group">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
-                                <input
-                                    type="tel"
-                                    required={authFields.phone.required}
-                                    placeholder="+1 (555) 000-0000"
-                                    className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none"
-                                    value={form.phone}
-                                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                />
+                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all overflow-hidden group">
+                                <CountryCodePicker value={countryCode} onChange={setCountryCode} />
+                                <div className="relative flex-1">
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
+                                    <input
+                                        type="tel"
+                                        required={authFields.phone.required}
+                                        placeholder="555 000 0000"
+                                        className="w-full bg-transparent pl-9 pr-4 py-3 text-sm font-medium text-gray-900 focus:outline-none"
+                                        value={form.phone}
+                                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}

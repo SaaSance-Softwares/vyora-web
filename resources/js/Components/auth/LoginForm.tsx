@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { router } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { Mail, Lock, ArrowRight, Phone } from 'lucide-react';
+import CountryCodePicker from './CountryCodePicker';
 
 interface LoginFormProps {
     settings: any;
@@ -18,6 +19,7 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
 
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -54,11 +56,11 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
     
     if (isEmailVisible && isPhoneVisible) {
         fieldLabel = 'Email or Phone Number';
-        fieldPlaceholder = 'name@example.com or +1...';
+        fieldPlaceholder = 'name@example.com or 555 000 0000';
         FieldIcon = Mail;
     } else if (isPhoneVisible && !isEmailVisible) {
         fieldLabel = 'Phone Number';
-        fieldPlaceholder = '+1 (555) 000-0000';
+        fieldPlaceholder = '555 000 0000';
         FieldIcon = Phone;
     }
 
@@ -68,7 +70,20 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
         setLoading(true);
 
         try {
-            const res = await api.post('/api/login', { identifier, password });
+            let finalIdentifier = identifier.trim();
+            // If phone login is allowed and the identifier does not contain an '@' symbol
+            if (isPhoneVisible && finalIdentifier && !finalIdentifier.includes('@')) {
+                if (finalIdentifier.startsWith('+')) {
+                    finalIdentifier = finalIdentifier.substring(1);
+                }
+                const rawCode = countryCode.replace('+', '');
+                if (finalIdentifier.startsWith(rawCode)) {
+                    finalIdentifier = finalIdentifier.substring(rawCode.length);
+                }
+                finalIdentifier = `${countryCode}${finalIdentifier}`;
+            }
+
+            const res = await api.post('/api/login', { identifier: finalIdentifier, password });
             login(res.data.access_token, res.data.user);
             if (onSuccess) onSuccess();
             else router.visit('/');
@@ -118,16 +133,32 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">{fieldLabel}</label>
-                        <div className="relative group">
-                            <FieldIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
-                            <input
-                                type="text" required
-                                placeholder={fieldPlaceholder}
-                                className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none"
-                                value={identifier}
-                                onChange={(e) => setIdentifier(e.target.value)}
-                            />
-                        </div>
+                        {isPhoneVisible ? (
+                            <div className="flex bg-gray-50/50 border border-gray-200 rounded-xl focus-within:border-black focus-within:bg-white transition-all overflow-hidden group">
+                                <CountryCodePicker value={countryCode} onChange={setCountryCode} />
+                                <div className="relative flex-1">
+                                    <FieldIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
+                                    <input
+                                        type="text" required
+                                        placeholder={fieldPlaceholder}
+                                        className="w-full bg-transparent pl-9 pr-4 py-3 text-sm font-medium text-gray-900 focus:outline-none"
+                                        value={identifier}
+                                        onChange={(e) => setIdentifier(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative group">
+                                <FieldIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input
+                                    type="text" required
+                                    placeholder={fieldPlaceholder}
+                                    className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none"
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-1.5">
