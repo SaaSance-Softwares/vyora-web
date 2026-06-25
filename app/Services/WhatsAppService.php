@@ -461,6 +461,8 @@ class WhatsAppService
                         return $target->items->pluck('product_name')->implode(', ');
                     }
                     return 'Products';
+                case 'tracking_number':
+                    return $target->tracking_number ?? 'N/A';
                 case 'tracking_url':
                     return $target->tracking_url ?? 'N/A';
             }

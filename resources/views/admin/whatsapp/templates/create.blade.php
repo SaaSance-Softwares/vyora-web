@@ -157,8 +157,8 @@
                                     <div>
                                         <label class="block text-[10px] font-bold text-gray-500 mb-1">URL</label>
                                         <input type="text" x-model="btn.url" :name="'buttons['+index+'][url]'"
-                                            class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="https://vyora.com/track/{tracking_url}">
-                                        <p class="mt-1 text-[10px] text-gray-500">Supports 1 variable at the end: {tracking_url}</p>
+                                            class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="{{ url('/') }}/track/{tracking_number}">
+                                        <p class="mt-1 text-[10px] text-gray-500">Supports 1 variable at the end: {tracking_number} or {tracking_url}</p>
                                     </div>
                                     <div x-show="btn.url && btn.url.includes('{') && btn.url.includes('}')" style="display: none;">
                                         <label class="block text-[10px] font-bold text-blue-800 mb-1">URL Example</label>
@@ -194,6 +194,7 @@
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_number}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{order_total}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{product_names}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{tracking_number}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{tracking_url}</li>
                                 </ul>
                             </div>
