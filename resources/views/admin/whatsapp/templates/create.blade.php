@@ -31,10 +31,11 @@
             <div class="space-y-6">
                 <div>
                     <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Template Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" value="{{ old('name') }}" 
+                    <input type="text" name="name" x-model="templateName" 
+                        @input="templateName = templateName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_')"
                         class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400"
                         placeholder="e.g. order_shipped_v2" required>
-                    <p class="mt-2 text-[10px] text-gray-500">Lowercase letters, numbers, and underscores only.</p>
+                    <p class="mt-2 text-[10px] text-gray-500">Automatically formatted to Meta standards (lowercase, underscores).</p>
                     @error('name')<span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>@enderror
                 </div>
 
@@ -232,6 +233,7 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('templateBuilder', () => ({
+        templateName: '{{ old("name", "") }}',
         headerType: 'NONE',
         headerText: '',
         bodyText: '',
