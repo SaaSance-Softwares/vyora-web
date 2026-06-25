@@ -20,7 +20,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('skus')->latest()->paginate(10);
+        $products = Product::with('skus')->withCount('orderItems as purchase_count')->latest()->paginate(10);
 
         $stats = [
             'total' => Product::count(),
@@ -48,6 +48,32 @@ class ProductController extends Controller
         });
 
         return response()->json($products);
+    }
+
+    public function analytics(Product $product)
+    {
+        $product->loadMissing('orderItems.order');
+        
+        $viewCount = $product->view_count;
+        $purchaseCount = $product->orderItems->count();
+        
+        // Count items in returned/cancelled orders
+        $returnCount = $product->orderItems->filter(function($item) {
+            return in_array($item->order->status, ['returned', 'cancelled', 'refunded']);
+        })->count();
+
+        // Revenue (sum of total for items in completed/delivered/shipped orders)
+        $revenue = $product->orderItems->filter(function($item) {
+            return in_array($item->order->status, ['completed', 'delivered', 'shipped']);
+        })->sum('total');
+
+        $conversionRate = $viewCount > 0 ? round(($purchaseCount / $viewCount) * 100, 2) : 0;
+        $returnRate = $purchaseCount > 0 ? round(($returnCount / $purchaseCount) * 100, 2) : 0;
+
+        return view('admin.products.analytics', compact(
+            'product', 'viewCount', 'purchaseCount', 'returnCount', 
+            'revenue', 'conversionRate', 'returnRate'
+        ));
     }
 
     public function create()

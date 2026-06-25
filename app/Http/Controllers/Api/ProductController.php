@@ -212,6 +212,9 @@ class ProductController extends Controller
             }
         }
 
+        // Increment view count for analytics
+        $product->increment('view_count');
+
         return new ProductResource($product);
     }
 }

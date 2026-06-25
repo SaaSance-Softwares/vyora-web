@@ -144,6 +144,7 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
         Route::prefix('products')->name('products.')->group(function () {
             Route::get('/search', [ProductController::class, 'search'])->name('search');
             Route::get('/', [ProductController::class, 'index'])->name('index');
+            Route::get('/{product}/analytics', [ProductController::class, 'analytics'])->name('analytics');
             Route::get('/create', [ProductController::class, 'create'])->name('create');
             Route::post('/', [ProductController::class, 'store'])->name('store');
             Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit');
