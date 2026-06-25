@@ -67,6 +67,8 @@ class PageController extends Controller
             ->with(['images', 'skus.color', 'skus.size', 'sizeChart', 'categories', 'productType', 'reviews.user', 'reviews.images'])
             ->firstOrFail();
 
+        $product->increment('view_count');
+
         return Inertia::render('Product/Show', [
             'product' => (new ProductResource($product))->resolve(),
         ]);
