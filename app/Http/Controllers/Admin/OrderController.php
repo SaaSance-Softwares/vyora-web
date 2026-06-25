@@ -162,6 +162,29 @@ class OrderController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
+    /*  Shiprocket Integration */
+    /* ------------------------------------------------------------------ */
+
+    public function sendToShiprocket(Order $order, \App\Services\ShiprocketService $shiprocket)
+    {
+        if ($order->shiprocket_order_id) {
+            return back()->with('error', 'Order is already sent to Shiprocket.');
+        }
+
+        try {
+            $response = $shiprocket->createOrder($order);
+
+            if ($response['success']) {
+                return back()->with('success', $response['message']);
+            }
+
+            return back()->with('error', $response['message']);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Shiprocket error: ' . $e->getMessage());
+        }
+    }
+
+    /* ------------------------------------------------------------------ */
     /*  Private helpers */
     /* ------------------------------------------------------------------ */
 

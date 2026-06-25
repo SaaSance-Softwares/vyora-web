@@ -34,6 +34,12 @@ class IntegrationSettingsController extends Controller
             'icon' => 'truck',
             'status' => 'active',
         ],
+        'shiprocket' => [
+            'name' => 'Shiprocket',
+            'description' => 'Automated shipping and tracking via Shiprocket',
+            'icon' => 'truck',
+            'status' => 'active',
+        ],
         'smtp' => [
             'name' => 'SMTP Email',
             'description' => 'Send transactional emails via a custom SMTP server',
@@ -163,6 +169,10 @@ class IntegrationSettingsController extends Controller
             // Google Search Console
             'site_verification_code' => $rows->get('site_verification_code') ? $this->maybeDecrypt($rows->get('site_verification_code')->value) : '',
 
+            // Shiprocket
+            'shiprocket_email' => $rows->get('shiprocket_email') ? $this->maybeDecrypt($rows->get('shiprocket_email')->value) : '',
+            'shiprocket_password' => $rows->get('shiprocket_password') ? $this->maskedSecret($rows->get('shiprocket_password')->value) : '',
+
             // SMTP
             'smtp_host' => $rows->get('smtp_host') ? $this->maybeDecrypt($rows->get('smtp_host')->value) : '',
             'smtp_port' => $rows->get('smtp_port') ? $this->maybeDecrypt($rows->get('smtp_port')->value) : '',
@@ -214,6 +224,10 @@ class IntegrationSettingsController extends Controller
 
         if ($slug === 'qikink') {
             return $this->updateQikink($request);
+        }
+
+        if ($slug === 'shiprocket') {
+            return $this->updateShiprocket($request);
         }
 
         if ($slug === 'google-search-console') {
@@ -431,6 +445,35 @@ class IntegrationSettingsController extends Controller
         }
     }
 
+    public function testShiprocket(Request $request)
+    {
+        $group = 'integration.shiprocket';
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
+
+        try {
+            $email = $this->maybeDecrypt($rows->get('shiprocket_email')?->value ?? '');
+            $password = $this->maybeDecrypt($rows->get('shiprocket_password')?->value ?? '');
+
+            if (! $email || ! $password) {
+                return response()->json(['success' => false, 'message' => 'API credentials not configured. Save your email and password first.']);
+            }
+
+            $response = Http::post('https://apiv2.shiprocket.in/v1/external/auth/login', [
+                'email' => $email,
+                'password' => $password,
+            ]);
+
+            if ($response->successful() && $response->json('token')) {
+                return response()->json(['success' => true, 'message' => 'Connection successful! Shiprocket credentials are valid.']);
+            }
+
+            $errorDetail = $response->body();
+            return response()->json(['success' => false, 'message' => 'Authentication failed. Check your Email and Password. Details: '.$errorDetail]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Connection failed: '.$e->getMessage()]);
+        }
+    }
+
     public function testAlgolia(Request $request)
     {
         $group = 'integration.algolia';
@@ -493,6 +536,25 @@ class IntegrationSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Qikink settings saved successfully.');
+    }
+
+    private function updateShiprocket(Request $request)
+    {
+        $request->validate([
+            'shiprocket_email' => 'required|email',
+            'shiprocket_password' => 'required|string',
+        ]);
+
+        $group = 'integration.shiprocket';
+
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'shiprocket_email'], ['value' => Crypt::encryptString($request->shiprocket_email)]);
+
+        if (! str_contains($request->shiprocket_password, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'shiprocket_password'], ['value' => Crypt::encryptString($request->shiprocket_password)]);
+        }
+
+        return redirect()->back()->with('success', 'Shiprocket settings saved successfully.');
     }
 
     private function updateGoogleSearchConsole(Request $request)

@@ -249,6 +249,36 @@ $shipping = $order->shippingAddress;
       </form>
     </div>
 
+    {{-- SHIPROCKET --}}
+    @if(\App\Models\ThemeSetting::where('group', 'integration.shiprocket')->where('key', 'enabled')->value('value') == '1')
+    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="w-5 h-5 text-[#7367F0]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Shiprocket</h2>
+      </div>
+
+      @if($order->shiprocket_order_id)
+        <div class="space-y-2">
+          <p class="text-xs text-gray-500"><span class="font-bold text-gray-700">Order ID:</span> {{ $order->shiprocket_order_id }}</p>
+          @if($order->shiprocket_shipment_id)
+            <p class="text-xs text-gray-500"><span class="font-bold text-gray-700">Shipment ID:</span> {{ $order->shiprocket_shipment_id }}</p>
+          @endif
+          <a href="https://app.shiprocket.in/orders" target="_blank" class="block w-full text-center mt-3 py-2 bg-gray-50 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-100 transition-colors border border-gray-200">
+            View in Shiprocket
+          </a>
+        </div>
+      @else
+        <form action="{{ route('admin.orders.shiprocket', $order) }}" method="POST">
+          @csrf
+          <button type="submit" class="w-full py-2.5 bg-[#7367F0] text-white rounded-xl text-sm font-bold hover:bg-[#5E50EE] transition-colors flex items-center justify-center gap-2">
+            Send to Shiprocket
+          </button>
+        </form>
+        <p class="text-[10px] text-gray-400 mt-2 text-center">Creates an ad-hoc order in your Shiprocket account.</p>
+      @endif
+    </div>
+    @endif
+
     {{-- TRACKING DISPLAY (when already shipped) --}}
     @if($order->tracking_url || $order->tracking_number)
     <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">

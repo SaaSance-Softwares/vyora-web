@@ -199,6 +199,7 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
         Route::patch('/orders/{order}/tracking', [OrderController::class, 'updateTracking'])->name('orders.updateTracking');
+        Route::post('/orders/{order}/shiprocket', [OrderController::class, 'sendToShiprocket'])->name('orders.shiprocket');
 
         // WhatsApp Chat & Templates
         Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
@@ -258,6 +259,7 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
             Route::post('/integrations/razorpay/test', [IntegrationSettingsController::class, 'testRazorpay'])->name('integrations.razorpay.test');
             Route::post('/integrations/qikink/test', [IntegrationSettingsController::class, 'testQikink'])->name('integrations.qikink.test');
             Route::post('/integrations/algolia/test', [IntegrationSettingsController::class, 'testAlgolia'])->name('integrations.algolia.test');
+            Route::post('/integrations/shiprocket/test', [IntegrationSettingsController::class, 'testShiprocket'])->name('integrations.shiprocket.test');
 
             // Navbar Settings
             Route::get('/navbar-settings', [NavbarSettingsController::class, 'index'])->name('navbar-settings.index');

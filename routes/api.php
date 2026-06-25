@@ -91,6 +91,7 @@ Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle']);
 
 // Webhooks
 Route::post('/webhooks/qikink', [WebhookController::class, 'handleQikink']);
+Route::post('/webhooks/shiprocket', [WebhookController::class, 'handleShiprocket']);
 
 // Shortlinks
 Route::get('/shortlinks/{short_code}', [ShortlinkApiController::class, 'resolve']);
