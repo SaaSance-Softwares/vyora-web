@@ -172,6 +172,21 @@ class IntegrationSettingsController extends Controller
             // Shiprocket
             'shiprocket_email' => $rows->get('shiprocket_email') ? $this->maybeDecrypt($rows->get('shiprocket_email')->value) : '',
             'shiprocket_password' => $rows->get('shiprocket_password') ? $this->maskedSecret($rows->get('shiprocket_password')->value) : '',
+            'shiprocket_webhook_token' => (function() use ($rows, $slug) {
+                if ($slug === 'shiprocket') {
+                    $tokenRow = $rows->get('shiprocket_webhook_token');
+                    if (!$tokenRow) {
+                        $tokenRow = \App\Models\ThemeSetting::create([
+                            'group' => 'integration.shiprocket',
+                            'key' => 'shiprocket_webhook_token',
+                            'value' => \Illuminate\Support\Facades\Crypt::encryptString(\Illuminate\Support\Str::random(32)),
+                            'type' => 'string'
+                        ]);
+                    }
+                    return $this->maybeDecrypt($tokenRow->value);
+                }
+                return '';
+            })(),
 
             // SMTP
             'smtp_host' => $rows->get('smtp_host') ? $this->maybeDecrypt($rows->get('smtp_host')->value) : '',

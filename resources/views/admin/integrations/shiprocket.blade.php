@@ -130,15 +130,33 @@
                 <div class="bg-white border border-gray-200 rounded-2xl p-5 mt-5">
                     <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Webhook Configuration</h3>
                     <p class="text-xs text-gray-600 mb-4 leading-relaxed">
-                        To receive automated tracking updates (shipped, delivered, etc.), add this URL in your Shiprocket Dashboard under <strong>Settings → API → Webhooks</strong>.
+                        To receive automated tracking updates, add these details in your Shiprocket Dashboard under <strong>Settings → API → Webhooks</strong>.
                     </p>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Your Webhook URL</label>
+                    
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Webhook URL</label>
                     <div class="flex mb-4">
-                        <input type="text" readonly value="{{ url('/api/webhooks/shiprocket') }}" class="w-full bg-gray-50 border border-gray-200 rounded-l-lg px-3 py-2 text-xs font-mono text-gray-800" id="webhookUrl">
+                        <input type="text" readonly value="{{ url('/api/webhooks/shipping-partner') }}" class="w-full bg-gray-50 border border-gray-200 rounded-l-lg px-3 py-2 text-xs font-mono text-gray-800" id="webhookUrl">
                         <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('webhookUrl').value); alert('Copied!')" class="px-4 py-2 bg-gray-100 border border-l-0 border-gray-200 rounded-r-lg text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors">
                             Copy
                         </button>
                     </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Auth Token Type</label>
+                            <input type="text" readonly value="x-api-key" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Token</label>
+                            <div class="flex">
+                                <input type="text" readonly value="{{ $saved['shiprocket_webhook_token'] ?? '' }}" class="w-full bg-gray-50 border border-gray-200 rounded-l-lg px-3 py-2 text-xs font-mono text-gray-800" id="webhookToken">
+                                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('webhookToken').value); alert('Copied!')" class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-200 rounded-r-lg text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-800">
                         <p class="font-bold mb-1">Event Type:</p>
                         <p>Ensure you select <strong>AWB Status Update</strong> or Tracking event.</p>

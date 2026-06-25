@@ -33,6 +33,18 @@ class WebhookController extends Controller
 
     public function handleShiprocket(Request $request)
     {
+        // Verify x-api-key if set
+        $tokenRow = \App\Models\ThemeSetting::where('group', 'integration.shiprocket')
+            ->where('key', 'shiprocket_webhook_token')->first();
+            
+        if ($tokenRow) {
+            $expectedToken = \Illuminate\Support\Facades\Crypt::decryptString($tokenRow->value);
+            if ($request->header('x-api-key') !== $expectedToken) {
+                Log::warning('Shiprocket Webhook rejected: Invalid x-api-key');
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+        }
+
         Log::info('Shiprocket Webhook Received:', $request->all());
 
         $awb = $request->input('awb');
