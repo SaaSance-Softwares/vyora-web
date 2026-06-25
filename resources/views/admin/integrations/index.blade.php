@@ -31,7 +31,7 @@
             </div>
             @endif
 
-            @if($isActive && $isEnabled)
+            @if($isActive && $isEnabled && in_array($slug, ['razorpay', 'qikink']))
             <div class="absolute top-4 right-4">
                 <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full {{ $mode === 'live' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
                     {{ $mode === 'live' ? '● Live' : '● Test' }}
