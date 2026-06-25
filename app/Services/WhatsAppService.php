@@ -147,7 +147,67 @@ class WhatsAppService
 
             Log::error('WhatsApp Create Template Error: '.$response->body());
             $errorData = $response->json();
-            $msg = $errorData['error']['message'] ?? 'Failed to create template on Meta.';
+            $msg = $errorData['error']['error_user_msg'] ?? $errorData['error']['message'] ?? 'Failed to create template on Meta.';
+
+            return ['error' => $msg];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
+            return ['error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Edit an existing template on Meta
+     */
+    public function editTemplateToMeta(string $templateId, array $data)
+    {
+        if (! $this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
+            return ['error' => 'Integration disabled or missing WABA ID / Access Token.'];
+        }
+
+        try {
+            $response = Http::withToken($this->accessToken)
+                ->post("{$this->apiUrl}/{$this->apiVersion}/{$templateId}", $data);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('WhatsApp Edit Template Error: '.$response->body());
+            $errorData = $response->json();
+            $msg = $errorData['error']['error_user_msg'] ?? $errorData['error']['message'] ?? 'Failed to edit template on Meta.';
+
+            return ['error' => $msg];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp API Exception: '.$e->getMessage());
+
+            return ['error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Delete a template from Meta
+     */
+    public function deleteTemplateFromMeta(string $name)
+    {
+        if (! $this->enabled || empty($this->accessToken) || empty($this->wabaId)) {
+            return ['error' => 'Integration disabled or missing WABA ID / Access Token.'];
+        }
+
+        try {
+            $response = Http::withToken($this->accessToken)
+                ->delete("{$this->apiUrl}/{$this->apiVersion}/{$this->wabaId}/message_templates", [
+                    'name' => $name,
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('WhatsApp Delete Template Error: '.$response->body());
+            $errorData = $response->json();
+            $msg = $errorData['error']['error_user_msg'] ?? $errorData['error']['message'] ?? 'Failed to delete template on Meta.';
 
             return ['error' => $msg];
         } catch (\Exception $e) {
@@ -159,7 +219,6 @@ class WhatsAppService
 
     /**
      * Helper to send event-based WhatsApp templates
-     */
     public function sendEventWhatsApp(string $event, $target)
     {
         if (! $this->isEnabled()) {

@@ -217,6 +217,9 @@ Route::prefix($adminPath)->name('admin.')->group(function () {
                 Route::get('/', [WhatsAppTemplateController::class, 'index'])->name('index');
                 Route::get('/create', [WhatsAppTemplateController::class, 'create'])->name('create');
                 Route::post('/', [WhatsAppTemplateController::class, 'store'])->name('store');
+                Route::get('/{template}/edit', [WhatsAppTemplateController::class, 'edit'])->name('edit');
+                Route::put('/{template}', [WhatsAppTemplateController::class, 'update'])->name('update');
+                Route::delete('/{template}', [WhatsAppTemplateController::class, 'destroy'])->name('destroy');
                 Route::post('/sync', [WhatsAppTemplateController::class, 'sync'])->name('sync');
             });
         });

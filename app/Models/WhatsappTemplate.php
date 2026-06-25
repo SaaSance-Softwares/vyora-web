@@ -10,6 +10,7 @@ class WhatsappTemplate extends Model
     use HasFactory;
 
     protected $fillable = [
+        'meta_id',
         'name',
         'language',
         'status',

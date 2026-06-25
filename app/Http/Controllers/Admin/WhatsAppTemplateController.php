@@ -26,13 +26,18 @@ class WhatsAppTemplateController extends Controller
 
         if (isset($response['data'])) {
             $syncedCount = 0;
+            $metaNames = [];
+
             foreach ($response['data'] as $template) {
+                $metaNames[] = $template['name'];
+
                 WhatsappTemplate::updateOrCreate(
                     [
                         'name' => $template['name'],
                         'language' => $template['language'],
                     ],
                     [
+                        'meta_id' => $template['id'],
                         'category' => $template['category'],
                         'status' => $template['status'],
                         'components' => $template['components'] ?? [],
@@ -40,6 +45,9 @@ class WhatsAppTemplateController extends Controller
                 );
                 $syncedCount++;
             }
+
+            // Cleanup local templates not in Meta
+            WhatsappTemplate::whereNotIn('name', $metaNames)->delete();
 
             return back()->with('success', "Successfully synced {$syncedCount} templates from Meta.");
         }
@@ -198,6 +206,7 @@ class WhatsAppTemplateController extends Controller
                 'language' => $request->language,
             ],
             [
+                'meta_id' => $response['data']['id'] ?? null,
                 'category' => $request->category,
                 'status' => 'PENDING',
                 'components' => $components,
@@ -206,5 +215,172 @@ class WhatsAppTemplateController extends Controller
         );
 
         return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template created successfully and submitted to Meta for approval.');
+    }
+
+    public function edit(WhatsappTemplate $template)
+    {
+        return view('admin.whatsapp.templates.edit', compact('template'));
+    }
+
+    public function update(Request $request, WhatsappTemplate $template, WhatsAppService $service)
+    {
+        $request->validate([
+            'category' => 'required|string|in:MARKETING,UTILITY,AUTHENTICATION',
+            'body_text' => 'required|string|max:1024',
+            'header_type' => 'nullable|string|in:NONE,TEXT',
+            'header_text' => 'nullable|string|max:60|required_if:header_type,TEXT',
+            'footer_text' => 'nullable|string|max:60',
+            'body_examples' => 'nullable|array',
+            'buttons' => 'nullable|array',
+        ]);
+
+        if (!$template->meta_id) {
+            return back()->with('error', 'Cannot edit this template because it is missing a Meta ID. Try syncing first.');
+        }
+
+        $components = [];
+        $variablesMapping = [];
+
+        // Header Component
+        if ($request->header_type === 'TEXT') {
+            $headerText = $request->header_text;
+            $header = [
+                'type' => 'HEADER',
+                'format' => 'TEXT',
+                'text' => $headerText,
+            ];
+
+            if (preg_match('/\{([a-zA-Z0-9_]+)\}/', $headerText, $matches)) {
+                $varName = $matches[1];
+                $variablesMapping['header'] = [$varName];
+                $header['text'] = str_replace('{' . $varName . '}', '{{1}}', $headerText);
+
+                if ($request->filled('header_example')) {
+                    $header['example'] = ['header_text' => [$request->header_example]];
+                }
+            }
+            $components[] = $header;
+        }
+
+        // Body Component
+        $bodyText = $request->body_text;
+        $bodyVars = [];
+        
+        if (preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $bodyText, $matches)) {
+            $uniqueVars = array_values(array_unique($matches[1]));
+            $varIndex = 1;
+            foreach ($uniqueVars as $varName) {
+                $bodyVars[] = $varName;
+                $bodyText = str_replace('{' . $varName . '}', '{{' . $varIndex . '}}', $bodyText);
+                $varIndex++;
+            }
+            $variablesMapping['body'] = $bodyVars;
+        }
+
+        $body = [
+            'type' => 'BODY',
+            'text' => $bodyText,
+        ];
+
+        if (! empty($request->body_examples) && ! empty($bodyVars)) {
+            $examplesArray = [];
+            foreach ($bodyVars as $varName) {
+                $examplesArray[] = $request->body_examples[$varName] ?? 'Example';
+            }
+            if (!empty($examplesArray)) {
+                $body['example'] = ['body_text' => [$examplesArray]];
+            }
+        }
+        $components[] = $body;
+
+        // Footer Component
+        if ($request->filled('footer_text')) {
+            $components[] = [
+                'type' => 'FOOTER',
+                'text' => $request->footer_text,
+            ];
+        }
+
+        // Buttons Component
+        if (! empty($request->buttons)) {
+            $buttons = [];
+            $btnIndex = 0;
+            foreach ($request->buttons as $btn) {
+                if ($btn['type'] === 'QUICK_REPLY') {
+                    $buttons[] = [
+                        'type' => 'QUICK_REPLY',
+                        'text' => $btn['text'],
+                    ];
+                } elseif ($btn['type'] === 'URL') {
+                    $btnUrl = $btn['url'];
+                    $button = [
+                        'type' => 'URL',
+                        'text' => $btn['text'],
+                        'url' => $btnUrl,
+                    ];
+                    
+                    if (preg_match('/\{([a-zA-Z0-9_]+)\}/', $btnUrl, $matches)) {
+                        $varName = $matches[1];
+                        if (!isset($variablesMapping['buttons'])) {
+                            $variablesMapping['buttons'] = [];
+                        }
+                        $variablesMapping['buttons'][$btnIndex] = [$varName];
+                        $button['url'] = str_replace('{' . $varName . '}', '{{1}}', $btnUrl);
+                        
+                        if (! empty($btn['url_example'])) {
+                            $button['example'] = [$btn['url_example']];
+                        }
+                    }
+                    $buttons[] = $button;
+                } elseif ($btn['type'] === 'PHONE_NUMBER') {
+                    $buttons[] = [
+                        'type' => 'PHONE_NUMBER',
+                        'text' => $btn['text'],
+                        'phone_number' => $btn['phone_number'],
+                    ];
+                }
+                $btnIndex++;
+            }
+            if (! empty($buttons)) {
+                $components[] = [
+                    'type' => 'BUTTONS',
+                    'buttons' => $buttons,
+                ];
+            }
+        }
+
+        $payload = [
+            'category' => $request->category,
+            'components' => $components,
+        ];
+
+        $response = $service->editTemplateToMeta($template->meta_id, $payload);
+
+        if (isset($response['error'])) {
+            return back()->with('error', $response['error'])->withInput();
+        }
+
+        $template->update([
+            'category' => $request->category,
+            'status' => 'PENDING',
+            'components' => $components,
+            'variables_mapping' => empty($variablesMapping) ? null : $variablesMapping,
+        ]);
+
+        return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template edited successfully and resubmitted to Meta for approval.');
+    }
+
+    public function destroy(WhatsappTemplate $template, WhatsAppService $service)
+    {
+        // First delete from meta
+        $response = $service->deleteTemplateFromMeta($template->name);
+
+        if (isset($response['error'])) {
+            return back()->with('error', $response['error']);
+        }
+
+        $template->delete();
+
+        return redirect()->route('admin.whatsapp.templates.index')->with('success', 'Template deleted successfully from Meta and local system.');
     }
 }

@@ -1,13 +1,55 @@
 @extends('admin.whatsapp.layout')
 
 @section('whatsapp_content')
+@php
+    $headerComponent = collect($template->components)->firstWhere('type', 'HEADER');
+    $bodyComponent = collect($template->components)->firstWhere('type', 'BODY');
+    $footerComponent = collect($template->components)->firstWhere('type', 'FOOTER');
+    $buttonsComponent = collect($template->components)->firstWhere('type', 'BUTTONS');
+
+    $headerType = $headerComponent ? $headerComponent['format'] : 'NONE';
+    $headerText = $headerComponent['text'] ?? '';
+    
+    $bodyText = $bodyComponent['text'] ?? '';
+    if (!empty($template->variables_mapping['body'])) {
+        foreach ($template->variables_mapping['body'] as $index => $varName) {
+            $num = $index + 1;
+            $bodyText = str_replace('{{'.$num.'}}', '{'.$varName.'}', $bodyText);
+        }
+    }
+    if (!empty($template->variables_mapping['header'])) {
+        $varName = $template->variables_mapping['header'][0];
+        $headerText = str_replace('{{1}}', '{'.$varName.'}', $headerText);
+    }
+    
+    $buttons = $buttonsComponent['buttons'] ?? [];
+    if (!empty($template->variables_mapping['buttons'])) {
+        foreach ($buttons as $idx => &$btn) {
+            if ($btn['type'] === 'URL' && isset($template->variables_mapping['buttons'][$idx])) {
+                $varName = $template->variables_mapping['buttons'][$idx][0];
+                $btn['url'] = str_replace('{{1}}', '{'.$varName.'}', $btn['url']);
+            }
+        }
+    }
+
+    $headerExample = $headerComponent['example']['header_text'][0] ?? '';
+    
+    $bodyExamples = new \stdClass();
+    if (!empty($bodyComponent['example']['body_text'][0]) && !empty($template->variables_mapping['body'])) {
+        $exampleValues = $bodyComponent['example']['body_text'][0];
+        foreach ($template->variables_mapping['body'] as $index => $varName) {
+            $bodyExamples->{$varName} = $exampleValues[$index] ?? '';
+        }
+    }
+@endphp
+
 <div class="w-full" x-data="templateBuilder()">
     
     <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden mb-6">
         <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
             <div>
-                <h2 class="text-lg font-bold text-gray-900">Advanced Template Builder</h2>
-                <p class="text-sm text-gray-500">Design a message template and submit to Meta for approval.</p>
+                <h2 class="text-lg font-bold text-gray-900">Edit Template: {{ $template->name }}</h2>
+                <p class="text-sm text-gray-500">Tweak your template and resubmit to Meta for approval.</p>
             </div>
             <a href="{{ route('admin.whatsapp.templates.index') }}" class="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors">
                 &larr; Back to Library
@@ -26,8 +68,9 @@
         </script>
         @endif
 
-        <form action="{{ route('admin.whatsapp.templates.store') }}" method="POST" id="templateForm">
+        <form action="{{ route('admin.whatsapp.templates.update', $template) }}" method="POST" id="templateForm">
             @csrf
+            @method('PUT')
 
             <div class="flex flex-col lg:flex-row gap-6 p-6">
                 {{-- Main Form --}}
@@ -36,35 +79,27 @@
             {{-- Basic Info --}}
             <div class="space-y-6">
                 <div>
-                    <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Template Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" x-model="templateName" 
-                        @input="templateName = templateName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_')"
-                        class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400"
-                        placeholder="e.g. order_shipped_v2" required>
-                    <p class="mt-2 text-[10px] text-gray-500">Automatically formatted to Meta standards (lowercase, underscores).</p>
-                    @error('name')<span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>@enderror
+                    <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Template Name</label>
+                    <input type="text" value="{{ $template->name }}" disabled
+                        class="w-full bg-gray-100 border-0 ring-1 ring-inset ring-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-500 cursor-not-allowed">
+                    <p class="mt-2 text-[10px] text-gray-500">Name cannot be changed when editing an existing template.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Category <span class="text-red-500">*</span></label>
                         <select name="category" class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900" required>
-                            <option value="MARKETING" {{ old('category') == 'MARKETING' ? 'selected' : '' }}>Marketing (Promotions, updates)</option>
-                            <option value="UTILITY" {{ old('category') == 'UTILITY' ? 'selected' : '' }}>Utility (Order updates, accounts)</option>
-                            <option value="AUTHENTICATION" {{ old('category') == 'AUTHENTICATION' ? 'selected' : '' }}>Authentication (OTPs)</option>
+                            <option value="MARKETING" {{ (old('category') ?? $template->category) == 'MARKETING' ? 'selected' : '' }}>Marketing (Promotions, updates)</option>
+                            <option value="UTILITY" {{ (old('category') ?? $template->category) == 'UTILITY' ? 'selected' : '' }}>Utility (Order updates, accounts)</option>
+                            <option value="AUTHENTICATION" {{ (old('category') ?? $template->category) == 'AUTHENTICATION' ? 'selected' : '' }}>Authentication (OTPs)</option>
                         </select>
                         @error('category')<span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Language <span class="text-red-500">*</span></label>
-                        <select name="language" class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900" required>
-                            <option value="en_US" {{ old('language') == 'en_US' ? 'selected' : '' }}>English (US)</option>
-                            <option value="en_GB" {{ old('language') == 'en_GB' ? 'selected' : '' }}>English (UK)</option>
-                            <option value="hi" {{ old('language') == 'hi' ? 'selected' : '' }}>Hindi</option>
-                            <option value="es" {{ old('language') == 'es' ? 'selected' : '' }}>Spanish</option>
-                        </select>
-                        @error('language')<span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>@enderror
+                        <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Language</label>
+                        <input type="text" value="{{ $template->language }}" disabled
+                            class="w-full bg-gray-100 border-0 ring-1 ring-inset ring-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-500 cursor-not-allowed">
                     </div>
                 </div>
             </div>
@@ -93,7 +128,7 @@
                         
                         <div x-show="headerText.includes('{') && headerText.includes('}')" class="p-3 bg-blue-50/50 rounded-xl border border-blue-100" style="display: none;">
                             <label class="block text-[10px] font-bold text-blue-800 mb-1">Example for Header Variable</label>
-                            <input type="text" name="header_example" class="w-full bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="e.g. Karan">
+                            <input type="text" name="header_example" x-model="headerExample" class="w-full bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" placeholder="e.g. Karan">
                         </div>
                     </div>
                 </div>
@@ -112,7 +147,7 @@
                         <template x-for="varName in bodyVariables" :key="varName">
                             <div class="flex items-center gap-3">
                                 <span class="text-xs font-bold text-blue-900 w-auto min-w-[80px]" x-text="'{'+varName+'}'"></span>
-                                <input type="text" :name="'body_examples['+varName+']'" required
+                                <input type="text" :name="'body_examples['+varName+']'" x-model="bodyExamplesMap[varName]" required
                                     class="flex-1 bg-white border-0 ring-1 ring-inset ring-blue-200 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-gray-900" 
                                     :placeholder="'Example for ' + varName">
                             </div>
@@ -123,7 +158,7 @@
                 {{-- Footer --}}
                 <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200">
                     <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Footer (Optional)</label>
-                    <input type="text" name="footer_text"
+                    <input type="text" name="footer_text" value="{{ old('footer_text') ?? ($footerComponent['text'] ?? '') }}"
                         class="w-full bg-white border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm text-gray-900"
                         placeholder="e.g. Thanks for choosing Vyora!">
                     <p class="mt-2 text-[10px] text-gray-500">Max 60 chars. Appears in small text at the bottom. No variables allowed.</p>
@@ -230,7 +265,7 @@
                     Cancel
                 </a>
                 <button type="submit" class="px-8 py-3 bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-[#25D366]/30">
-                    Submit for Approval
+                    Resubmit for Approval
                 </button>
             </div>
         </form>
@@ -240,11 +275,12 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('templateBuilder', () => ({
-        templateName: '{{ old("name", "") }}',
-        headerType: 'NONE',
-        headerText: '',
-        bodyText: '',
-        buttons: [],
+        headerType: '{!! $headerType !!}',
+        headerText: `{!! str_replace('`', '\`', $headerText) !!}`,
+        headerExample: `{!! str_replace('`', '\`', $headerExample) !!}`,
+        bodyText: `{!! str_replace('`', '\`', $bodyText) !!}`,
+        bodyExamplesMap: {!! json_encode($bodyExamples) !!},
+        buttons: {!! json_encode($buttons) !!},
         
         get bodyVariables() {
             // Find all instances of {variable}
@@ -252,6 +288,14 @@ document.addEventListener('alpine:init', () => {
             const matches = [...this.bodyText.matchAll(regex)];
             // Extract the variable names, make unique
             const vars = [...new Set(matches.map(m => m[1]))];
+            
+            // Initialize missing keys in bodyExamplesMap
+            vars.forEach(v => {
+                if (this.bodyExamplesMap[v] === undefined) {
+                    this.bodyExamplesMap[v] = '';
+                }
+            });
+            
             return vars;
         },
 
