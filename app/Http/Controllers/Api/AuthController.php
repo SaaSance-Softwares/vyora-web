@@ -35,6 +35,9 @@ class AuthController extends Controller
             Log::error('Failed to send WhatsApp account created: '.$e->getMessage());
         }
 
+        \Illuminate\Support\Facades\Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -63,6 +66,9 @@ class AuthController extends Controller
             ]);
         }
 
+        \Illuminate\Support\Facades\Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -80,6 +86,10 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
+
+        \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out successfully']);
     }
