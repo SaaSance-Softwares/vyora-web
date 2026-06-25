@@ -401,14 +401,6 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                     </span>
                                 </div>
                             )}
-
-                            {(product as any).view_count > 0 && (
-                                <div className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 w-fit px-2.5 py-1 rounded-md">
-                                    <Zap className="w-4 h-4 fill-indigo-600" />
-                                    <span>{(product as any).view_count} people have viewed this</span>
-                                </div>
-                            )}
-
                             {product.short_description && (
                                 <div className="mt-3 text-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: product.short_description }} />
                             )}

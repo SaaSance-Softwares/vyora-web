@@ -143,7 +143,6 @@ class ProductResource extends JsonResource
             'video' => $videoUrl,
             'category' => $this->categories->first()?->name ?? 'General',
             'is_new' => $this->created_at->diffInDays(now()) < 7,
-            'view_count' => $this->view_count,
 
             // Categories
             'categories' => $this->categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'slug' => $c->slug]),
