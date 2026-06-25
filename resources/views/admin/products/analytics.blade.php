@@ -3,7 +3,7 @@
 @section('header', 'Product Analytics')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
