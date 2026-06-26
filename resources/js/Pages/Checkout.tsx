@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/utils';
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
 import CheckoutAddress from '@/components/checkout/CheckoutAddress';
+import CountryCodePicker from '@/Components/auth/CountryCodePicker';
 import {
     Trash2, Plus, Minus, Tag, Ticket, X, ChevronRight,
     ShoppingBag, ArrowRight, AlertCircle, Check, MapPin, Lock, Gift
@@ -172,6 +173,7 @@ export default function CheckoutPage() {
 
     const [selectedAddr, setSelectedAddr] = useState<any>(null);
     const [guest, setGuest] = useState({ name: '', email: '', phone: '', line1: '', line2: '', city: '', state: '', zip: '' });
+    const [guestCountryCode, setGuestCountryCode] = useState('+91');
     const g = (k: string, v: string) => setGuest(p => ({ ...p, [k]: v }));
 
     const [placing, setPlacing] = useState(false);
@@ -263,8 +265,19 @@ export default function CheckoutPage() {
         } else {
             const { name, email, phone, line1, city, state, zip } = guest;
             if (!name || !email || !phone || !line1 || !city || !state || !zip) { setOrderErr('Please fill all delivery fields.'); return; }
+            
+            let finalPhone = phone.trim();
+            if (finalPhone.startsWith(guestCountryCode)) {
+                finalPhone = finalPhone.substring(guestCountryCode.length);
+            }
+            const rawCode = guestCountryCode.replace('+', '');
+            if (finalPhone.startsWith(rawCode)) {
+                finalPhone = finalPhone.substring(rawCode.length);
+            }
+            finalPhone = `${guestCountryCode}${finalPhone}`;
+
             addrPayload = { line1, line2: guest.line2, city, state, zip };
-            custPayload = { name, email, phone };
+            custPayload = { name, email, phone: finalPhone };
         }
         setPlacing(true);
         try {
@@ -553,7 +566,20 @@ export default function CheckoutPage() {
                             <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     <Field label="Full Name" value={guest.name} onChange={v => g('name', v)} placeholder="Your name" />
-                                    <Field label="Phone" value={guest.phone} onChange={v => g('phone', v)} placeholder="10-digit" />
+                                    
+                                    <div className="">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Phone</label>
+                                        <div className="flex bg-white rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-gray-200 focus-within:border-gray-500 border border-gray-200 transition-all">
+                                            <CountryCodePicker value={guestCountryCode} onChange={setGuestCountryCode} />
+                                            <input 
+                                                value={guest.phone} 
+                                                onChange={e => g('phone', e.target.value)} 
+                                                placeholder="10-digit"
+                                                className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none" 
+                                            />
+                                        </div>
+                                    </div>
+
                                     <Field label="Email" value={guest.email} onChange={v => g('email', v)} placeholder="you@email.com" type="email" span />
                                     <Field label="Address Line 1" value={guest.line1} onChange={v => g('line1', v)} placeholder="House, Street" span />
                                     <Field label="Address Line 2" value={guest.line2} onChange={v => g('line2', v)} placeholder="Area, Landmark (optional)" span />

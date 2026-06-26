@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapPin, Plus, Check, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import CountryCodePicker from '@/Components/auth/CountryCodePicker';
 
 interface Address { id: number; name: string; phone: string; address_line1: string; address_line2?: string; city: string; state: string; zip_code: string; is_default: boolean; }
 
@@ -28,6 +29,7 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState('');
     const [form, setForm] = useState({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
+    const [countryCode, setCountryCode] = useState('+91');
     const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
     const load = async () => {
@@ -51,8 +53,19 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
             setErr('Please fill all required fields.'); return;
         }
         setSaving(true); setErr('');
+
+        let finalPhone = form.phone.trim();
+        if (finalPhone.startsWith(countryCode)) {
+            finalPhone = finalPhone.substring(countryCode.length);
+        }
+        const rawCode = countryCode.replace('+', '');
+        if (finalPhone.startsWith(rawCode)) {
+            finalPhone = finalPhone.substring(rawCode.length);
+        }
+        finalPhone = `${countryCode}${finalPhone}`;
+
         try {
-            await api.post('/api/account/addresses', form);
+            await api.post('/api/account/addresses', { ...form, phone: finalPhone });
             setShowForm(false);
             setForm({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
             await load();
@@ -87,7 +100,20 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
                     <p className="text-xs font-black text-gray-900 uppercase tracking-wider">New Delivery Address</p>
                     <div className="grid grid-cols-2 gap-3">
                         <Inp label="Full Name" value={form.name} onChange={v => f('name', v)} placeholder="Recipient" req />
-                        <Inp label="Phone" value={form.phone} onChange={v => f('phone', v)} placeholder="10-digit" req />
+                        
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Phone<span className="text-red-500 ml-0.5">*</span></label>
+                            <div className="flex bg-white rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-gray-900 focus-within:border-gray-900 border border-gray-200 transition-all">
+                                <CountryCodePicker value={countryCode} onChange={setCountryCode} />
+                                <input 
+                                    value={form.phone} 
+                                    onChange={e => f('phone', e.target.value)} 
+                                    placeholder="10-digit"
+                                    className="flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none" 
+                                />
+                            </div>
+                        </div>
+
                         <div className="col-span-2"><Inp label="Address Line 1" value={form.line1} onChange={v => f('line1', v)} placeholder="House, Street" req /></div>
                         <div className="col-span-2"><Inp label="Address Line 2" value={form.line2} onChange={v => f('line2', v)} placeholder="Area, Landmark (optional)" /></div>
                         <Inp label="City" value={form.city} onChange={v => f('city', v)} req />
