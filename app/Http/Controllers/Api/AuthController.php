@@ -8,6 +8,7 @@ use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -35,6 +36,7 @@ class AuthController extends Controller
             Log::error('Failed to send WhatsApp account created: '.$e->getMessage());
         }
 
+        Auth::guard('web')->login($user);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -64,6 +66,7 @@ class AuthController extends Controller
             ]);
         }
 
+        Auth::guard('web')->login($user);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -81,8 +84,13 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+        }
 
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out successfully']);
     }
