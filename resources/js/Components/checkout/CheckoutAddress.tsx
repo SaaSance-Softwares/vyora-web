@@ -4,19 +4,19 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import CountryCodePicker from '@/Components/auth/CountryCodePicker';
 
-interface Address { id: number; name: string; phone: string; address_line1: string; address_line2?: string; city: string; state: string; zip_code: string; is_default: boolean; }
+interface Address { id: number; name: string; phone: string; address_line1: string; address_line2?: string; city: string; district?: string; state: string; zip_code: string; country: string; is_default: boolean; }
 
 interface Props {
     selectedId: number | null;
     onChange: (addr: Address) => void;
 }
 
-function Inp({ label, value, onChange, placeholder, req }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; req?: boolean }) {
+function Inp({ label, value, onChange, placeholder, req, readOnly }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; req?: boolean; readOnly?: boolean }) {
     return (
         <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}{req && <span className="text-red-500 ml-0.5">*</span>}</label>
-            <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all" />
+            <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly}
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all read-only:bg-gray-100 read-only:text-gray-600 read-only:cursor-not-allowed read-only:focus:ring-0 read-only:focus:border-gray-200" />
         </div>
     );
 }
@@ -28,7 +28,49 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState('');
-    const [form, setForm] = useState({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
+    const [form, setForm] = useState({ name: '', phone: '', line1: '', line2: '', pincode: '', state: '', city: '', district: '', country: 'India' });
+    const [locked, setLocked] = useState({ city: false, district: false, state: false, country: true });
+    const [activeCountryId, setActiveCountryId] = useState<number | null>(null);
+
+    useEffect(() => {
+        api.get('/api/localization/countries').then(res => {
+            if (res.data && res.data.length > 0) {
+                setActiveCountryId(res.data[0].id);
+                setForm(p => ({ ...p, country: res.data[0].name }));
+            }
+        }).catch(() => {});
+    }, []);
+    
+    useEffect(() => {
+        const fetchPincode = async () => {
+            if (form.pincode.length === 6 && activeCountryId) {
+                try {
+                    const res = await api.get(`/api/localization/postal-code/${activeCountryId}/${form.pincode}`);
+                    if (res.data.found) {
+                        setForm(p => ({
+                            ...p,
+                            city: res.data.city || p.city,
+                            district: res.data.district || p.district,
+                            state: res.data.state || p.state,
+                        }));
+                        setLocked(p => ({
+                            ...p,
+                            city: !!res.data.city,
+                            district: !!res.data.district,
+                            state: !!res.data.state,
+                        }));
+                    } else {
+                        setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                    }
+                } catch (e) {
+                    setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                }
+            } else if (form.pincode.length < 6) {
+                setLocked(p => ({ ...p, city: false, district: false, state: false }));
+            }
+        };
+        fetchPincode();
+    }, [form.pincode]);
     const [countryCode, setCountryCode] = useState('+91');
     const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -67,7 +109,8 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
         try {
             await api.post('/api/account/addresses', { ...form, phone: finalPhone });
             setShowForm(false);
-            setForm({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
+            setForm({ name: '', phone: '', line1: '', line2: '', pincode: '', state: '', city: '', district: '', country: form.country });
+            setLocked({ city: false, district: false, state: false, country: true });
             await load();
         } catch (e: any) { setErr(e.response?.data?.message || 'Could not save.'); }
         finally { setSaving(false); }
@@ -84,7 +127,8 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
                         <div>
                             <p className="text-sm font-bold text-gray-900">{addr.name} <span className="text-gray-400 font-normal">· {addr.phone}</span></p>
                             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                                {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ''}, {addr.city}, {addr.state} – {addr.zip_code}
+                                {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ''}, {addr.city}{addr.district ? `, ${addr.district}` : ''}, {addr.state} – {addr.zip_code}
+                                <span className="block mt-1 text-gray-500">{addr.country}</span>
                             </p>
                         </div>
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-4 mt-0.5 transition-all ${selectedId === addr.id ? 'border-gray-900 bg-gray-900' : 'border-gray-300'}`}>
@@ -98,7 +142,7 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
             {showForm && (
                 <div className="p-4 rounded-2xl border border-gray-200 bg-gray-50 space-y-3">
                     <p className="text-xs font-black text-gray-900 uppercase tracking-wider">New Delivery Address</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                         <Inp label="Full Name" value={form.name} onChange={v => f('name', v)} placeholder="Recipient" req />
                         
                         <div className="flex flex-col gap-1">
@@ -114,11 +158,13 @@ export default function CheckoutAddress({ selectedId, onChange }: Props) {
                             </div>
                         </div>
 
-                        <div className="col-span-2"><Inp label="Address Line 1" value={form.line1} onChange={v => f('line1', v)} placeholder="House, Street" req /></div>
-                        <div className="col-span-2"><Inp label="Address Line 2" value={form.line2} onChange={v => f('line2', v)} placeholder="Area, Landmark (optional)" /></div>
-                        <Inp label="City" value={form.city} onChange={v => f('city', v)} req />
-                        <Inp label="State" value={form.state} onChange={v => f('state', v)} req />
-                        <Inp label="Pincode" value={form.pincode} onChange={v => f('pincode', v)} req />
+                        <div className="col-span-1"><Inp label="Address Line 1" value={form.line1} onChange={v => f('line1', v)} placeholder="House, Street" req /></div>
+                        <div className="col-span-1"><Inp label="Address Line 2" value={form.line2} onChange={v => f('line2', v)} placeholder="Area, Landmark (optional)" /></div>
+                        <div className="col-span-1"><Inp label="Pincode" value={form.pincode} onChange={v => f('pincode', v)} placeholder="6-digit pincode" req /></div>
+                        <div className="col-span-1"><Inp label="State" value={form.state} onChange={v => f('state', v)} placeholder="State" req readOnly={locked.state} /></div>
+                        <div className="col-span-1"><Inp label="City" value={form.city} onChange={v => f('city', v)} placeholder="City" req readOnly={locked.city} /></div>
+                        <div className="col-span-1"><Inp label="District" value={form.district} onChange={v => f('district', v)} placeholder="District (optional)" readOnly={locked.district} /></div>
+                        <div className="col-span-1"><Inp label="Country" value={form.country} onChange={v => f('country', v)} placeholder="Country" req readOnly={locked.country} /></div>
                     </div>
                     {err && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{err}</p>}
                     <div className="flex gap-2">

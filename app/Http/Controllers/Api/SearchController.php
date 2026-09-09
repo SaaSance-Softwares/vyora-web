@@ -30,12 +30,12 @@ class SearchController extends Controller
                         });
                 });
 
-            $products = $queryBuilder->with(['images', 'skus'])->paginate(12);
+            $products = $queryBuilder->with(['images', 'skus.color'])->paginate(12);
         } else {
             $products = Product::search($query)
                 ->query(function ($builder) {
                     // Eager load related data and apply any necessary constraints
-                    $builder->with(['images', 'skus'])
+                    $builder->with(['images', 'skus.color'])
                         ->where('is_active', true);
                 })
                 ->paginate(12);

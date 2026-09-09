@@ -63,11 +63,9 @@
     </div>
 
     {{-- ── STICKY SAVE BAR ──────────────────────────────── --}}
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30 md:pl-64 flex items-center justify-between shadow-lg">
-        <p class="text-sm text-gray-500">Your information will be securely saved.</p>
-        <button type="submit"
-            class="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 text-sm font-medium transition-colors shadow-sm">
-            Save Profile Settings
+    <div class="bg-gray-50 border-t border-gray-200 p-5 flex justify-end rounded-b-lg mt-6">
+        <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-colors">
+            Save Changes
         </button>
     </div>
 </form>

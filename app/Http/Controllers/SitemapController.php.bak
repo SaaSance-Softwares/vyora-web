@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\Collection;
+use App\Models\LegalPage;
+use App\Models\Product;
+use App\Models\CmsPage;
+
+class SitemapController extends Controller
+{
+    public function index()
+    {
+        $appUrl = rtrim(url('/'), '/');
+
+        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+
+        // Static Pages
+        $staticPages = [
+            '/',
+            '/shop',
+            '/search',
+            '/gift-cards',
+        ];
+
+        foreach ($staticPages as $page) {
+            $url = $xml->addChild('url');
+            $url->addChild('loc', $appUrl.$page);
+            $url->addChild('changefreq', 'daily');
+            $url->addChild('priority', $page === '/' ? '1.0' : '0.8');
+        }
+
+        // Products
+        $products = Product::where('is_active', true)->select('slug', 'updated_at')->get();
+        foreach ($products as $product) {
+            $url = $xml->addChild('url');
+            $url->addChild('loc', $appUrl.'/product/'.$product->slug);
+            $url->addChild('lastmod', $product->updated_at->toAtomString());
+            $url->addChild('changefreq', 'daily');
+            $url->addChild('priority', '0.9');
+        }
+
+        // Categories
+        $categories = Category::select('slug', 'updated_at')->get();
+        foreach ($categories as $category) {
+            $url = $xml->addChild('url');
+            $url->addChild('loc', $appUrl.'/category/'.$category->slug);
+            $url->addChild('lastmod', $category->updated_at->toAtomString());
+            $url->addChild('changefreq', 'weekly');
+            $url->addChild('priority', '0.7');
+        }
+
+        // Collections
+        if (class_exists(Collection::class)) {
+            $collections = Collection::select('slug', 'updated_at')->get();
+            foreach ($collections as $collection) {
+                $url = $xml->addChild('url');
+                $url->addChild('loc', $appUrl.'/collection/'.$collection->slug);
+                $url->addChild('lastmod', $collection->updated_at->toAtomString());
+                $url->addChild('changefreq', 'weekly');
+                $url->addChild('priority', '0.7');
+            }
+        }
+
+        // Legal Pages
+        $legalPages = LegalPage::where('is_published', true)->select('slug', 'updated_at')->get();
+        foreach ($legalPages as $legalPage) {
+            $url = $xml->addChild('url');
+            $url->addChild('loc', $appUrl.'/policy/'.$legalPage->slug);
+            $url->addChild('lastmod', $legalPage->updated_at->toAtomString());
+            $url->addChild('changefreq', 'monthly');
+            $url->addChild('priority', '0.5');
+        }
+
+        // CMS Pages
+        if (class_exists(CmsPage::class)) {
+            $cmsPages = CmsPage::where('is_published', true)->select('slug', 'updated_at')->get();
+            foreach ($cmsPages as $cmsPage) {
+                $url = $xml->addChild('url');
+                $url->addChild('loc', $appUrl.'/p/'.$cmsPage->slug);
+                $url->addChild('lastmod', $cmsPage->updated_at->toAtomString());
+                $url->addChild('changefreq', 'monthly');
+                $url->addChild('priority', '0.6');
+            }
+        }
+
+        return response($xml->asXML(), 200, [
+            'Content-Type' => 'application/xml',
+        ]);
+    }
+}

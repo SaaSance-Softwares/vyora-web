@@ -10,7 +10,7 @@ class DeliveryPinApiController extends Controller
 {
     public function check(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'pincode' => 'required|string|max:20',
         ]);
 

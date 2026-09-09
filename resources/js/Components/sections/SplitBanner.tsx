@@ -9,7 +9,7 @@ export default function SplitBanner({ data, isFluid, sectionBg }: { data: any; i
 
     const textSide = (
         <div
-            className="flex flex-col justify-center px-8 md:px-16"
+            className="flex flex-col justify-center px-8 md:px-16 py-16 md:py-20"
             style={{ backgroundColor: textBg }}
         >
             {data.badge && (

@@ -112,12 +112,12 @@ class ProductUploadController extends Controller
             'Pragma' => 'no-cache',
         ];
 
-        $columns = ['Item name', 'Variant', 'Design SKU', 'Product SKU', 'Store SKU', 'Selling price', 'Product price'];
+        $columns = ['Item name', 'Variant', 'Product SKU', 'Design SKU', 'Store SKU', 'Selling price', 'Product price'];
 
         $callback = function () use ($columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
-            fputcsv($file, ['Dope T-Shirt', 'Black - S', 'DES-123', 'PROD-123', 'SKU-BLK-S', '999', '400']);
+            fputcsv($file, ['Dope T-Shirt', 'Black - S', 'PROD-123', 'DES-123', 'SKU-BLK-S', '999', '400']);
             fclose($file);
         };
 
@@ -126,9 +126,9 @@ class ProductUploadController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt',
-            'type' => 'required|in:qikink,general',
+        $request->strictValidate([
+            'file' => 'required|file|mimes:csv,txt|max:51200',
+            'type' => 'required|string|max:255|in:qikink,general',
         ]);
 
         $file = $request->file('file');

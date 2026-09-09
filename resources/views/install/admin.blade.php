@@ -25,9 +25,9 @@
 
         <div>
             <label class="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2 pl-1">Secure Admin Path</label>
-            <div class="relative flex items-center">
-                <span class="absolute pl-4 text-sm font-medium text-gray-400 pointer-events-none">{{ request()->getHttpHost() }}/</span>
-                <input type="text" name="admin_path" value="{{ old('admin_path', 'occ') }}" required placeholder="occ" style="padding-left: {{ strlen(request()->getHttpHost()) * 8 + 40 }}px;" class="block w-full pr-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none">
+            <div class="flex items-center overflow-hidden bg-gray-50/50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-black focus-within:border-transparent focus-within:bg-white transition-all">
+                <span class="pl-4 py-3.5 text-sm font-medium text-gray-400 whitespace-nowrap">{{ request()->getHttpHost() }}/</span>
+                <input type="text" name="admin_path" value="{{ old('admin_path', 'occ') }}" required placeholder="occ" class="block w-full pr-4 py-3.5 bg-transparent text-sm font-medium text-gray-900 border-none focus:ring-0 outline-none">
             </div>
             <p class="mt-2 text-[10px] text-gray-400 uppercase tracking-widest font-bold pl-1">This will be your secret backend URL (e.g. occ, admin, portal)</p>
         </div>

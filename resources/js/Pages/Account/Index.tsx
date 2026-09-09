@@ -3,6 +3,7 @@ import { useUIStore } from '@/store/ui';
 import { useState, useEffect } from 'react';
 import { Link } from '@inertiajs/react';
 import api from '@/lib/api';
+import CountryCodePicker, { COUNTRIES } from '@/Components/auth/CountryCodePicker';
 import { formatPrice } from '@/lib/utils';
 import {
     User, Lock, MapPin, Package, LogOut, ChevronRight,
@@ -35,7 +36,7 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
             <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
             <input
                 {...props}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all disabled:bg-gray-50 disabled:text-gray-400 read-only:bg-gray-100 read-only:text-gray-600 read-only:cursor-not-allowed read-only:focus:ring-0 read-only:focus:border-gray-200"
             />
         </div>
     );
@@ -94,8 +95,15 @@ function SecuritySection() {
     const [showCur, setShowCur]   = useState(false);
     const [showNew, setShowNew]   = useState(false);
     const [saving, setSaving]     = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteStep, setDeleteStep] = useState(1);
+    const [deleteOtp, setDeleteOtp] = useState('');
+    const [sendingOtp, setSendingOtp] = useState(false);
     const [success, setSuccess]   = useState('');
     const [error, setError]       = useState('');
+
+    const logout = useAuthStore(state => state.logout);
 
     const handleChange = async () => {
         if (newPwd !== confirm) { setError('Passwords do not match.'); return; }
@@ -110,12 +118,47 @@ function SecuritySection() {
         } finally { setSaving(false); }
     };
 
+    const handleRequestDeleteOtp = async () => {
+        setSendingOtp(true);
+        setError('');
+        try {
+            await api.post('/api/user/delete-account/otp');
+            setDeleteStep(2);
+        } catch (e: any) {
+            setError(e.response?.data?.message || 'Could not send OTP.');
+        } finally {
+            setSendingOtp(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!deleteOtp || deleteOtp.length !== 6) {
+            setError('Please enter a valid 6-digit OTP.');
+            return;
+        }
+        setDeleting(true);
+        setError('');
+        try {
+            await api.delete('/api/user/delete-account', { data: { otp: deleteOtp } });
+            setShowDeleteModal(false);
+            alert('Your account has been successfully deleted/anonymized.');
+            logout();
+            window.location.href = '/';
+        } catch (e: any) {
+            setError(e.response?.data?.errors?.otp?.[0] || e.response?.data?.message || 'Could not delete account.');
+            setDeleting(false);
+        }
+    };
+
     return (
         <SectionCard title="Security" icon={Lock}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Current password */}
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Current Password</label>
+                    <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Current Password</label>
+                        <span className="text-[10px] text-gray-400 italic">If you do not remember, logout and forget password.</span>
+                    </div>
                     <div className="relative">
                         <input type={showCur ? 'text' : 'password'} value={current} onChange={e => setCurrent(e.target.value)}
                             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all"
@@ -141,11 +184,87 @@ function SecuritySection() {
             {error   && <p className="mt-3 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{error}</p>}
             {success && <p className="mt-3 text-xs text-green-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" />{success}</p>}
             <div className="mt-6">
-                <button onClick={handleChange} disabled={saving}
+                <button onClick={handleChange} disabled={saving || deleting}
                     className="flex items-center gap-2 bg-black text-white text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl hover:bg-gray-800 transition-all disabled:opacity-50 active:scale-[0.98]">
                     {saving ? 'Updating…' : 'Update Password'}
                 </button>
             </div>
+
+            <div className="mt-12 pt-6 border-t border-red-50">
+                <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-2">Danger Zone</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                    Permanently delete your account. If you have placed orders, your profile data will be anonymized to maintain order history. This action cannot be undone.
+                </p>
+                <button onClick={() => { setShowDeleteModal(true); setDeleteStep(1); setDeleteOtp(''); setError(''); }} disabled={deleting}
+                    className="flex items-center gap-2 bg-red-50 text-red-600 text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl border border-red-100 hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 active:scale-[0.98]">
+                    {deleting ? 'Deleting...' : 'Delete Account'}
+                </button>
+            </div>
+
+            {/* Custom Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                                <AlertCircle className="w-6 h-6 text-red-600" />
+                            </div>
+                            <h2 className="text-xl font-black text-gray-900 mb-2 tracking-tight">Delete Account</h2>
+                            
+                            {deleteStep === 1 ? (
+                                <>
+                                    <p className="text-sm text-gray-500 mb-6">
+                                        Are you absolutely sure you want to delete your account? This action cannot be undone. If you have pending or past orders, your profile data will be anonymized to preserve order history.
+                                    </p>
+                                    {error && <p className="mb-4 text-xs text-red-500">{error}</p>}
+                                    <div className="flex gap-3 justify-end">
+                                        <button onClick={() => setShowDeleteModal(false)}
+                                            className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={handleRequestDeleteOtp} disabled={sendingOtp}
+                                            className="px-5 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                            {sendingOtp && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                            Request OTP
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        We've sent a 6-digit OTP to your registered WhatsApp/Email. Please enter it below to confirm deletion.
+                                    </p>
+                                    <div className="mb-6">
+                                        <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Enter OTP</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={deleteOtp}
+                                            onChange={e => setDeleteOtp(e.target.value)}
+                                            maxLength={6}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-center tracking-[0.5em] font-bold text-lg focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all"
+                                            placeholder="------"
+                                        />
+                                    </div>
+                                    {error && <p className="mb-4 text-xs text-red-500">{error}</p>}
+                                    <div className="flex gap-3 justify-end">
+                                        <button onClick={() => setShowDeleteModal(false)}
+                                            className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={handleDeleteAccount} disabled={deleting || !deleteOtp || deleteOtp.length !== 6}
+                                            className="px-5 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                            {deleting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                            Confirm Deletion
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </SectionCard>
     );
 }
@@ -158,8 +277,10 @@ interface Address {
     address_line1: string;
     address_line2?: string;
     city: string;
+    district?: string;
     state: string;
     zip_code: string;
+    country: string;
     is_default: boolean;
 }
 
@@ -173,7 +294,8 @@ function AddressCard({ addr, onDelete, onSetDefault, onEdit }: { addr: Address; 
             <p className="text-xs text-gray-500 mt-0.5">{addr.phone}</p>
             <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ''}<br />
-                {addr.city}, {addr.state} – {addr.zip_code}
+                {addr.city}{addr.district ? `, ${addr.district}` : ''}, {addr.state} – {addr.zip_code}<br />
+                {addr.country}
             </p>
             <div className="flex items-center gap-3 mt-3">
                 {!addr.is_default && (
@@ -199,9 +321,53 @@ function AddressesSection() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [form, setForm] = useState({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
+    const [form, setForm] = useState({ name: '', phone: '', line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: 'India' });
+    const [locked, setLocked] = useState({ city: false, district: false, state: false, country: true });
+    const [activeCountryId, setActiveCountryId] = useState<number | null>(null);
+    const [countryCode, setCountryCode] = useState('+91');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        // Fetch active country on mount
+        api.get('/api/localization/countries').then(res => {
+            if (res.data && res.data.length > 0) {
+                setActiveCountryId(res.data[0].id);
+                setForm(p => ({ ...p, country: res.data[0].name }));
+            }
+        }).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        const fetchPincode = async () => {
+            if (form.pincode.length === 6 && activeCountryId) {
+                try {
+                    const res = await api.get(`/api/localization/postal-code/${activeCountryId}/${form.pincode}`);
+                    if (res.data.found) {
+                        setForm(p => ({
+                            ...p,
+                            city: res.data.city || p.city,
+                            district: res.data.district || p.district,
+                            state: res.data.state || p.state,
+                        }));
+                        setLocked(p => ({
+                            ...p,
+                            city: !!res.data.city,
+                            district: !!res.data.district,
+                            state: !!res.data.state,
+                        }));
+                    } else {
+                        setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                    }
+                } catch (e) {
+                    setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                }
+            } else if (form.pincode.length < 6) {
+                setLocked(p => ({ ...p, city: false, district: false, state: false }));
+            }
+        };
+        fetchPincode();
+    }, [form.pincode]);
 
     const load = async () => {
         try { const r = await api.get('/api/account/addresses'); setAddresses(r.data); }
@@ -211,24 +377,69 @@ function AddressesSection() {
 
     const handleAdd = async () => {
         setSaving(true); setError('');
+        
+        let finalPhone = form.phone.trim();
+        if (finalPhone.startsWith(countryCode)) {
+            finalPhone = finalPhone.substring(countryCode.length);
+        }
+        const rawCode = countryCode.replace('+', '');
+        if (finalPhone.startsWith(rawCode)) {
+            finalPhone = finalPhone.substring(rawCode.length);
+        }
+        finalPhone = `${countryCode}${finalPhone}`;
+
         try {
             if (editingId) {
-                await api.put(`/api/account/addresses/${editingId}`, form);
+                await api.put(`/api/account/addresses/${editingId}`, { ...form, phone: finalPhone });
             } else {
-                await api.post('/api/account/addresses', form);
+                await api.post('/api/account/addresses', { ...form, phone: finalPhone });
             }
             setShowForm(false);
             setEditingId(null);
-            setForm({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' });
+            setForm({ name: '', phone: '', line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: form.country });
+            setCountryCode('+91');
+            setLocked({ city: false, district: false, state: false, country: true });
             load();
         } catch (e: any) { setError(e.response?.data?.message || 'Could not save address.'); }
         finally { setSaving(false); }
     };
 
     const handleEdit = (addr: Address) => {
+        let ph = addr.phone || '';
+        let cCode = '+91'; // Default
+        
+        // Sort dial codes by length descending so +918 matches before +91
+        const sortedCodes = [...COUNTRIES].sort((a, b) => b.dial_code.length - a.dial_code.length);
+        
+        let foundCode = false;
+        
+        if (ph.startsWith('+')) {
+            for (const country of sortedCodes) {
+                if (ph.startsWith(country.dial_code)) {
+                    cCode = country.dial_code;
+                    ph = ph.substring(country.dial_code.length);
+                    foundCode = true;
+                    break;
+                }
+            }
+        } 
+        
+        // Fallback for missing '+'
+        if (!foundCode && ph.length > 10) {
+            for (const country of sortedCodes) {
+                const codeWithoutPlus = country.dial_code.replace('+', '');
+                if (ph.startsWith(codeWithoutPlus) && ph.length > codeWithoutPlus.length + 5) {
+                    cCode = country.dial_code;
+                    ph = ph.substring(codeWithoutPlus.length);
+                    break;
+                }
+            }
+        }
+
+        setCountryCode(cCode);
         setForm({
-            name: addr.name, phone: addr.phone, line1: addr.address_line1,
-            line2: addr.address_line2 || '', city: addr.city, state: addr.state, pincode: addr.zip_code
+            name: addr.name, phone: ph, line1: addr.address_line1,
+            line2: addr.address_line2 || '', city: addr.city, district: addr.district || '', state: addr.state, pincode: addr.zip_code, country: addr.country || form.country
         });
         setEditingId(addr.id);
         setShowForm(true);
@@ -263,12 +474,25 @@ function AddressesSection() {
                     <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">{editingId ? 'Edit Address' : 'New Address'}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Field label="Full Name" value={form.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('name', e.target.value)} placeholder="Recipient name" />
-                        <Field label="Phone" value={form.phone} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('phone', e.target.value)} placeholder="10-digit number" />
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Phone</label>
+                            <div className="flex bg-white rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-gray-900 focus-within:border-gray-900 border border-gray-200 transition-all">
+                                <CountryCodePicker value={countryCode} onChange={setCountryCode} />
+                                <input 
+                                    value={form.phone} 
+                                    onChange={e => f('phone', e.target.value)} 
+                                    placeholder="10-digit number"
+                                    className="flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none" 
+                                />
+                            </div>
+                        </div>
                         <Field label="Address Line 1" value={form.line1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('line1', e.target.value)} placeholder="House / Flat / Street" />
                         <Field label="Address Line 2" value={form.line2} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('line2', e.target.value)} placeholder="Area / Landmark (optional)" />
-                        <Field label="City" value={form.city} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('city', e.target.value)} placeholder="City" />
-                        <Field label="State" value={form.state} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('state', e.target.value)} placeholder="State" />
                         <Field label="Pincode" value={form.pincode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('pincode', e.target.value)} placeholder="6-digit pincode" />
+                        <Field label="State" value={form.state} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('state', e.target.value)} placeholder="State" readOnly={locked.state} />
+                        <Field label="City" value={form.city} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('city', e.target.value)} placeholder="City" readOnly={locked.city} />
+                        <Field label="District" value={form.district} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('district', e.target.value)} placeholder="District (optional)" readOnly={locked.district} />
+                        <Field label="Country" value={form.country} onChange={(e: React.ChangeEvent<HTMLInputElement>) => f('country', e.target.value)} placeholder="Country" readOnly={locked.country} />
                     </div>
                     {error && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{error}</p>}
                     <div className="flex gap-2 pt-1">
@@ -276,7 +500,7 @@ function AddressesSection() {
                             className="flex items-center gap-2 bg-black text-white text-xs font-bold uppercase tracking-wider px-5 py-2 rounded-xl hover:bg-gray-800 transition-all disabled:opacity-50">
                             {saving ? 'Saving…' : 'Save Address'}
                         </button>
-                        <button onClick={() => { setShowForm(false); setEditingId(null); setForm({ name: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' }); }} className="text-xs text-gray-500 font-medium hover:text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-100 transition-all">
+                        <button onClick={() => { setShowForm(false); setEditingId(null); setForm({ name: '', phone: '', line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: form.country }); setCountryCode('+91'); setLocked({ city: false, district: false, state: false, country: true }); }} className="text-xs text-gray-500 font-medium hover:text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-100 transition-all">
                             Cancel
                         </button>
                     </div>
@@ -313,6 +537,8 @@ export default function AccountPage() {
     const [userData, setUserData] = useState<any>(null);
     const [latestOrders, setLatestOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
+    const [latestGiftCards, setLatestGiftCards] = useState<any[]>([]);
+    const [giftCardsLoading, setGiftCardsLoading] = useState(false);
 
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
@@ -334,6 +560,13 @@ export default function AccountPage() {
     }, [user]);
 
     useEffect(() => {
+        if (activeTab === 'gift-cards' && latestGiftCards.length === 0 && user) {
+            setGiftCardsLoading(true);
+            api.get('/api/gift-cards/my-cards').then(r => {
+                setLatestGiftCards(Array.isArray(r.data) ? r.data.slice(0, 4) : []);
+            }).catch(() => {}).finally(() => setGiftCardsLoading(false));
+        }
+        
         if (activeTab === 'orders' && latestOrders.length === 0 && user) {
             setOrdersLoading(true);
             api.get('/api/my-orders?page=1').then(r => {
@@ -457,18 +690,58 @@ export default function AccountPage() {
                     )}
                     {activeTab === 'gift-cards' && (
                         <SectionCard title="Gift Cards" icon={Gift}>
-                            <div className="text-center py-8">
-                                <Gift className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                                <p className="text-sm text-gray-500 mb-4">Manage your gift cards, wallet balance, and send gifts.</p>
-                                <div className="flex gap-3 justify-center">
-                                    <Link href="/gift-cards/my-cards" className="inline-flex items-center gap-2 bg-black text-white text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl hover:bg-gray-800 transition-all">
-                                        <Wallet className="w-3.5 h-3.5" /> My Wallet
-                                    </Link>
-                                    <Link href="/gift-cards" className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl hover:border-gray-400 transition-all">
-                                        <Gift className="w-3.5 h-3.5" /> Buy Cards
-                                    </Link>
+                            {giftCardsLoading ? (
+                                <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-gray-50 animate-pulse" />)}</div>
+                            ) : latestGiftCards.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Gift className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                                    <p className="text-sm text-gray-500 mb-4">Manage your gift cards, wallet balance, and send gifts.</p>
+                                    <div className="flex gap-3 justify-center">
+                                        <Link href="/gift-cards/my-cards" className="inline-flex items-center gap-2 bg-black text-white text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl hover:bg-gray-800 transition-all">
+                                            <Wallet className="w-3.5 h-3.5" /> My Wallet
+                                        </Link>
+                                        <Link href="/gift-cards" className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl hover:border-gray-400 transition-all">
+                                            <Gift className="w-3.5 h-3.5" /> Buy Cards
+                                        </Link>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-gray-100">
+                                                    <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Card Code</th>
+                                                    <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                                                    <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Balance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {latestGiftCards.map(card => (
+                                                    <tr key={card.id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="py-4 px-4">
+                                                            <p className="font-mono text-sm font-bold text-gray-900">{card.card_number}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">{card.status_badge?.label || card.status}</p>
+                                                        </td>
+                                                        <td className="py-4 px-4 text-sm text-gray-600 font-medium">
+                                                            {card.template_name || 'Direct Gift'}
+                                                        </td>
+                                                        <td className="py-4 px-4 text-right">
+                                                            <p className="text-sm font-bold text-gray-900">₹{card.remaining_amount?.toLocaleString()}</p>
+                                                            {card.used_amount > 0 && <p className="text-xs text-gray-400 mt-1">₹{card.used_amount?.toLocaleString()} Used</p>}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="flex justify-center border-t border-gray-100 pt-4">
+                                        <Link href="/gift-cards/my-cards" className="inline-flex items-center gap-2 text-xs font-bold text-black uppercase tracking-widest hover:text-gray-600 transition-all">
+                                            View More <ArrowRight className="w-3.5 h-3.5" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
                         </SectionCard>
                     )}
                 </main>

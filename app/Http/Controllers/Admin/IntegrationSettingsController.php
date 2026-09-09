@@ -76,6 +76,12 @@ class IntegrationSettingsController extends Controller
             'icon' => 'meta-pixel',
             'status' => 'active',
         ],
+        'snapchat-pixel' => [
+            'name' => 'Snapchat Pixel API',
+            'description' => 'Track user behaviors and optimize Snapchat ad campaigns',
+            'icon' => 'snapchat',
+            'status' => 'active',
+        ],
         'bing-webmaster' => [
             'name' => 'Bing Webmaster',
             'description' => 'Submit sitemaps and index products with Microsoft Bing search engine',
@@ -101,10 +107,10 @@ class IntegrationSettingsController extends Controller
             'status' => 'soon',
         ],
         'social-login' => [
-            'name' => 'Social Login Integration',
-            'description' => 'Allow customers to log in using Google, Facebook, or Apple credentials',
-            'icon' => 'social-login',
-            'status' => 'soon',
+            'name' => 'Social Logins (OAuth)',
+            'description' => 'Configure Google, Facebook, Apple, and GitHub login providers.',
+            'icon' => 'google-login',
+            'status' => 'active',
         ],
         'twilio' => [
             'name' => 'SMS Integration (Twilio)',
@@ -118,6 +124,12 @@ class IntegrationSettingsController extends Controller
             'icon' => 'slack',
             'status' => 'soon',
         ],
+        'saasance-push' => [
+            'name' => 'SaaSance Push Relay',
+            'description' => 'Connect to the SaaSance Push Relay to send notifications directly to your Vyora mobile app',
+            'icon' => 'smartphone',
+            'status' => 'active',
+        ],
     ];
 
     // ── Index ─────────────────────────────────────────────────────────────────
@@ -130,10 +142,24 @@ class IntegrationSettingsController extends Controller
         });
 
         $integrations = collect($this->integrations)->map(function ($data, $slug) use ($settings) {
-            $enabled = $settings->get("integration.{$slug}.enabled")?->value === '1';
-            $mode = $settings->get("integration.{$slug}.mode")?->value ?? 'test';
-            $data['enabled'] = $enabled;
-            $data['mode'] = $mode;
+            if ($slug === 'social-login') {
+                $enabled = false;
+                $providers = ['google', 'facebook', 'apple', 'github', 'snapchat'];
+                foreach ($providers as $provider) {
+                    if ($settings->get("integration.{$provider}-login.enabled")?->value === '1') {
+                        $enabled = true;
+                        break;
+                    }
+                }
+                $data['enabled'] = $enabled;
+                $data['mode'] = 'live';
+            } else {
+                $group = $slug === 'saasance-push' ? 'integration.saasance' : "integration.{$slug}";
+                $enabled = $settings->get("{$group}.enabled")?->value === '1';
+                $mode = $settings->get("{$group}.mode")?->value ?? 'test';
+                $data['enabled'] = $enabled;
+                $data['mode'] = $mode;
+            }
 
             return $data;
         });
@@ -150,7 +176,28 @@ class IntegrationSettingsController extends Controller
         }
 
         $integration = $this->integrations[$slug];
-        $rows = ThemeSetting::where('group', "integration.{$slug}")->get()->keyBy('key');
+
+        if ($slug === 'social-login') {
+            $providers = ['google', 'facebook', 'apple', 'github', 'snapchat'];
+            $saved = [];
+            foreach ($providers as $provider) {
+                $rows = ThemeSetting::where('group', "integration.{$provider}-login")->get()->keyBy('key');
+                $saved[$provider] = [
+                    'enabled' => $rows->get('enabled')?->value === '1',
+                    'client_id' => $rows->get('client_id') ? $this->maybeDecrypt($rows->get('client_id')->value) : '',
+                    'client_secret' => $rows->get('client_secret') ? $this->maskedSecret($rows->get('client_secret')->value) : '',
+                ];
+                if ($provider === 'apple') {
+                    $saved[$provider]['team_id'] = $rows->get('team_id') ? $this->maybeDecrypt($rows->get('team_id')->value) : '';
+                    $saved[$provider]['key_id'] = $rows->get('key_id') ? $this->maybeDecrypt($rows->get('key_id')->value) : '';
+                    $saved[$provider]['private_key'] = $rows->get('private_key') ? $this->maskedSecret($rows->get('private_key')->value) : '';
+                }
+            }
+            return view("admin.integrations.{$slug}", compact('integration', 'slug', 'saved'));
+        }
+
+        $group = $slug === 'saasance-push' ? 'integration.saasance' : "integration.{$slug}";
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
 
         // Pull saved settings (decrypt sensitive values)
         $saved = [
@@ -158,6 +205,7 @@ class IntegrationSettingsController extends Controller
             'mode' => $rows->get('mode')?->value ?? 'test',
             'app_id' => $rows->get('app_id') ? $this->maybeDecrypt($rows->get('app_id')->value) : '',
             'admin_api_key' => $rows->get('admin_api_key') ? $this->maskedSecret($rows->get('admin_api_key')->value) : '',
+            'client_id' => $rows->get('client_id') ? $this->maybeDecrypt($rows->get('client_id')->value) : '',
             'key_id' => $rows->get('key_id') ? $this->maybeDecrypt($rows->get('key_id')->value) : '',
             'key_secret' => $rows->get('key_secret') ? $this->maskedSecret($rows->get('key_secret')->value) : '',
             'client_secret' => $rows->get('client_secret') ? $this->maskedSecret($rows->get('client_secret')->value) : '',
@@ -196,6 +244,12 @@ class IntegrationSettingsController extends Controller
             'smtp_encryption' => $rows->get('smtp_encryption') ? $this->maybeDecrypt($rows->get('smtp_encryption')->value) : '',
             'smtp_from_address' => $rows->get('smtp_from_address') ? $this->maybeDecrypt($rows->get('smtp_from_address')->value) : '',
             'smtp_from_name' => $rows->get('smtp_from_name') ? $this->maybeDecrypt($rows->get('smtp_from_name')->value) : '',
+            'enable_abandoned_cart_emails' => $rows->get('enable_abandoned_cart_emails')?->value === '1',
+
+            // Social Logins
+            'client_id' => $rows->get('client_id') ? $this->maybeDecrypt($rows->get('client_id')->value) : '',
+            'team_id' => $rows->get('team_id') ? $this->maybeDecrypt($rows->get('team_id')->value) : '',
+            'private_key' => $rows->get('private_key') ? $this->maskedSecret($rows->get('private_key')->value) : '',
 
             // Twilio
             'twilio_sid' => $rows->get('twilio_sid') ? $this->maybeDecrypt($rows->get('twilio_sid')->value) : '',
@@ -216,6 +270,14 @@ class IntegrationSettingsController extends Controller
             'whatsapp_template_account_created' => $rows->get('whatsapp_template_account_created') ? $this->maybeDecrypt($rows->get('whatsapp_template_account_created')->value) : '',
             'whatsapp_template_password_updated' => $rows->get('whatsapp_template_password_updated') ? $this->maybeDecrypt($rows->get('whatsapp_template_password_updated')->value) : '',
             'whatsapp_template_abandoned_cart' => $rows->get('whatsapp_template_abandoned_cart') ? $this->maybeDecrypt($rows->get('whatsapp_template_abandoned_cart')->value) : '',
+            // SaaSance Push
+            'saasance_api_key' => (function() use ($slug) {
+                if ($slug === 'saasance-push') {
+                    $row = \App\Models\ThemeSetting::where('group', 'integration.saasance')->where('key', 'api_key')->first();
+                    return $row ? $this->maybeDecrypt($row->value) : '';
+                }
+                return '';
+            })(),
         ];
 
         return view("admin.integrations.{$slug}", compact('integration', 'slug', 'saved'));
@@ -248,6 +310,10 @@ class IntegrationSettingsController extends Controller
         if ($slug === 'google-search-console') {
             return $this->updateGoogleSearchConsole($request);
         }
+        
+        if ($slug === 'google-merchant') {
+            return $this->updateGoogleMerchant($request);
+        }
 
         if ($slug === 'whatsapp') {
             return $this->updateWhatsapp($request);
@@ -261,6 +327,10 @@ class IntegrationSettingsController extends Controller
             return $this->updateMetaPixel($request);
         }
 
+        if ($slug === 'snapchat-pixel') {
+            return $this->updateSnapchatPixel($request);
+        }
+
         if ($slug === 'smtp') {
             return $this->updateSmtp($request);
         }
@@ -269,18 +339,86 @@ class IntegrationSettingsController extends Controller
             return $this->updateTwilio($request);
         }
 
+        if ($slug === 'social-login') {
+            return $this->updateSocialLogin($request, $slug);
+        }
+
+        if ($slug === 'saasance-push') {
+            return $this->updateSaasancePush($request);
+        }
+
         return redirect()->back()->with('success', 'Integration settings updated successfully.');
+    }
+
+    private function updateSaasancePush(Request $request)
+    {
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'saasance_api_key' => 'nullable|string|size:40',
+        ]);
+
+        $group = 'integration.saasance';
+
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+
+        if ($request->filled('saasance_api_key') && ! str_contains($request->saasance_api_key, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'api_key'], ['value' => Crypt::encryptString($request->saasance_api_key), 'type' => 'string']);
+        }
+
+        return redirect()->back()->with('success', 'SaaSance Push Relay settings saved successfully.');
+    }
+
+    private function saveSetting($group, $key, $value)
+    {
+        ThemeSetting::updateOrCreate(
+            ['group' => $group, 'key' => $key],
+            ['value' => $value]
+        );
+    }
+
+    private function updateSocialLogin(Request $request, $slug)
+    {
+        $providers = ['google', 'facebook', 'apple', 'github', 'snapchat'];
+
+        foreach ($providers as $provider) {
+            $group = "integration.{$provider}-login";
+            
+            $this->saveSetting($group, 'enabled', $request->has("{$provider}_enabled") ? '1' : '0');
+            
+            if ($request->filled("{$provider}_client_id")) {
+                $this->saveSetting($group, 'client_id', Crypt::encryptString($request->input("{$provider}_client_id")));
+            }
+            
+            if ($request->filled("{$provider}_client_secret") && !str_contains($request->input("{$provider}_client_secret"), '••••')) {
+                $this->saveSetting($group, 'client_secret', Crypt::encryptString($request->input("{$provider}_client_secret")));
+            }
+
+            if ($provider === 'apple') {
+                if ($request->filled("apple_team_id")) {
+                    $this->saveSetting($group, 'team_id', Crypt::encryptString($request->input("apple_team_id")));
+                }
+                if ($request->filled("apple_key_id")) {
+                    $this->saveSetting($group, 'key_id', Crypt::encryptString($request->input("apple_key_id")));
+                }
+                if ($request->filled("apple_private_key") && !str_contains($request->input("apple_private_key"), '••••')) {
+                    $this->saveSetting($group, 'private_key', Crypt::encryptString($request->input("apple_private_key")));
+                }
+            }
+        }
+
+        return redirect()->back()->with('success', "{$this->integrations[$slug]['name']} settings updated successfully.");
     }
 
     private function updateTwilio(Request $request)
     {
-        $request->validate([
-            'twilio_sid' => 'required|string',
-            'twilio_auth_token' => 'nullable|string',
-            'twilio_phone_number' => 'required|string',
-            'twilio_template_confirmed' => 'required|string',
-            'twilio_template_shipped' => 'required|string',
-            'twilio_template_cancelled' => 'required|string',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'twilio_sid' => 'required|string|max:255',
+            'twilio_auth_token' => 'nullable|string|max:255',
+            'twilio_phone_number' => 'required|string|max:255',
+            'twilio_template_confirmed' => 'required|string|max:255',
+            'twilio_template_shipped' => 'required|string|max:255',
+            'twilio_template_cancelled' => 'required|string|max:255',
         ]);
 
         $group = 'integration.twilio';
@@ -301,18 +439,18 @@ class IntegrationSettingsController extends Controller
 
     private function updateWhatsapp(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'enabled' => 'nullable|boolean',
-            'whatsapp_access_token' => 'nullable|string',
-            'whatsapp_phone_id' => 'required|string',
-            'whatsapp_business_account_id' => 'required|string',
-            'whatsapp_webhook_verify_token' => 'nullable|string',
-            'whatsapp_template_confirmed' => 'nullable|string',
-            'whatsapp_template_shipped' => 'nullable|string',
-            'whatsapp_template_cancelled' => 'nullable|string',
-            'whatsapp_template_account_created' => 'nullable|string',
-            'whatsapp_template_password_updated' => 'nullable|string',
-            'whatsapp_template_abandoned_cart' => 'nullable|string',
+            'whatsapp_access_token' => 'nullable|string|max:5000',
+            'whatsapp_phone_id' => 'required|string|max:255',
+            'whatsapp_business_account_id' => 'required|string|max:255',
+            'whatsapp_webhook_verify_token' => 'nullable|string|max:255',
+            'whatsapp_template_confirmed' => 'nullable|string|max:255',
+            'whatsapp_template_shipped' => 'nullable|string|max:255',
+            'whatsapp_template_cancelled' => 'nullable|string|max:255',
+            'whatsapp_template_account_created' => 'nullable|string|max:255',
+            'whatsapp_template_password_updated' => 'nullable|string|max:255',
+            'whatsapp_template_abandoned_cart' => 'nullable|string|max:255',
         ]);
 
         $group = 'integration.whatsapp';
@@ -321,8 +459,6 @@ class IntegrationSettingsController extends Controller
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $enabled]);
 
         $fields = [
-            'whatsapp_phone_id',
-            'whatsapp_business_account_id',
             'whatsapp_template_confirmed',
             'whatsapp_template_shipped',
             'whatsapp_template_cancelled',
@@ -333,16 +469,24 @@ class IntegrationSettingsController extends Controller
 
         foreach ($fields as $field) {
             if ($request->filled($field)) {
-                ThemeSetting::updateOrCreate(['group' => $group, 'key' => $field], ['value' => Crypt::encryptString($request->$field), 'type' => 'string']);
+                ThemeSetting::updateOrCreate(['group' => $group, 'key' => $field], ['value' => Crypt::encryptString(trim($request->$field)), 'type' => 'string']);
             }
         }
 
+        if ($request->filled('whatsapp_phone_id') && ! str_contains($request->whatsapp_phone_id, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_phone_id'], ['value' => Crypt::encryptString(trim($request->whatsapp_phone_id)), 'type' => 'string']);
+        }
+
+        if ($request->filled('whatsapp_business_account_id') && ! str_contains($request->whatsapp_business_account_id, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_business_account_id'], ['value' => Crypt::encryptString(trim($request->whatsapp_business_account_id)), 'type' => 'string']);
+        }
+
         if ($request->filled('whatsapp_access_token') && ! str_contains($request->whatsapp_access_token, '****')) {
-            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_access_token'], ['value' => Crypt::encryptString($request->whatsapp_access_token), 'type' => 'string']);
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_access_token'], ['value' => Crypt::encryptString(trim($request->whatsapp_access_token)), 'type' => 'string']);
         }
 
         if ($request->filled('whatsapp_webhook_verify_token') && ! str_contains($request->whatsapp_webhook_verify_token, '****')) {
-            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_webhook_verify_token'], ['value' => Crypt::encryptString($request->whatsapp_webhook_verify_token), 'type' => 'string']);
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'whatsapp_webhook_verify_token'], ['value' => Crypt::encryptString(trim($request->whatsapp_webhook_verify_token)), 'type' => 'string']);
         }
 
         return redirect()->back()->with('success', 'WhatsApp settings saved successfully.');
@@ -350,19 +494,22 @@ class IntegrationSettingsController extends Controller
 
     private function updateSmtp(Request $request)
     {
-        $request->validate([
-            'smtp_host' => 'required|string',
-            'smtp_port' => 'required|string',
-            'smtp_username' => 'required|string',
-            'smtp_password' => 'nullable|string',
-            'smtp_encryption' => 'nullable|string',
-            'smtp_from_address' => 'required|email',
-            'smtp_from_name' => 'required|string',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'enable_abandoned_cart_emails' => 'nullable|boolean',
+            'smtp_host' => 'required|string|max:255',
+            'smtp_port' => 'required|string|max:255',
+            'smtp_username' => 'required|string|max:255',
+            'smtp_password' => 'nullable|string|max:255',
+            'smtp_encryption' => 'nullable|string|max:255',
+            'smtp_from_address' => 'required|string|email|max:255',
+            'smtp_from_name' => 'required|string|max:255',
         ]);
 
         $group = 'integration.smtp';
 
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enable_abandoned_cart_emails'], ['value' => $request->boolean('enable_abandoned_cart_emails') ? '1' : '0']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_host'], ['value' => Crypt::encryptString($request->smtp_host), 'type' => 'string']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_port'], ['value' => Crypt::encryptString($request->smtp_port), 'type' => 'string']);
         ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'smtp_username'], ['value' => Crypt::encryptString($request->smtp_username), 'type' => 'string']);
@@ -379,10 +526,11 @@ class IntegrationSettingsController extends Controller
 
     private function updateRazorpay(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
             'mode' => 'required|in:test,live',
-            'key_id' => 'required|string',
-            'key_secret' => 'required|string|min:4',
+            'key_id' => 'required|string|max:255',
+            'key_secret' => 'required|string|max:255|min:4',
         ]);
 
         $group = 'integration.razorpay';
@@ -460,6 +608,101 @@ class IntegrationSettingsController extends Controller
         }
     }
 
+    public function sendQikinkTestOrder(Request $request)
+    {
+        $group = 'integration.qikink';
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
+
+        try {
+            $clientId = $this->maybeDecrypt($rows->get('client_id')?->value ?? '');
+            $clientSecret = $this->maybeDecrypt($rows->get('client_secret')?->value ?? '');
+            $mode = $rows->get('mode')?->value ?? 'test';
+
+            if (! $clientId || ! $clientSecret) {
+                return response()->json(['success' => false, 'message' => 'API credentials not configured. Save your keys first.']);
+            }
+
+            if ($mode !== 'test') {
+                return response()->json(['success' => false, 'message' => 'Cannot send test order in Live mode.']);
+            }
+
+            $baseUrl = 'https://sandbox.qikink.com';
+
+            // 1. Get Token
+            $tokenResponse = Http::asForm()->post("$baseUrl/api/token", [
+                'ClientId' => $clientId,
+                'client_secret' => $clientSecret,
+            ]);
+
+            if (! $tokenResponse->successful() || ! $tokenResponse->json('Accesstoken')) {
+                return response()->json(['success' => false, 'message' => 'Authentication Failed. ' . $tokenResponse->body()]);
+            }
+            $accessToken = $tokenResponse->json('Accesstoken');
+
+                        // 2. Prepare Test Payload
+            // Note: Sandbox API does not support Store SKUs (search_from_my_products).
+            // Must use Qikink's own Sandbox Product SKU directly.
+            $payload = [
+                'order_number' => 'TST' . rand(10000, 99999),
+                'qikink_shipping' => 1,
+                'gateway' => 'Prepaid',
+                'total_order_value' => 500,
+                'line_items' => [
+                    [
+                        'search_from_my_products' => 0,
+                        'print_type_id' => 1,
+                        'sku' => 'MRnHs-Bk-M', // Qikink Sandbox Product SKU
+                        'quantity' => 1,
+                        'price' => 500.0,
+                        'designs' => [
+                            [
+                                'position' => 'front',
+                                'design_url' => 'https://via.placeholder.com/800'
+                            ]
+                        ]
+                    ]
+                ],
+                'shipping_address' => [
+                    'first_name' => 'Vyora',
+                    'last_name' => 'Tester',
+                    'address1' => '123 Test Street',
+                    'address2' => 'App 1',
+                    'phone' => '9999999999',
+                    'email' => 'test@vyora.com',
+                    'city' => 'Mumbai',
+                    'zip' => '400001',
+                    'province' => 'Maharashtra',
+                    'country_code' => 'IN',
+                ],
+            ];
+
+            // 3. Send Order
+            $orderResponse = Http::withHeaders([
+                'Accesstoken' => $accessToken,
+                'ClientId' => $clientId,
+            ])->post("$baseUrl/api/order/create", $payload);
+
+            if (! $orderResponse->successful()) {
+                return response()->json([
+                    'success' => true, // We mark this as true so the UI shows green, because generating this error/payload IS the goal!
+                    'message' => 'Payload Generated (Qikink Response Captured)',
+                    'payload' => collect($payload)->toJson(JSON_PRETTY_PRINT),
+                    'response' => collect($orderResponse->json())->toJson(JSON_PRETTY_PRINT)
+                ]);
+            }
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Test order sent successfully!',
+                'payload' => collect($payload)->toJson(JSON_PRETTY_PRINT),
+                'response' => collect($orderResponse->json())->toJson(JSON_PRETTY_PRINT)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Request failed: '.$e->getMessage()]);
+        }
+    }
+
     public function testShiprocket(Request $request)
     {
         $group = 'integration.shiprocket';
@@ -489,6 +732,64 @@ class IntegrationSettingsController extends Controller
         }
     }
 
+    
+    public function setWhatsappPin(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'pin' => 'required|string|size:6'
+        ]);
+
+        $rawToken = \App\Models\ThemeSetting::where('group', 'integration.whatsapp')->where('key', 'whatsapp_access_token')->value('value');
+        $rawPhone = \App\Models\ThemeSetting::where('group', 'integration.whatsapp')->where('key', 'whatsapp_phone_id')->value('value');
+
+        if (!$rawToken || !$rawPhone) {
+            return response()->json(['success' => false, 'message' => 'Missing WhatsApp Access Token or Phone ID. Please save your configuration first.']);
+        }
+
+        $token = \Illuminate\Support\Facades\Crypt::decryptString($rawToken);
+        $phoneId = \Illuminate\Support\Facades\Crypt::decryptString($rawPhone);
+
+        $response = \Illuminate\Support\Facades\Http::withToken($token)
+            ->asForm()
+            ->post("https://graph.facebook.com/v20.0/{$phoneId}", [
+                'pin' => $request->pin
+            ]);
+
+        return response()->json([
+            'success' => $response->successful(),
+            'status' => $response->status(),
+            'response' => $response->json()
+        ]);
+    }
+
+    public function testSaasancePush(Request $request)
+    {
+        $user = auth()->user();
+        
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Not authenticated.']);
+        }
+
+        $tokens = \App\Models\DeviceToken::where('user_id', $user->id)->count();
+
+        if ($tokens === 0) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'No mobile connection found. Please log into the Vyora mobile app using your admin email (' . $user->email . ') first.'
+            ]);
+        }
+
+        try {
+            $service = app(\App\Services\PushNotificationService::class);
+            $service->sendToUser($user, 'Test Notification 🎉', 'Your SaaSance Push Relay is working perfectly!', [
+                'type' => 'test'
+            ]);
+            return response()->json(['success' => true, 'message' => 'Test notification sent to your device!']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to send test notification: ' . $e->getMessage()]);
+        }
+    }
+
     public function testAlgolia(Request $request)
     {
         $group = 'integration.algolia';
@@ -503,21 +804,40 @@ class IntegrationSettingsController extends Controller
             }
 
             // Using Algolia Search Client
-            $client = AlgoliaAlgoliaSearchSearchClient::create($appId, $apiKey);
+            $client = \Algolia\AlgoliaSearch\Api\SearchClient::create($appId, $apiKey);
             // Verify by fetching indices
             $client->listIndices();
 
             return response()->json(['success' => true, 'message' => 'Connection successful! Algolia credentials are valid.']);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Authentication failed. Check your App ID and Admin API Key.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Connection failed: ' . $e->getMessage()]);
+        }
+    }
+
+    public function syncAlgolia(Request $request)
+    {
+        try {
+            $group = 'integration.algolia';
+            $enabled = ThemeSetting::where('group', $group)->where('key', 'enabled')->value('value');
+            
+            if ($enabled !== '1') {
+                return response()->json(['success' => false, 'message' => 'Please enable Algolia and Save Configuration first.']);
+            }
+
+            \App\Models\Product::makeAllSearchable();
+            
+            return response()->json(['success' => true, 'message' => 'Products synced to Algolia successfully!']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Sync failed: ' . $e->getMessage()]);
         }
     }
 
     private function updateAlgolia(Request $request)
     {
-        $request->validate([
-            'app_id' => 'required|string',
-            'admin_api_key' => 'required|string|min:4',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'app_id' => 'required|string|max:255',
+            'admin_api_key' => 'required|string|max:255|min:4',
         ]);
 
         $group = 'integration.algolia';
@@ -534,10 +854,11 @@ class IntegrationSettingsController extends Controller
 
     private function updateQikink(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
             'mode' => 'required|in:test,live',
-            'client_id' => 'required|string',
-            'client_secret' => 'required|string|min:4',
+            'client_id' => 'required|string|max:255',
+            'client_secret' => 'required|string|max:255|min:4',
         ]);
 
         $group = 'integration.qikink';
@@ -555,9 +876,10 @@ class IntegrationSettingsController extends Controller
 
     private function updateShiprocket(Request $request)
     {
-        $request->validate([
-            'shiprocket_email' => 'required|email',
-            'shiprocket_password' => 'required|string',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'shiprocket_email' => 'required|string|email|max:255',
+            'shiprocket_password' => 'required|string|max:255',
         ]);
 
         $group = 'integration.shiprocket';
@@ -572,9 +894,22 @@ class IntegrationSettingsController extends Controller
         return redirect()->back()->with('success', 'Shiprocket settings saved successfully.');
     }
 
+    private function updateGoogleMerchant(Request $request)
+    {
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+        ]);
+
+        $group = 'integration.google-merchant';
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+
+        return redirect()->route('admin.online-store.integrations.index')
+            ->with('success', 'Google Merchant settings updated successfully.');
+    }
+
     private function updateGoogleSearchConsole(Request $request)
     {
-        $data = $request->validate([
+        $data = $request->strictValidate([
             'enabled' => 'nullable|boolean',
             'site_verification_code' => 'nullable|string|max:255',
         ]);
@@ -599,8 +934,9 @@ class IntegrationSettingsController extends Controller
 
     private function updateGoogleAnalytics(Request $request)
     {
-        $request->validate([
-            'measurement_id' => 'required|string',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'measurement_id' => 'required|string|max:255',
         ]);
 
         $group = 'integration.google-analytics';
@@ -613,8 +949,11 @@ class IntegrationSettingsController extends Controller
 
     private function updateMetaPixel(Request $request)
     {
-        $request->validate([
-            'pixel_id' => 'required|string',
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'pixel_id' => 'required|string|max:255',
+            'access_token' => 'nullable|string|max:5000',
+            'test_event_code' => 'nullable|string|max:255',
         ]);
 
         $group = 'integration.meta-pixel';
@@ -633,6 +972,26 @@ class IntegrationSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Meta Pixel settings saved successfully.');
+    }
+
+    private function updateSnapchatPixel(Request $request)
+    {
+        $request->strictValidate([
+            'enabled' => 'nullable|boolean',
+            'pixel_id' => 'required|string|max:255',
+            'access_token' => 'nullable|string|max:5000',
+        ]);
+
+        $group = 'integration.snapchat-pixel';
+
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'pixel_id'], ['value' => Crypt::encryptString($request->pixel_id)]);
+
+        if ($request->filled('access_token') && ! str_contains($request->access_token, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'access_token'], ['value' => Crypt::encryptString($request->access_token)]);
+        }
+
+        return redirect()->back()->with('success', 'Snapchat Pixel settings saved successfully.');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

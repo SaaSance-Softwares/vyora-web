@@ -1,9 +1,13 @@
 @extends('layouts.admin')
 
-@section('header', 'Policy Settings')
+@section('header', 'Short PDP Policies')
 
 @section('content')
 <div class="max-w-5xl mx-auto pb-24">
+    <div class="mb-6 bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start text-sm border border-blue-100">
+        <svg class="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p><strong>Note:</strong> This is a Short Policy which will be listed in PDP (Product Display Page). This will be common for all products.</p>
+    </div>
     <form id="policy-form" action="{{ route('admin.online-store.policy-settings.update') }}" method="POST" class="space-y-8">
         @csrf
         @method('PUT')
@@ -20,10 +24,7 @@
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Prepaid Charges</label>
                     <input type="text" name="prepaid_charges" value="{{ $settings['prepaid_charges'] }}" placeholder="e.g. Free" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Delivery Timeline</label>
-                    <input type="text" name="delivery_timeline" value="{{ $settings['delivery_timeline'] }}" placeholder="3-5 Days" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                </div>
+
             </div>
         </div>
 
@@ -63,9 +64,9 @@
             </div>
         </div>
 
-        <!-- Sticky Save -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:pl-64 flex justify-end">
-            <button type="submit" class="bg-black text-white px-8 py-2 rounded font-bold text-sm hover:bg-gray-800 transition-colors shadow-lg">
+        <!-- Save Section -->
+        <div class="bg-gray-50 border-t border-gray-200 p-5 flex justify-end rounded-b-lg mt-6">
+            <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-colors">
                 Save All Policies
             </button>
         </div>

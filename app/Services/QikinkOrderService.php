@@ -16,7 +16,7 @@ class QikinkOrderService
             // Get settings
             $settings = ThemeSetting::where('group', 'integration.qikink')->get()->keyBy('key');
             if (($settings->get('enabled')->value ?? '0') !== '1') {
-                return false;
+                return ['success' => false, 'error' => 'Qikink integration is disabled.'];
             }
 
             // Check if any item in the order uses Qikink
@@ -27,7 +27,7 @@ class QikinkOrderService
             });
 
             if ($qikinkItems->isEmpty()) {
-                return false;
+                return ['success' => true, 'error' => null]; // Technically not an error, just nothing to do
             }
 
             $clientId = $this->maybeDecrypt($settings->get('client_id')?->value);
@@ -37,7 +37,7 @@ class QikinkOrderService
             if (! $clientId || ! $clientSecret) {
                 Log::warning('Qikink is enabled but credentials are not fully configured.');
 
-                return false;
+                return ['success' => false, 'error' => 'Credentials not fully configured.'];
             }
 
             $baseUrl = $mode === 'live' ? 'https://api.qikink.com' : 'https://sandbox.qikink.com';
@@ -51,7 +51,7 @@ class QikinkOrderService
             if (! $tokenResponse->successful() || ! $tokenResponse->json('Accesstoken')) {
                 Log::error('Qikink Authentication Failed', ['response' => $tokenResponse->body()]);
 
-                return false;
+                return ['success' => false, 'error' => 'Authentication Failed. ' . $tokenResponse->body()];
             }
 
             $accessToken = $tokenResponse->json('Accesstoken');
@@ -74,7 +74,7 @@ class QikinkOrderService
                         'product_id' => $item->product_id,
                     ]);
 
-                    return false;
+                    return ['success' => false, 'error' => 'Missing SKU code for a product.'];
                 }
 
                 $lineItems[] = [
@@ -90,7 +90,7 @@ class QikinkOrderService
             if (! $address) {
                 Log::error('Qikink: Order has no shipping address.', ['order_id' => $order->id]);
 
-                return false;
+                return ['success' => false, 'error' => 'Order has no shipping address.'];
             }
 
             // Safe parsing of customer name
@@ -136,7 +136,7 @@ class QikinkOrderService
                     'payload' => $payload,
                 ]);
 
-                return false;
+                return ['success' => false, 'error' => 'Order Creation Failed: ' . $orderResponse->body()];
             }
 
             Log::info('Qikink Order Created Successfully', [
@@ -144,7 +144,10 @@ class QikinkOrderService
                 'response' => $orderResponse->json(),
             ]);
 
-            return true;
+            $order->qikink_order_id = $orderResponse->json('order_id');
+            $order->save();
+
+            return ['success' => true, 'error' => null];
 
         } catch (\Exception $e) {
             Log::error('Exception in QikinkOrderService', [
@@ -153,7 +156,7 @@ class QikinkOrderService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return false;
+            return ['success' => false, 'error' => 'Exception: ' . $e->getMessage()];
         }
     }
 

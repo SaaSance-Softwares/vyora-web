@@ -16,6 +16,7 @@ class CmsPage extends Model
         'meta_image',
         'is_active',
         'is_home',
+        'is_about_page',
         'draft_content',
     ];
 
@@ -24,5 +25,6 @@ class CmsPage extends Model
         'draft_content' => 'array',
         'is_active' => 'boolean',
         'is_home' => 'boolean',
+        'is_about_page' => 'boolean',
     ];
 }

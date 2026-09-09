@@ -9,63 +9,82 @@
     <style>
         body { 
             font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            background-color: #111827;
-            color: white;
-            background-attachment: fixed;
+            background-color: #f9fafb;
+            color: #111827;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0px); }
+        }
+
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
     </style>
 </head>
-<body class="antialiased min-h-screen flex flex-col items-center justify-center p-6">
+<body class="antialiased min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
     
-    <div class="mb-10 text-center">
-        <!-- Dynamic System App Name -->
-        <h1 class="text-3xl font-black tracking-[0.2em] uppercase text-white/80 drop-shadow-md">
-            {{ config('app.name', 'Vyora') }}
-        </h1>
-    </div>
-
-    <div class="glass-card max-w-lg w-full rounded-[2.5rem] p-10 sm:p-14 text-center space-y-6 relative overflow-hidden">
-        <!-- Decorative abstract lighting blobs -->
-        <div class="absolute -top-32 -right-32 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
-        <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px]"></div>
-        
-        <div class="relative z-10">
-            <!-- Dynamic Error Code -->
-            <h1 class="text-8xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-br from-white to-white/40 drop-shadow-sm">
-                @yield('code')
+    <div class="w-full max-w-lg mx-auto text-center animate-fade-in">
+        <!-- Minimal Logo / App Name -->
+        <div class="mb-10">
+            <h1 class="text-xl font-bold tracking-[0.2em] uppercase text-gray-900">
+                {{ config('app.name', 'Vyora') }}
             </h1>
+        </div>
+
+        <div class="bg-white rounded-3xl p-10 sm:p-14 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 relative overflow-hidden">
             
-            <div class="h-1.5 w-16 bg-white/20 mx-auto rounded-full my-8"></div>
+            <!-- Dynamic Error Code with float animation -->
+            <div class="animate-float mb-6">
+                <h1 class="text-7xl sm:text-8xl font-black tracking-tighter text-gray-900 drop-shadow-sm">
+                    @yield('code')
+                </h1>
+            </div>
+            
+            <div class="h-1 w-12 bg-gray-200 mx-auto rounded-full my-8"></div>
 
             <!-- Dynamic Error Message -->
-            <h2 class="text-2xl font-bold tracking-tight text-gray-100">
-                @yield('message')
-            </h2>
-            
-            <p class="mt-4 text-sm text-gray-400 font-medium max-w-sm mx-auto leading-relaxed">
-                @hasSection('description')
-                    @yield('description')
-                @else
-                    We're sorry, but something went wrong or the page you are looking for could not be found. Our systems have logged the issue.
-                @endif
-            </p>
+            <div class="animate-fade-in delay-100 opacity-0">
+                <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+                    @yield('message')
+                </h2>
+                
+                <p class="mt-4 text-sm text-gray-500 font-medium max-w-sm mx-auto leading-relaxed">
+                    @hasSection('description')
+                        @yield('description')
+                    @else
+                        We're sorry, but something went wrong or the page you are looking for could not be found. Our systems have logged the issue.
+                    @endif
+                </p>
+            </div>
             
             @unless(View::hasSection('hide_button'))
-            <div class="mt-12">
-                <a href="{{ url('/') }}" class="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-white text-black text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-100 hover:scale-[1.02] hover:-translate-y-1 transition-all duration-300 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.3)] active:scale-[0.98]">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <div class="mt-10 animate-fade-in delay-200 opacity-0">
+                <a href="{{ url('/') }}" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-black hover:-translate-y-0.5 transition-all duration-300 shadow-md shadow-gray-900/10 active:translate-y-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     Back to Store
                 </a>
             </div>
             @endunless
+        </div>
+        
+        <div class="mt-12 text-xs font-medium text-gray-400 uppercase tracking-widest animate-fade-in delay-300 opacity-0">
+            &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
         </div>
     </div>
 </body>

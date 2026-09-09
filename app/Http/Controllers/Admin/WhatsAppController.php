@@ -20,20 +20,71 @@ class WhatsAppController extends Controller
         return view('admin.whatsapp.index', compact('conversations', 'templates'));
     }
 
+    public function conversations()
+    {
+        $conversations = WhatsappConversation::withCount(['messages' => function ($query) {
+            $query->where('direction', 'inbound')->where('status', '!=', 'read');
+        }])->orderBy('last_message_at', 'desc')->get();
+
+        return response()->json(['conversations' => $conversations]);
+    }
+
     public function messages(WhatsappConversation $conversation)
     {
         // Mark inbound messages as read
         $conversation->messages()->where('direction', 'inbound')->where('status', '!=', 'read')->update(['status' => 'read']);
 
         $messages = $conversation->messages()->orderBy('created_at', 'asc')->get();
+        $templates = WhatsappTemplate::get()->keyBy('name');
+        
+        $otpTemplateName = \App\Models\ThemeSetting::where('group', 'auth')->where('key', 'whatsapp_template')->value('value') ?? 'user_verification_otp';
 
         return response()->json([
-            'messages' => $messages->map(function ($msg) {
+            'messages' => $messages->map(function ($msg) use ($templates, $otpTemplateName) {
+                $body = $msg->body;
+                
+                // Hide sensitive OTP messages from the admin chat interface
+                // We check if the body contains common OTP template phrases or matches the template name
+                if ($msg->type === 'template' && (
+                    $msg->body === $otpTemplateName ||
+                    stripos($msg->body, 'is your verification code') !== false ||
+                    stripos($msg->body, 'do not share this code') !== false ||
+                    stripos($msg->body, 'login OTP') !== false
+                )) {
+                    return [
+                        'id' => $msg->id,
+                        'direction' => $msg->direction,
+                        'type' => 'template',
+                        'body' => '🔒 Authentication OTP message sent (hidden for security)',
+                        'status' => $msg->status,
+                        'created_at' => $msg->created_at->format('M d, H:i'),
+                    ];
+                }
+                
+                // If it's a past message where we only stored the template ID
+                if ($msg->type === 'template' && isset($templates[$msg->body])) {
+                    $components = $templates[$msg->body]->components ?? [];
+                    $templateText = '';
+                    foreach ($components as $component) {
+                        if (in_array($component['type'] ?? '', ['HEADER', 'BODY', 'FOOTER']) && !empty($component['text'])) {
+                            $templateText .= $component['text'] . "\n\n";
+                        }
+                    }
+                    if (trim($templateText)) {
+                        $body = trim($templateText);
+                    }
+                }
+
+                // Clean up unresolved variables (e.g., {{1}}) for past messages
+                if ($msg->type === 'template') {
+                    $body = preg_replace('/\{\{\d+\}\}/', '[Variable]', $body);
+                }
+
                 return [
                     'id' => $msg->id,
                     'direction' => $msg->direction,
                     'type' => $msg->type,
-                    'body' => $msg->body,
+                    'body' => $body,
                     'status' => $msg->status,
                     'created_at' => $msg->created_at->format('M d, H:i'),
                 ];
@@ -43,8 +94,8 @@ class WhatsAppController extends Controller
 
     public function sendMessage(Request $request, WhatsappConversation $conversation)
     {
-        $request->validate([
-            'message' => 'required|string',
+        $request->strictValidate([
+            'message' => 'required|string|max:5000',
         ]);
 
         $service = app(WhatsAppService::class);
@@ -59,8 +110,8 @@ class WhatsAppController extends Controller
 
     public function sendTemplate(Request $request, WhatsappConversation $conversation)
     {
-        $request->validate([
-            'template_name' => 'required|string',
+        $request->strictValidate([
+            'template_name' => 'required|string|max:255',
         ]);
 
         $service = app(WhatsAppService::class);
@@ -111,9 +162,9 @@ class WhatsAppController extends Controller
 
     public function startConversation(Request $request)
     {
-        $request->validate([
-            'phone' => 'required|string',
-            'name' => 'required|string',
+        $request->strictValidate([
+            'phone' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
         ]);
 
         // Clean phone number (just in case)

@@ -79,58 +79,6 @@
                     </div>
                 </div>
 
-                {{-- Message Templates --}}
-                <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                        <h2 class="text-base font-bold text-gray-900">Automated Template IDs</h2>
-                        <span class="text-xs font-semibold text-gray-400">Triggered Events</span>
-                    </div>
-                    
-                    <div class="p-6 space-y-5">
-                        <p class="text-sm text-gray-600 mb-4">
-                            Enter the exact <strong>Template Name</strong> as approved in your WhatsApp Manager for each event. Leave blank to disable an event.
-                        </p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Order Confirmed</label>
-                                <input type="text" name="whatsapp_template_confirmed" value="{{ old('whatsapp_template_confirmed', $saved['whatsapp_template_confirmed'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. order_confirmed_v1">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Order Shipped</label>
-                                <input type="text" name="whatsapp_template_shipped" value="{{ old('whatsapp_template_shipped', $saved['whatsapp_template_shipped'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. order_shipped_v1">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Order Cancelled</label>
-                                <input type="text" name="whatsapp_template_cancelled" value="{{ old('whatsapp_template_cancelled', $saved['whatsapp_template_cancelled'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. order_cancelled_v1">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Account Created</label>
-                                <input type="text" name="whatsapp_template_account_created" value="{{ old('whatsapp_template_account_created', $saved['whatsapp_template_account_created'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. welcome_user">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Password Updated</label>
-                                <input type="text" name="whatsapp_template_password_updated" value="{{ old('whatsapp_template_password_updated', $saved['whatsapp_template_password_updated'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. security_alert_pass">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Abandoned Cart</label>
-                                <input type="text" name="whatsapp_template_abandoned_cart" value="{{ old('whatsapp_template_abandoned_cart', $saved['whatsapp_template_abandoned_cart'] ?? '') }}" 
-                                    class="w-full bg-gray-50 border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-xl px-4 py-3 text-sm font-medium text-gray-900"
-                                    placeholder="e.g. abandoned_cart_reminder">
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 {{-- Action Buttons --}}
                 <div class="flex items-center gap-3 pt-2">
@@ -180,6 +128,66 @@
                     </div>
                 </div>
                 
+                {{-- 2-Step Verification PIN Setup --}}
+                <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                        <h2 class="text-base font-bold text-gray-900">2-Step API PIN</h2>
+                        <span class="text-xs font-semibold text-gray-400">Recovery</span>
+                    </div>
+                    
+                    <div class="p-6 space-y-4">
+                        <p class="text-xs text-gray-600">
+                            If your WhatsApp Manager UI is bugged when setting a PIN, you can submit the 6-digit PIN securely via API here.
+                        </p>
+                        
+                        <div x-data="{
+                            pin: '',
+                            loading: false,
+                            response: null,
+                            submitPin() {
+                                if(this.pin.length !== 6) {
+                                    alert('PIN must be exactly 6 digits');
+                                    return;
+                                }
+                                this.loading = true;
+                                this.response = null;
+                                fetch('{{ route('admin.online-store.integrations.whatsapp.set-pin') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                                    },
+                                    body: JSON.stringify({ pin: this.pin })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.loading = false;
+                                    this.response = data;
+                                })
+                                .catch(err => {
+                                    this.loading = false;
+                                    this.response = { success: false, message: err.message };
+                                });
+                            }
+                        }">
+                            <div class="flex gap-2">
+                                <input type="text" x-model="pin" maxlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-center font-bold tracking-widest focus:ring-[#25D366]" placeholder="123456">
+                                <button type="button" @click="submitPin()" :disabled="loading" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 flex-shrink-0 disabled:opacity-50">
+                                    <span x-show="!loading">Set PIN</span>
+                                    <span x-show="loading">...</span>
+                                </button>
+                            </div>
+                            
+                            <template x-if="response">
+                                <div class="mt-3 p-3 rounded-lg text-xs font-mono overflow-auto max-h-48"
+                                     :class="response.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'">
+                                    <pre x-text="JSON.stringify(response, null, 2)"></pre>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Features Info --}}
                 <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5">
                     <h3 class="text-xs font-black uppercase tracking-widest text-blue-800 mb-3">Capabilities</h3>

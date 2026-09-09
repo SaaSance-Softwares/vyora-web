@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Order Management')
+@section('title', 'OMS')
+@section('header', 'OMS')
 
 @section('content')
 <div class="space-y-6">
@@ -17,12 +18,6 @@
     </div>
 
     {{-- ===== ALERT ===== --}}
-    @if(session('success'))
-        <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-sm font-medium">
-            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-            {{ session('success') }}
-        </div>
-    @endif
 
     {{-- ===== STATS CARDS ===== --}}
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
@@ -137,9 +132,18 @@
                                     {{-- Thumbnails --}}
                                     <div class="flex -space-x-2">
                                         @foreach($order->items->take(3) as $item)
-                                            <div class="w-9 h-11 rounded-lg border-2 border-white overflow-hidden bg-gray-100 shadow-sm shrink-0">
-                                                @if($item->image_url)
-                                                    <img src="{{ $item->image_url }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">
+                                            @php
+                                                $img = $item->image_url;
+                                                if (!$img && $item->product) {
+                                                    $primary = $item->product->images->where('is_primary', true)->first() ?? $item->product->images->first();
+                                                    $img = $primary ? asset('storage/' . $primary->path) : null;
+                                                }
+                                                // Fallback for product name if not saved in order_items
+                                                $pName = $item->product_name ?: ($item->product ? $item->product->name : 'Unknown Product');
+                                            @endphp
+                                            <div class="w-9 h-11 rounded-lg border-2 border-white overflow-hidden bg-gray-100 shadow-sm shrink-0" title="{{ $pName }}">
+                                                @if($img)
+                                                    <img src="{{ $img }}" alt="{{ $pName }}" class="w-full h-full object-cover">
                                                 @else
                                                     <div class="w-full h-full flex items-center justify-center">
                                                         <svg class="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -155,7 +159,13 @@
                             {{-- Payment --}}
                             <td class="py-4 px-4">
                                 <div class="text-sm font-semibold text-gray-800">{{ $order->payment_method ?? '—' }}</div>
-                                <div class="text-xs {{ $payStatusClass }} mt-0.5 uppercase tracking-wide">{{ $order->payment_status }}</div>
+                                @php
+                                    $displayPaymentStatus = $order->payment_status;
+                                    if ($order->payment_method === 'COD' && $order->payment_status === 'pending') {
+                                        $displayPaymentStatus = 'COD order placed';
+                                    }
+                                @endphp
+                                <div class="text-xs {{ $payStatusClass }} mt-0.5 uppercase tracking-wide">{{ $displayPaymentStatus }}</div>
                                 @if($order->transaction_id)
                                     <div class="text-xs text-gray-400 mt-0.5 font-mono truncate max-w-[100px]" title="{{ $order->transaction_id }}">{{ $order->transaction_id }}</div>
                                 @endif

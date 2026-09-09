@@ -5,11 +5,35 @@
 $statusColors = ['pending'=>'bg-amber-100 text-amber-700','processing'=>'bg-blue-100 text-blue-700','shipped'=>'bg-indigo-100 text-indigo-700','delivered'=>'bg-emerald-100 text-emerald-700','cancelled'=>'bg-rose-100 text-rose-700','refunded'=>'bg-gray-100 text-gray-600'];
 $sc = $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600';
 $payClass = $order->payment_status==='paid' ? 'text-emerald-600' : 'text-amber-600';
+$displayPaymentStatus = $order->payment_status;
+if ($order->payment_method === 'COD' && $order->payment_status === 'pending') {
+    $displayPaymentStatus = 'COD order placed';
+}
 $billing = $order->billingAddress;
 $shipping = $order->shippingAddress;
 @endphp
 
 <div class="space-y-6">
+
+@if($order->qikink_sync_error)
+<div class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 shadow-sm">
+    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 border border-red-100 mt-0.5">
+        <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <div class="flex-1">
+        <h3 class="text-sm font-bold text-red-800">Qikink Integration Failed</h3>
+        <p class="text-xs text-red-700 mt-1">This order failed to send to Qikink after 3 attempts. Error: <span class="font-mono bg-red-100 px-1 rounded">{{ $order->qikink_sync_error }}</span></p>
+        <p class="text-[11px] text-red-600 mt-2">Please fix the issue (e.g. invalid shipping address or phone number) and click retry to queue it again.</p>
+    </div>
+    <form action="{{ route('admin.orders.retryQikink', $order) }}" method="POST">
+        @csrf
+        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap">
+            Retry Qikink Sync
+        </button>
+    </form>
+</div>
+@endif
+
 {{-- HEADER --}}
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
   <div class="flex items-center gap-3">
@@ -23,16 +47,10 @@ $shipping = $order->shippingAddress;
   </div>
   <div class="flex items-center gap-3">
     <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $sc }}">{{ $order->status_label }}</span>
-    <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $payClass }} bg-gray-50 border">{{ $order->payment_status }}</span>
+    <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $payClass }} bg-gray-50 border">{{ $displayPaymentStatus }}</span>
   </div>
 </div>
 
-@if(session('success'))
-<div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-sm font-medium">
-  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-  {{ session('success') }}
-</div>
-@endif
 
 {{-- TIMELINE --}}
 <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
@@ -103,7 +121,10 @@ $shipping = $order->shippingAddress;
           </div>
           {{-- Details --}}
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-gray-900 truncate">{{ $item->product_name }}</p>
+            @php
+              $pName = $item->product_name ?: ($item->product ? $item->product->name : 'Unknown Product');
+            @endphp
+            <p class="font-semibold text-gray-900 truncate">{{ $pName }}</p>
             @if($item->variant_name)
               <p class="text-xs text-gray-500 mt-0.5">{{ $item->variant_name }}</p>
             @endif
@@ -132,24 +153,87 @@ $shipping = $order->shippingAddress;
     <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
       <h2 class="font-bold text-gray-900 mb-4">Financial Summary</h2>
       <div class="space-y-2.5">
+        @php
+          $mrpTotal = 0;
+          foreach ($order->items as $item) {
+              $itemMrp = max(floatval($item->sku?->mrp ?? 0), floatval($item->price));
+              $mrpTotal += $itemMrp * $item->quantity;
+          }
+          $mrpDiscount = $mrpTotal > $order->subtotal ? $mrpTotal - $order->subtotal : 0;
+          $taxBreakdown = json_decode($order->tax_breakdown ?? '{}', true);
+          $isTaxIncluded = abs(($order->total_amount + $order->discount_amount) - ($order->subtotal + $order->shipping_amount)) < 0.1;
+          $totalSavings = $mrpDiscount + $order->discount_amount;
+        @endphp
+
         <div class="flex justify-between text-sm">
-          <span class="text-gray-500">Subtotal</span>
+          <span class="text-gray-500">MRP Total</span>
+          <span class="font-semibold">₹{{ number_format($mrpTotal) }}</span>
+        </div>
+        
+        @if($mrpDiscount > 0)
+        <div class="flex justify-between text-sm text-emerald-600">
+          <span>Discount on MRP</span>
+          <span>-₹{{ number_format($mrpDiscount) }}</span>
+        </div>
+        @endif
+
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Cart Subtotal</span>
           <span class="font-semibold">₹{{ number_format($order->subtotal) }}</span>
         </div>
+
+        @php
+            $displayCouponDiscount = $order->discount_amount;
+            $displayPrepaidDiscount = 0;
+            
+            if (strtolower($order->payment_method) !== 'cod' && $order->discount_amount > 0) {
+                $shippingRules = json_decode(\App\Models\ThemeSetting::where('key', 'shipping_rules')->value('value') ?? '{}', true);
+                if (isset($shippingRules['prepaid'])) {
+                    $rule = $shippingRules['prepaid'];
+                    if (($rule['discount_type'] ?? '') === 'percent') {
+                        $p = floatval($rule['discount_value'] ?? 0) / 100;
+                        if ($p > 0 && $p < 1) {
+                            $displayCouponDiscount = ($order->discount_amount - ($order->subtotal * $p)) / (1 - $p);
+                            if ($displayCouponDiscount < 0) $displayCouponDiscount = 0;
+                            $displayPrepaidDiscount = $order->discount_amount - $displayCouponDiscount;
+                        }
+                    } elseif (($rule['discount_type'] ?? '') === 'flat') {
+                        $displayPrepaidDiscount = floatval($rule['discount_value'] ?? 0);
+                        $displayCouponDiscount = $order->discount_amount - $displayPrepaidDiscount;
+                        if ($displayCouponDiscount < 0) {
+                            $displayCouponDiscount = 0;
+                            $displayPrepaidDiscount = $order->discount_amount;
+                        }
+                    }
+                }
+            }
+        @endphp
+
+        @if($displayCouponDiscount > 0)
+        <div class="flex justify-between text-sm text-emerald-600">
+          <span>Coupon Discount{{ $order->coupon_code ? ' ('.$order->coupon_code.')' : '' }}</span>
+          <span>-₹{{ number_format($displayCouponDiscount) }}</span>
+        </div>
+        @endif
+
+        @if($displayPrepaidDiscount > 0)
+        <div class="flex justify-between text-sm text-emerald-600">
+          <span>Prepaid Discount</span>
+          <span>-₹{{ number_format($displayPrepaidDiscount) }}</span>
+        </div>
+        @endif
+
         @if($order->shipping_amount > 0)
         <div class="flex justify-between text-sm">
           <span class="text-gray-500">Shipping</span>
           <span class="font-semibold">₹{{ number_format($order->shipping_amount) }}</span>
         </div>
         @endif
-        @php
-          $taxBreakdown = json_decode($order->tax_breakdown ?? '{}', true);
-          $isTaxIncluded = abs(($order->total_amount + $order->discount_amount) - ($order->subtotal + $order->shipping_amount)) < 0.1;
-        @endphp
+
         @if(!empty($taxBreakdown))
           @foreach($taxBreakdown as $rate => $amount)
           <div class="flex justify-between text-sm">
-            <span class="text-gray-500">Tax @ {{ $rate }}% {{ $isTaxIncluded ? '(Included)' : '' }}</span>
+            <span class="text-gray-500">GST @ {{ $rate }}% {{ $isTaxIncluded ? '(Included)' : '' }}</span>
             <span class="font-semibold">₹{{ number_format($amount, 2) }}</span>
           </div>
           @endforeach
@@ -159,16 +243,29 @@ $shipping = $order->shippingAddress;
           <span class="font-semibold">₹{{ number_format($order->tax_amount) }}</span>
         </div>
         @endif
-        @if($order->discount_amount > 0)
-        <div class="flex justify-between text-sm text-emerald-600">
-          <span>Discount{{ $order->coupon_code ? ' ('.$order->coupon_code.')' : '' }}</span>
-          <span class="font-semibold">-₹{{ number_format($order->discount_amount) }}</span>
+
+        @if($totalSavings > 0)
+        <div class="pt-2 mt-1 flex justify-between text-sm text-emerald-600 font-semibold border-t border-gray-50">
+          <span>Total Savings</span>
+          <span>₹{{ number_format($totalSavings) }}</span>
         </div>
         @endif
+
         <div class="pt-3 mt-2 border-t border-gray-100 flex justify-between">
-          <span class="font-black text-gray-900">Grand Total</span>
+          <span class="font-black text-gray-900">Total</span>
           <span class="font-black text-xl text-gray-900">₹{{ number_format($order->total_amount) }}</span>
         </div>
+
+        @if($order->upfront_amount > 0)
+        <div class="pt-2 mt-2 border-t border-gray-50 flex justify-between text-sm text-gray-600">
+          <span>Upfront (Non Refundable)</span>
+          <span class="font-semibold text-gray-800">₹{{ number_format($order->upfront_amount) }}</span>
+        </div>
+        <div class="pt-1 flex justify-between text-sm font-bold text-gray-800">
+          <span>Due on Delivery</span>
+          <span>₹{{ number_format($order->total_amount - $order->upfront_amount) }}</span>
+        </div>
+        @endif
       </div>
       <div class="mt-5 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
         <div>
@@ -177,12 +274,28 @@ $shipping = $order->shippingAddress;
         </div>
         <div>
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Status</p>
-          <p class="font-bold {{ $payClass }}">{{ strtoupper($order->payment_status) }}</p>
+          <p class="font-bold {{ $payClass }}">{{ strtoupper($displayPaymentStatus) }}</p>
         </div>
         @if($order->transaction_id)
         <div class="col-span-2">
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Transaction ID</p>
           <p class="font-mono text-sm text-gray-700 break-all">{{ $order->transaction_id }}</p>
+        </div>
+        @endif
+        @if($order->payment_status === 'paid' && ($order->payment_received_via || $order->payment_received_by))
+        <div class="col-span-2 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+            @if($order->payment_received_via)
+            <div>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Received Via</p>
+              <p class="font-semibold text-gray-800">{{ $order->payment_received_via }}</p>
+            </div>
+            @endif
+            @if($order->payment_received_by)
+            <div>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Received By / Remarks</p>
+              <p class="font-semibold text-gray-800">{{ $order->payment_received_by }}</p>
+            </div>
+            @endif
         </div>
         @endif
       </div>
@@ -193,7 +306,7 @@ $shipping = $order->shippingAddress;
       <h2 class="font-bold text-gray-900 mb-3">Order Notes</h2>
       <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
         @csrf @method('PATCH')
-        <input type="hidden" name="status" value="{{ $order->status }}">
+        <input type="hidden" name="order_status_id" value="{{ $order->order_status_id }}">
         <textarea name="notes" rows="3" placeholder="Add internal notes about this order..."
           class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">{{ $order->notes }}</textarea>
         <button type="submit" class="mt-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-gray-700 transition-colors">Save Notes</button>
@@ -213,16 +326,16 @@ $shipping = $order->shippingAddress;
         <div class="space-y-3">
           <div>
             <label class="text-xs font-semibold text-gray-600 mb-1 block">Order Status</label>
-            <select name="status" id="statusSelect" onchange="toggleTracking(this.value)"
+            <select name="order_status_id" id="statusSelect" onchange="toggleTracking(this.options[this.selectedIndex].text.toLowerCase())"
               class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
-              @foreach(['pending','processing','shipped','delivered','cancelled','refunded'] as $s)
-                <option value="{{ $s }}" {{ $order->status===$s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
+              @foreach($orderStatuses as $statusObj)
+                <option value="{{ $statusObj->id }}" {{ $order->order_status_id === $statusObj->id ? 'selected' : '' }}>{{ $statusObj->name }}</option>
               @endforeach
             </select>
           </div>
 
           {{-- Tracking fields (shown when shipped) --}}
-          <div id="trackingFields" class="{{ $order->status==='shipped' ? '' : 'hidden' }} space-y-3 pt-2 border-t border-gray-100">
+          <div id="trackingFields" class="{{ strtolower($order->orderStatus?->name ?? $order->status) === 'shipped' ? '' : 'hidden' }} space-y-3 pt-2 border-t border-gray-100">
             <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider">🚚 Shipping Details</p>
             <div>
               <label class="text-xs font-semibold text-gray-600 mb-1 block">Courier Partner</label>
@@ -244,6 +357,37 @@ $shipping = $order->shippingAddress;
 
           <button type="submit" class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors">
             Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {{-- PAYMENT STATUS UPDATE --}}
+    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+      <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Update Payment</h2>
+      <form action="{{ route('admin.orders.updatePayment', $order) }}" method="POST">
+        @csrf @method('PATCH')
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-gray-600 mb-1 block">Payment Status</label>
+            <select name="payment_status" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+              @foreach(['pending', 'paid', 'failed'] as $ps)
+                <option value="{{ $ps }}" {{ $order->payment_status === $ps ? 'selected' : '' }}>{{ ucfirst($ps) }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-600 mb-1 block">Received Via (e.g. Bank, Cash, UPI)</label>
+            <input type="text" name="payment_received_via" value="{{ $order->payment_received_via }}" placeholder="Cash, Bank Transfer..."
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-600 mb-1 block">Received By / Remarks</label>
+            <input type="text" name="payment_received_by" value="{{ $order->payment_received_by }}" placeholder="e.g. Collected by Delivery Agent"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors mt-2">
+            Save Payment Info
           </button>
         </div>
       </form>
@@ -353,6 +497,20 @@ $shipping = $order->shippingAddress;
         </address>
       @else
         <p class="text-sm text-gray-500 italic">Same as shipping address.</p>
+      @endif
+      
+      @if($order->ip_address)
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Order Placed From</h2>
+        <div class="text-sm text-gray-900 font-medium">
+            @if($order->placed_from_city || $order->placed_from_state || $order->placed_from_country)
+                {{ collect([$order->placed_from_city, $order->placed_from_state, $order->placed_from_country])->filter()->join(', ') }}
+            @else
+                Unknown Location
+            @endif
+        </div>
+        <div class="text-xs text-gray-500 mt-0.5">IP: {{ $order->ip_address }}</div>
+      </div>
       @endif
     </div>
 

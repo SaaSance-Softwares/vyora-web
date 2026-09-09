@@ -3,7 +3,9 @@ import { usePage, Head } from '@inertiajs/react';
 import PageRenderer from "../Components/PageRenderer";
 
 export default function Home({ page, content, layout }) {
-    const { settings } = usePage().props;
+    const { settings, app_url } = usePage().props;
+    const baseUrl = app_url || 'https://dopestyle.in';
+    const storeName = settings?.general?.store_name || 'Dope Style';
 
     if (!page || !content) {
         return (
@@ -15,9 +17,40 @@ export default function Home({ page, content, layout }) {
         );
     }
 
+    const getHomeSchema = () => {
+        return {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "WebSite",
+                    "@id": `${baseUrl}/#website`,
+                    "url": baseUrl,
+                    "name": storeName,
+                    "potentialAction": {
+                        "@type": "SearchAction",
+                        "target": `${baseUrl}/search?q={search_term_string}`,
+                        "query-input": "required name=search_term_string"
+                    }
+                },
+                {
+                    "@type": "Organization",
+                    "@id": `${baseUrl}/#organization`,
+                    "name": storeName,
+                    "url": baseUrl,
+                    "logo": settings?.general?.favicon ? `${baseUrl}/${settings.general.favicon}` : `${baseUrl}/favicon.ico`
+                }
+            ]
+        };
+    };
+
     return (
         <main className="min-h-screen bg-gray-50">
-            <Head title={page.title || 'Home'} />
+            <Head>
+                <title>{page.title || 'Home'}</title>
+                <script type="application/ld+json" head-key="jsonld">
+                    {JSON.stringify(getHomeSchema())}
+                </script>
+            </Head>
             <PageRenderer content={content} layout={layout} settings={settings} />
         </main>
     );

@@ -10,7 +10,7 @@
             <a href="{{ route('admin.collections.index') }}" class="text-sm text-gray-500 hover:text-black font-medium">Cancel</a>
         </div>
 
-        <form action="{{ route('admin.collections.store') }}" method="POST" class="p-6 space-y-6">
+        <form action="{{ route('admin.collections.store') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
             @csrf
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -46,6 +46,32 @@
                             <p class="text-xs text-gray-500 mt-1">Make this collection visible for customer browsing</p>
                         </div>
                     </label>
+                </div>
+            </div>
+
+            <!-- Social SEO Section -->
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Social SEO Metadata (OG & Twitter)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Social Title</label>
+                        <input type="text" name="social_title" value="{{ old('social_title') }}" placeholder="e.g. Shop the Winter Collection"
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                        <p class="text-xs text-gray-500 mt-1">Leave blank to use the default collection name.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Social Image</label>
+                        <input type="file" name="social_image" accept="image/*"
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100">
+                        <p class="text-xs text-gray-500 mt-1">Recommended size: 1200x630 pixels (for OG/Twitter cards).</p>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Social Description</label>
+                        <textarea name="social_description" rows="3" placeholder="Description shown on social media shares..."
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('social_description') }}</textarea>
+                    </div>
                 </div>
             </div>
 

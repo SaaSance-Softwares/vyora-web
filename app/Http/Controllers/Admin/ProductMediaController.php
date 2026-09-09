@@ -14,8 +14,8 @@ class ProductMediaController extends Controller
 {
     public function uploadMasterPreview(Request $request, Product $product)
     {
-        $request->validate([
-            'file' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        $request->strictValidate([
+            'file' => 'required|file|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
         if ($product->preview_image) {
@@ -59,10 +59,10 @@ class ProductMediaController extends Controller
         $type = $request->type;
         $allowedMimes = $type === 'video' ? 'mimes:mp4,mov,qt,webm' : 'mimes:jpeg,png,jpg,gif,webp';
 
-        $request->validate([
+        $request->strictValidate([
             'file' => "required|file|{$allowedMimes}|max:51200",
-            'category_id' => 'required|exists:categories,id',
-            'type' => 'required|in:image,video',
+            'category_id' => 'required|integer|exists:categories,id',
+            'type' => 'required|string|max:255|in:image,video',
         ]);
 
         $catImage = ProductCategoryMasterImage::where('product_id', $product->id)
@@ -143,9 +143,9 @@ class ProductMediaController extends Controller
 
     public function deleteCategoryMasterPreview(Request $request, Product $product)
     {
-        $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'type' => 'required|in:image,video',
+        $request->strictValidate([
+            'category_id' => 'required|integer|exists:categories,id',
+            'type' => 'required|string|max:255|in:image,video',
         ]);
 
         $catImage = ProductCategoryMasterImage::where('product_id', $product->id)
@@ -181,10 +181,10 @@ class ProductMediaController extends Controller
 
     public function upload(Request $request, Product $product)
     {
-        $request->validate([
-            'files' => 'required|array',
+        $request->strictValidate([
+            'files' => 'required|array|max:100',
             'files.*' => 'required|file|mimes:jpeg,jpg,png,webp,mp4,mov,avi|max:51200', // 50MB max
-            'color_id' => 'required|exists:colors,id',
+            'color_id' => 'required|integer|exists:colors,id',
         ]);
 
         $uploadedMedia = [];
@@ -329,9 +329,9 @@ class ProductMediaController extends Controller
 
     public function reorder(Request $request, Product $product)
     {
-        $request->validate([
-            'media_ids' => 'required|array',
-            'media_ids.*' => 'required|exists:product_images,id',
+        $request->strictValidate([
+            'media_ids' => 'required|array|max:100',
+            'media_ids.*' => 'required|integer|exists:product_images,id',
         ]);
 
         foreach ($request->media_ids as $index => $id) {

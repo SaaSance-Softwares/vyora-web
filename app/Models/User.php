@@ -27,6 +27,14 @@ class User extends Authenticatable
         'module_access',
         'provider',
         'provider_id',
+        'has_consented_to_terms',
+        'has_consented_to_marketing',
+        'consent_timestamp',
+        'consent_ip_address',
+        'registration_ip',
+        'city',
+        'state',
+        'country',
     ];
 
     /**
@@ -50,6 +58,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'module_access' => 'array',
+            'has_consented_to_terms' => 'boolean',
+            'has_consented_to_marketing' => 'boolean',
+            'consent_timestamp' => 'datetime',
         ];
     }
 

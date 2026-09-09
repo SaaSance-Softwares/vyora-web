@@ -47,8 +47,8 @@ class CouponApiController extends Controller
      */
     public function applyCoupon(Request $request)
     {
-        $request->validate([
-            'code' => 'required|string',
+        $request->strictValidate([
+            'code' => 'required|string|max:255',
             'cart' => 'required|array',
         ]);
 

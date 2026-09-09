@@ -1,30 +1,13 @@
 @extends('layouts.admin')
 
-@section('title', 'Product Card Settings')
+@section('header', 'Product Card Designer')
 
 @section('content')
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Product Card Designer</h1>
-            <p class="mt-2 text-sm text-gray-600">Customize the appearance of product cards across your entire store.</p>
-        </div>
+<div class="w-full mx-auto pb-24">
+    <div class="mb-6 mt-6">
+        <p class="text-sm text-gray-600">Customize the appearance of product cards across your entire store.</p>
     </div>
 
-    @if(session('success'))
-        <div class="rounded-xl bg-green-50 p-4 border border-green-200">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
-                </div>
-            </div>
-        </div>
-    @endif
 
     <form action="{{ route('admin.online-store.product-card-settings.update') }}" method="POST">
         @csrf
@@ -82,7 +65,7 @@
 
                 <!-- Content Options -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-base font-semibold leading-7 text-gray-900 border-b pb-4 mb-4">Image</h3>
+                    <h3 class="text-base font-semibold leading-7 text-gray-900 border-b pb-4 mb-4">Content &amp; Imagery</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Image Aspect Ratio</label>
@@ -90,6 +73,21 @@
                                 <option value="aspect-[4/5]" {{ $settings['pc_image_aspect'] === 'aspect-[4/5]' ? 'selected' : '' }}>Portrait (4:5)</option>
                                 <option value="aspect-square" {{ $settings['pc_image_aspect'] === 'aspect-square' ? 'selected' : '' }}>Square (1:1)</option>
                                 <option value="aspect-[3/4]" {{ $settings['pc_image_aspect'] === 'aspect-[3/4]' ? 'selected' : '' }}>Tall Portrait (3:4)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Show Available Colors</label>
+                            <select name="pc_show_colors" id="pc_show_colors" class="block w-full rounded-xl border border-gray-300 py-2.5 px-3 focus:ring-black focus:border-black sm:text-sm">
+                                <option value="1" {{ ($settings['pc_show_colors'] ?? '0') === '1' ? 'selected' : '' }}>Show Colors</option>
+                                <option value="0" {{ ($settings['pc_show_colors'] ?? '0') === '0' ? 'selected' : '' }}>Hide Colors</option>
+                            </select>
+                            <p class="text-xs text-gray-400 mt-1">Displays color dots opposite the brand name.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color Circles Style</label>
+                            <select name="pc_color_style" id="pc_color_style" class="block w-full rounded-xl border border-gray-300 py-2.5 px-3 focus:ring-black focus:border-black sm:text-sm">
+                                <option value="overlap" {{ ($settings['pc_color_style'] ?? 'overlap') === 'overlap' ? 'selected' : '' }}>Overlapping</option>
+                                <option value="individual" {{ ($settings['pc_color_style'] ?? 'overlap') === 'individual' ? 'selected' : '' }}>Individual (Spaced)</option>
                             </select>
                         </div>
                     </div>
@@ -195,10 +193,6 @@
 
                     </div>
                 </div>
-                
-                <div class="flex justify-end">
-                    <button type="submit" class="bg-black text-white px-6 py-2.5 rounded-xl font-semibold shadow-sm hover:bg-gray-800 transition">Save Global Design</button>
-                </div>
             </div>
 
             <!-- Right Side: Live Preview -->
@@ -219,7 +213,19 @@
 
                             <!-- Text Content -->
                             <div class="mt-4 px-1 pb-1 flex flex-col gap-1">
-                                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">BRAND</span>
+                                <div class="flex justify-between items-center gap-2 min-h-[14px]">
+                                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">BRAND</span>
+                                    
+                                    <!-- Color Circles Preview -->
+                                    <div id="preview-colors-wrapper" class="flex items-center shrink-0 hidden transition-all duration-300">
+                                        <div class="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm relative bg-[#2a2a2a]" style="z-index: 4"></div>
+                                        <div class="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm relative bg-[#8b8b8b]" style="z-index: 3"></div>
+                                        <div class="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm relative bg-[#d6d6d6]" style="z-index: 2"></div>
+                                        <div class="w-3.5 h-3.5 rounded-full border border-gray-200 shadow-sm relative bg-[#e0c7a5]" style="z-index: 1"></div>
+                                        <span id="preview-colors-text" class="text-[9px] font-bold text-gray-500">+2</span>
+                                    </div>
+                                </div>
+                                
                                 <h3 class="text-sm font-medium text-gray-900 mt-0.5">Premium Graphic Tee</h3>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-xs text-gray-400 font-medium line-through">₹1,999</span>
@@ -258,6 +264,13 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Save Section -->
+        <div class="bg-gray-50 border-t border-gray-200 p-5 flex justify-end rounded-b-lg mt-6">
+            <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-colors">
+                Save Global Design
+            </button>
         </div>
     </form>
 </div>
@@ -300,6 +313,8 @@
             wishlistStyle:document.getElementById('pc_wishlist_style'),
             wishlistBg:   document.getElementById('pc_wishlist_bg_color'),
             wishlistText: document.getElementById('pc_wishlist_text_color'),
+            showColors:   document.getElementById('pc_show_colors'),
+            colorStyle:   document.getElementById('pc_color_style'),
         };
 
         /**
@@ -378,6 +393,26 @@
             if (wishlistBtn) {
                 wishlistBtn.style.backgroundColor = inputs.wishlistBg.value;
                 wishlistBtn.style.color = inputs.wishlistText.value;
+            }
+
+            // Colors
+            const colorWrapper = document.getElementById('preview-colors-wrapper');
+            const colorText = document.getElementById('preview-colors-text');
+            if (colorWrapper) {
+                if (inputs.showColors && inputs.showColors.value === '1') {
+                    colorWrapper.classList.remove('hidden');
+                    if (inputs.colorStyle && inputs.colorStyle.value === 'overlap') {
+                        colorWrapper.classList.remove('space-x-1');
+                        colorWrapper.classList.add('-space-x-1.5');
+                        if (colorText) colorText.classList.add('ml-1');
+                    } else {
+                        colorWrapper.classList.remove('-space-x-1.5');
+                        colorWrapper.classList.add('space-x-1');
+                        if (colorText) colorText.classList.remove('ml-1');
+                    }
+                } else {
+                    colorWrapper.classList.add('hidden');
+                }
             }
         }
 

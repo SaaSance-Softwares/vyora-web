@@ -25,7 +25,7 @@
                 <!-- Slug -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
-                    <input type="text" name="slug" id="slug" value="{{ old('slug') }}" required placeholder="streetwear"
+                    <input type="text" id="slug-input" name="slug" id="slug" value="{{ old('slug') }}" required placeholder="streetwear"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
                 </div>
 
@@ -53,13 +53,18 @@
                         </div>
                     </label>
                 </div>
+            </div>
+            
             <hr class="border-gray-100 my-6">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Category Image -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Category Image</label>
-                    <input type="file" name="image" accept="image/*"
+                    <div class="mb-3">
+                        <img id="image-preview" src="" class="w-32 h-32 object-cover rounded-lg border border-gray-200 hidden">
+                    </div>
+                    <input type="file" id="image-input" name="image" accept="image/*"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
                     <p class="text-xs text-gray-500 mt-1">Recommended size: 800x800px</p>
                 </div>
@@ -69,16 +74,19 @@
                 </div>
 
                 <!-- Meta Title -->
-                <div>
+                <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Title</label>
                     <input type="text" name="meta_title" value="{{ old('meta_title') }}" placeholder="Optimized Page Title"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
                 </div>
 
                 <!-- Social Image -->
-                <div>
+                <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Social Share Image (OG Image)</label>
-                    <input type="file" name="social_image" accept="image/*"
+                    <div class="mb-3">
+                        <img id="social-preview" src="" class="w-32 h-20 object-cover rounded-lg border border-gray-200 hidden">
+                    </div>
+                    <input type="file" id="social-image-input" name="social_image" accept="image/*"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
                 </div>
 
@@ -98,4 +106,59 @@
         </form>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+            // Image Preview logic
+            const imageInput = document.getElementById('image-input');
+            const imagePreview = document.getElementById('image-preview');
+            
+            if (imageInput && imagePreview) {
+                imageInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        imagePreview.src = URL.createObjectURL(file);
+                        imagePreview.classList.remove('hidden');
+                    }
+                });
+            }
+
+            const socialInput = document.getElementById('social-image-input');
+            const socialPreview = document.getElementById('social-preview');
+            
+            if (socialInput && socialPreview) {
+                socialInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        socialPreview.src = URL.createObjectURL(file);
+                        socialPreview.classList.remove('hidden');
+                    }
+                });
+            }
+        const slugInput = document.querySelector('input[name="slug"]');
+        if (slugInput) {
+            slugInput.addEventListener('input', function(e) {
+                let val = e.target.value;
+                val = val.toLowerCase();
+                val = val.replace(/\s+/g, '-');
+                val = val.replace(/-+/g, '-');
+                val = val.replace(/[^a-z0-9-]/g, ''); // Optional: remove invalid characters
+                e.target.value = val;
+            });
+            
+            // Auto-generate slug from name only on create page if slug is empty
+            const nameInput = document.querySelector('input[name="name"]');
+            if (nameInput && window.location.pathname.includes('/create')) {
+                nameInput.addEventListener('input', function(e) {
+                    if (!slugInput.dataset.manuallyEdited) {
+                        let val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-').replace(/[^a-z0-9-]/g, '');
+                        slugInput.value = val;
+                    }
+                });
+                slugInput.addEventListener('input', function() {
+                    slugInput.dataset.manuallyEdited = true;
+                });
+            }
+        }
+    });
+</script>
 @endsection

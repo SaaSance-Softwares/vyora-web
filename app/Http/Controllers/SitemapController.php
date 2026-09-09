@@ -4,13 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Collection;
+use App\Models\LegalPage;
 use App\Models\Product;
+use App\Models\CmsPage;
 
 class SitemapController extends Controller
 {
     public function index()
     {
-        $appUrl = config('app.url');
+        $appUrl = rtrim(url('/'), '/');
 
         $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
 
@@ -19,9 +21,7 @@ class SitemapController extends Controller
             '/',
             '/shop',
             '/search',
-            '/cart',
-            '/checkout',
-            '/wishlist',
+            '/gift-cards',
         ];
 
         foreach ($staticPages as $page) {
@@ -60,6 +60,28 @@ class SitemapController extends Controller
                 $url->addChild('lastmod', $collection->updated_at->toAtomString());
                 $url->addChild('changefreq', 'weekly');
                 $url->addChild('priority', '0.7');
+            }
+        }
+
+        // Legal Pages
+        $legalPages = LegalPage::where('is_published', true)->select('slug', 'updated_at')->get();
+        foreach ($legalPages as $legalPage) {
+            $url = $xml->addChild('url');
+            $url->addChild('loc', $appUrl.'/policy/'.$legalPage->slug);
+            $url->addChild('lastmod', $legalPage->updated_at->toAtomString());
+            $url->addChild('changefreq', 'monthly');
+            $url->addChild('priority', '0.5');
+        }
+
+        // CMS Pages
+        if (class_exists(CmsPage::class)) {
+            $cmsPages = CmsPage::where('is_active', true)->select('slug', 'updated_at')->get();
+            foreach ($cmsPages as $cmsPage) {
+                $url = $xml->addChild('url');
+                $url->addChild('loc', $appUrl.'/p/'.$cmsPage->slug);
+                $url->addChild('lastmod', $cmsPage->updated_at->toAtomString());
+                $url->addChild('changefreq', 'monthly');
+                $url->addChild('priority', '0.6');
             }
         }
 

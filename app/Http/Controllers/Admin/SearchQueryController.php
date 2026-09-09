@@ -18,9 +18,9 @@ class SearchQueryController extends Controller
 
     public function deleteByDate(Request $request)
     {
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+        $request->strictValidate([
+            'start_date' => 'required|string|date|max:255',
+            'end_date' => 'required|string|date|max:255|after_or_equal:start_date',
         ]);
 
         $start = Carbon::parse($request->start_date)->startOfDay();

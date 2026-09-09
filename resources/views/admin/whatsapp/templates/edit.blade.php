@@ -31,6 +31,13 @@
             }
         }
     }
+    if ($template->category === 'AUTHENTICATION') {
+        foreach ($buttons as &$btn) {
+            if ($btn['type'] === 'URL' && str_contains($btn['url'] ?? '', 'otp_type=COPY_CODE')) {
+                $btn['type'] = 'OTP';
+            }
+        }
+    }
 
     $headerExample = $headerComponent['example']['header_text'][0] ?? '';
     
@@ -117,6 +124,7 @@
                         <select name="header_type" x-model="headerType" class="bg-white border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-lg px-3 py-1.5 text-xs font-medium text-gray-900">
                             <option value="NONE">None</option>
                             <option value="TEXT">Text</option>
+                            <option value="IMAGE">Image</option>
                         </select>
                     </div>
 
@@ -185,6 +193,7 @@
                                             <option value="QUICK_REPLY">Quick Reply</option>
                                             <option value="URL">Visit Website (URL)</option>
                                             <option value="PHONE_NUMBER">Call Phone Number</option>
+                                            <option value="OTP">Authentication (OTP - Copy Code)</option>
                                         </select>
                                     </div>
                                     <div>
@@ -246,6 +255,17 @@
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_email}</li>
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{customer_phone}</li>
                                 </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Abandoned Carts</h4>
+                                <ul class="space-y-1 mb-3">
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{product_name}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{cart_token}</li>
+                                </ul>
+                                <div class="bg-blue-100/50 p-2 rounded text-[10px] text-blue-800 border border-blue-200">
+                                    <strong>To setup abandoned carts:</strong> Create a Marketing template named <code>abandoned_cart</code> in Meta. Set Header to Image (the product image is sent automatically). Map <code>{cart_token}</code> to a Dynamic URL button formatted like: <code>https://yoursite.com/cart/recover/{{1}}</code>
+                                </div>
                             </div>
 
                             <div>

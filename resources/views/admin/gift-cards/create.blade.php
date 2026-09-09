@@ -14,7 +14,7 @@
         <button type="button" onclick="switchType('direct')" id="btn-direct" class="px-4 py-2 text-sm font-bold rounded-md transition-all text-gray-500 hover:text-gray-800">🎁 Direct Gift to User</button>
     </div>
 
-    <form action="{{ route('admin.online-store.gift-cards.store') }}" method="POST" class="space-y-6">
+    <form action="{{ route('admin.online-store.gift-cards.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
         <input type="hidden" name="type" id="cardType" value="template">
 
@@ -52,6 +52,27 @@
                 <input type="number" name="validity_days" value="{{ old('validity_days') }}" min="1"
                     class="w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-gray-900 transition-all"
                     placeholder="e.g. 365">
+            </div>
+
+            {{-- Background Image --}}
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Card Background Image <span class="text-gray-300 font-normal normal-case">(optional — will be converted to WebP)</span></label>
+                <div class="flex items-start gap-4">
+                    <label for="bg_image_input" class="flex flex-col items-center justify-center w-48 h-28 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 transition-all bg-gray-50 relative overflow-hidden">
+                        <img id="bg_image_preview" src="" alt="" class="absolute inset-0 w-full h-full object-cover hidden rounded-xl">
+                        <div id="bg_image_placeholder" class="flex flex-col items-center justify-center gap-1 z-10">
+                            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Upload Image</span>
+                        </div>
+                        <input type="file" id="bg_image_input" name="background_image" accept="image/*" class="hidden" onchange="previewBgImage(this)">
+                    </label>
+                    <div class="text-xs text-gray-400 leading-relaxed pt-2">
+                        <p>Supported: JPG, PNG, WebP, GIF</p>
+                        <p>Max size: 5 MB</p>
+                        <p class="mt-2 text-gray-500">If no image is set, the card will use the automatic premium color theme based on amount.</p>
+                    </div>
+                </div>
+                @error('background_image') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-xs text-gray-500 bg-gray-50 rounded-lg p-4">
@@ -105,6 +126,20 @@ function switchType(t) {
     } else {
         tpl.classList.add('hidden'); dir.classList.remove('hidden');
         au.required = true; btnD.className = active; btnT.className = inactive;
+    }
+}
+
+function previewBgImage(input) {
+    const preview = document.getElementById('bg_image_preview');
+    const placeholder = document.getElementById('bg_image_placeholder');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 }
 </script>

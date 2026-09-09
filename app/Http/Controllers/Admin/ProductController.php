@@ -9,18 +9,33 @@ use App\Models\Color;
 use App\Models\Product;
 use App\Models\ProductType;
 use App\Models\Size;
+use App\Models\Fit;
+use App\Models\Fabric;
 use App\Models\SizeChart;
 use App\Models\Sku;
 use App\Models\ThemeSetting;
+use App\Models\DeliveryTimeline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('skus')->withCount('orderItems as purchase_count')->latest()->paginate(10);
+        $query = Product::with('skus')->withCount('orderItems as purchase_count')->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhereHas('skus', function ($sq) use ($search) {
+                      $sq->where('code', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
+        $products = $query->paginate(10)->withQueryString();
 
         $stats = [
             'total' => Product::count(),
@@ -29,7 +44,19 @@ class ProductController extends Controller
             'out_of_stock' => Sku::where('stock', 0)->count(),
         ];
 
-        return view('admin.products.index', compact('products', 'stats'));
+                $sizeCharts = \App\Models\SizeChart::all();
+        $fits = \App\Models\Fit::all();
+        $fabrics = \App\Models\Fabric::all();
+        $productTypes = \App\Models\ProductType::all();
+        $categories = \App\Models\Category::whereNull('parent_id')->with('children.children')->get();
+        $collections = \App\Models\Collection::all();
+        $deliveryTimelines = \App\Models\DeliveryTimeline::all();
+        $qikinkEnabled = \App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') == '1';
+        
+        $taxRows = \App\Models\ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
+        $taxes = json_decode($taxRows->get('taxes')?->value ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true);
+
+        return view('admin.products.index', compact('products', 'stats', 'sizeCharts', 'fits', 'fabrics', 'productTypes', 'categories', 'collections', 'deliveryTimelines', 'qikinkEnabled', 'taxes'));
     }
 
     public function search(Request $request)
@@ -84,11 +111,15 @@ class ProductController extends Controller
         $sizeCharts = SizeChart::where('is_active', true)->orderBy('name')->get();
         $colors = Color::orderBy('name')->get();
         $sizes = Size::orderBy('name')->get();
+        $fits = Fit::orderBy('name')->get();
+        $fabrics = Fabric::orderBy('name')->get();
 
         $taxRows = ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
         $taxes = json_decode($taxRows->get('taxes')?->value ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true);
+        
+        $deliveryTimelines = DeliveryTimeline::orderBy('created_at', 'desc')->get();
 
-        return view('admin.products.create', compact('categories', 'collections', 'productTypes', 'sizeCharts', 'colors', 'sizes', 'taxes'));
+        return view('admin.products.create', compact('categories', 'collections', 'productTypes', 'sizeCharts', 'colors', 'sizes', 'fits', 'fabrics', 'taxes', 'deliveryTimelines'));
     }
 
     public function store(Request $request)
@@ -98,9 +129,45 @@ class ProductController extends Controller
             'slug' => Str::slug($request->slug ?? $request->name),
         ]);
 
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug',
+            'brand_name' => 'nullable|string|max:255',
+            'short_description' => 'nullable|string|max:5000',
+            'use_case' => 'nullable|string|max:255',
+            'long_description' => 'nullable|string|max:5000',
+            'product_type_id' => 'nullable|string|max:255',
+            'seo_title' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|string|max:5000',
+            'seo_keywords' => 'nullable|string|max:1000',
+            'is_returnable' => 'boolean',
+            'on_sale' => 'boolean',
+            'use_qikink' => 'boolean',
+            'tax_class' => 'nullable|string|max:255',
+            'delivery_timeline_id' => 'nullable|exists:delivery_timelines,id',
+            'fit_id' => 'nullable|exists:fits,id',
+            'fabric_id' => 'nullable|exists:fabrics,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'string|max:255',
+            'collections' => 'nullable|array',
+            'collections.*' => 'string|max:255',
+            'size_chart_id' => 'nullable|string|max:255',
+            'new_skus' => 'nullable|array|max:100',
+            'new_skus.*' => 'array',
+            'new_skus.*.code' => 'nullable|string|max:255',
+            'new_skus.*.price' => 'nullable|numeric',
+            'new_skus.*.mrp' => 'nullable|numeric',
+            'new_skus.*.stock' => 'nullable|integer',
+            'new_skus.*.color_id' => 'nullable|string|max:255',
+            'new_skus.*.size' => 'nullable|string|max:255',
+            'new_skus.*.design_sku' => 'nullable|string|max:255',
+            'new_skus.*.product_sku' => 'nullable|string|max:255',
+            'new_skus.*.weight' => 'nullable|numeric',
+            'new_skus.*.width' => 'nullable|numeric',
+            'new_skus.*.height' => 'nullable|numeric',
+            'new_skus.*.length' => 'nullable|numeric',
+            'redirect_tab' => 'nullable|string|max:255',
+            'preview_image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         // Create product
@@ -109,6 +176,7 @@ class ProductController extends Controller
             'slug' => $request->slug,
             'brand_name' => $request->brand_name,
             'short_description' => $request->short_description,
+            'use_case' => $request->use_case,
             'long_description' => $request->long_description,
             'product_type_id' => $request->product_type_id,
             'seo_title' => $request->seo_title,
@@ -119,6 +187,9 @@ class ProductController extends Controller
             'on_sale' => $request->has('on_sale'),
             'use_qikink' => $request->has('use_qikink'),
             'tax_class' => $request->tax_class,
+            'delivery_timeline_id' => $request->delivery_timeline_id,
+            'fit_id' => $request->fit_id,
+            'fabric_id' => $request->fabric_id,
         ];
 
         // Handle preview image upload
@@ -201,8 +272,18 @@ class ProductController extends Controller
         $categories = Category::whereNull('parent_id')->with('children.children')->get();
         $collections = Collection::where('is_active', true)->get();
         $productTypes = ProductType::all();
-
-        $productParentCategories = $product->categories->whereNull('parent_id');
+        
+        $rootCategories = collect();
+        foreach ($product->categories as $category) {
+            $current = $category;
+            while ($current->parent_id != null) {
+                $current = $current->parent;
+            }
+            if (!$rootCategories->contains('id', $current->id)) {
+                $rootCategories->push($current);
+            }
+        }
+        $productCategories = $rootCategories;
 
         // Get unique colors from product SKUs
         $productColors = $product->skus->pluck('color')->unique('id')->filter();
@@ -216,11 +297,15 @@ class ProductController extends Controller
         // Get available attributes for new variants
         $colors = Color::orderBy('name')->get();
         $sizes = Size::orderBy('name')->get();
+        $fits = Fit::orderBy('name')->get();
+        $fabrics = Fabric::orderBy('name')->get();
 
         $taxRows = ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
         $taxes = json_decode($taxRows->get('taxes')?->value ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true);
+        
+        $deliveryTimelines = DeliveryTimeline::orderBy('created_at', 'desc')->get();
 
-        return view('admin.products.edit', compact('product', 'categories', 'collections', 'productTypes', 'productColors', 'mediaByColor', 'sizeCharts', 'colors', 'sizes', 'productParentCategories', 'taxes'));
+        return view('admin.products.edit', compact('product', 'categories', 'collections', 'productTypes', 'productColors', 'mediaByColor', 'sizeCharts', 'colors', 'sizes', 'fits', 'fabrics', 'productCategories', 'taxes', 'deliveryTimelines'));
     }
 
     public function update(Request $request, Product $product)
@@ -230,14 +315,58 @@ class ProductController extends Controller
             'slug' => Str::slug($request->slug),
         ]);
 
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug,'.$product->id,
-            'skus' => 'nullable|array',
+            'brand_name' => 'nullable|string|max:255',
+            'short_description' => 'nullable|string|max:5000',
+            'use_case' => 'nullable|string|max:255',
+            'long_description' => 'nullable|string|max:5000',
+            'product_type_id' => 'nullable|string|max:255',
+            'seo_title' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|string|max:5000',
+            'seo_keywords' => 'nullable|string|max:1000',
+            'is_active' => 'boolean',
+            'is_returnable' => 'boolean',
+            'on_sale' => 'boolean',
+            'use_qikink' => 'boolean',
+            'tax_class' => 'nullable|string|max:255',
+            'delivery_timeline_id' => 'nullable|exists:delivery_timelines,id',
+            'fit_id' => 'nullable|exists:fits,id',
+            'fabric_id' => 'nullable|exists:fabrics,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'string|max:255',
+            'collections' => 'nullable|array',
+            'collections.*' => 'string|max:255',
+            'size_chart_id' => 'nullable|string|max:255',
+            'skus' => 'nullable|array|max:100',
+            'skus.*' => 'array',
             'skus.*.code' => 'required|string|max:255',
-            'skus.*.price' => 'required|numeric|min:0',
-            'skus.*.mrp' => 'nullable|numeric|min:0',
-            'skus.*.stock' => 'required|integer|min:0',
+            'skus.*.price' => 'required|numeric|min:0|max:9999999',
+            'skus.*.mrp' => 'nullable|numeric|min:0|max:9999999',
+            'skus.*.stock' => 'required|integer|min:0|max:999999',
+            'skus.*.design_sku' => 'nullable|string|max:255',
+            'skus.*.product_sku' => 'nullable|string|max:255',
+            'skus.*.weight' => 'nullable|numeric',
+            'skus.*.width' => 'nullable|numeric',
+            'skus.*.height' => 'nullable|numeric',
+            'skus.*.length' => 'nullable|numeric',
+            'new_skus' => 'nullable|array|max:100',
+            'new_skus.*' => 'array',
+            'new_skus.*.code' => 'nullable|string|max:255',
+            'new_skus.*.price' => 'nullable|numeric',
+            'new_skus.*.mrp' => 'nullable|numeric',
+            'new_skus.*.stock' => 'nullable|integer',
+            'new_skus.*.color_id' => 'nullable|string|max:255',
+            'new_skus.*.size' => 'nullable|string|max:255',
+            'new_skus.*.design_sku' => 'nullable|string|max:255',
+            'new_skus.*.product_sku' => 'nullable|string|max:255',
+            'new_skus.*.weight' => 'nullable|numeric',
+            'new_skus.*.width' => 'nullable|numeric',
+            'new_skus.*.height' => 'nullable|numeric',
+            'new_skus.*.length' => 'nullable|numeric',
+            'redirect_tab' => 'nullable|string|max:255',
+            'preview_image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         // Update basic product details
@@ -247,6 +376,7 @@ class ProductController extends Controller
             'slug' => $request->slug,
             'brand_name' => $request->brand_name,
             'short_description' => $request->short_description,
+            'use_case' => $request->use_case,
             'long_description' => $request->long_description,
             'product_type_id' => $request->product_type_id,
             'seo_title' => $request->seo_title,
@@ -257,13 +387,13 @@ class ProductController extends Controller
             'on_sale' => $request->has('on_sale'),
             'use_qikink' => $request->has('use_qikink'),
             'tax_class' => $request->tax_class,
+            'delivery_timeline_id' => $request->delivery_timeline_id,
+            'fit_id' => $request->fit_id,
+            'fabric_id' => $request->fabric_id,
         ];
 
         // Handle Master Image Upload
         if ($request->hasFile('preview_image')) {
-            $request->validate([
-                'preview_image' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            ]);
 
             // Delete old image if exists
             if ($product->preview_image) {
@@ -377,6 +507,47 @@ class ProductController extends Controller
             ->withFragment($tab);
     }
 
+    public function export()
+    {
+        $products = Product::with('skus')->withCount('orderItems as purchase_count')->latest()->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="products_export_' . date('Y-m-d') . '.csv"',
+        ];
+
+        $callback = function () use ($products) {
+            $file = fopen('php://output', 'w');
+            
+            // Add CSV headers
+            fputcsv($file, [
+                'ID', 'Name', 'Slug', 'Brand', 'Status', 
+                'Total Stock', 'Min Price', 'Max Price', 
+                'Views', 'Purchases', 'Created At'
+            ]);
+
+            foreach ($products as $product) {
+                fputcsv($file, [
+                    $product->id,
+                    $product->name,
+                    $product->slug,
+                    $product->brand_name,
+                    $product->is_active ? 'Active' : 'Draft',
+                    $product->skus->sum('stock'),
+                    $product->skus->isNotEmpty() ? $product->skus->min('price') : 0,
+                    $product->skus->isNotEmpty() ? $product->skus->max('price') : 0,
+                    $product->view_count,
+                    $product->purchase_count,
+                    $product->created_at->format('Y-m-d H:i:s')
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function destroy(Product $product)
     {
         // Check if product has any orders
@@ -394,5 +565,61 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('admin.products.index')->with('success', 'Product deleted successfully.');
+    }
+    public function bulkUpdate(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|string',
+        ]);
+
+        // Convert comma-separated string to array
+        $productIds = array_filter(explode(',', $request->product_ids));
+        
+        if (empty($productIds)) {
+            return back()->with('error', 'No products selected.');
+        }
+
+        $updateData = [];
+
+        $fields = ['fit_id', 'fabric_id', 'product_type_id', 'delivery_timeline_id', 'tax_class'];
+        foreach ($fields as $field) {
+            if ($request->filled($field)) {
+                $updateData[$field] = $request->$field;
+            }
+        }
+        
+        $boolFields = ['is_active', 'is_returnable', 'on_sale', 'use_qikink'];
+        foreach ($boolFields as $field) {
+            if ($request->filled($field) && $request->$field !== 'leave') {
+                $updateData[$field] = $request->$field === '1';
+            }
+        }
+
+        if (!empty($updateData)) {
+            Product::whereIn('id', $productIds)->update($updateData);
+        }
+
+        $products = Product::whereIn('id', $productIds)->get();
+
+        if ($request->filled('size_chart_id')) {
+            foreach ($products as $product) {
+                $product->sizeChart()->sync([$request->size_chart_id]);
+            }
+        }
+
+        if ($request->filled('categories')) {
+            foreach ($products as $product) {
+                // If they check multiple checkboxes, it replaces the product's categories
+                $product->categories()->sync($request->categories);
+            }
+        }
+
+        if ($request->filled('collections')) {
+            foreach ($products as $product) {
+                $product->collections()->sync($request->collections);
+            }
+        }
+
+        return back()->with('success', count($productIds) . ' products updated successfully.');
     }
 }

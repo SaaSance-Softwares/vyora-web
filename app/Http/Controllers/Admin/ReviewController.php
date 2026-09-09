@@ -19,8 +19,8 @@ class ReviewController extends Controller
 
     public function reply(Request $request, Review $review)
     {
-        $request->validate([
-            'admin_reply' => 'nullable|string',
+        $request->strictValidate([
+            'admin_reply' => 'nullable|string|max:5000',
         ]);
 
         $review->update([

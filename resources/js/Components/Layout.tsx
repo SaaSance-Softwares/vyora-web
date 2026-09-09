@@ -3,6 +3,8 @@ import { usePage, Head } from '@inertiajs/react';
 import Navbar from './Navbar';
 import AuthModal from './auth/AuthModal';
 import QuickViewModal from './product/QuickViewModal';
+import Footer from './Footer';
+import { useAuthStore } from '@/store/auth';
 
 // A mock context provider for Settings, since some components might still use it
 export const SettingsContext = React.createContext({});
@@ -10,6 +12,18 @@ export const useSettings = () => React.useContext(SettingsContext);
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const { settings } = usePage().props as any;
+
+    useEffect(() => {
+        useAuthStore.getState().checkAuth();
+        
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                useAuthStore.getState().checkAuth();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
 
     const primary = settings?.primary_color || '#000000';
     const secondary = settings?.secondary_color || '#ffffff';
@@ -51,9 +65,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 } as React.CSSProperties}
             >
                 <Navbar settings={settings} />
-                <main className="flex-grow">
+                <main className="flex-grow pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
                     {children}
                 </main>
+                <Footer />
                 <AuthModal />
                 <QuickViewModal />
             </div>

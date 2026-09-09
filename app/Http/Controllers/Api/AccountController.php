@@ -17,10 +17,10 @@ class AccountController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,'.$user->id,
-            'phone' => 'nullable|string|max:20',
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20|unique:users,phone,'.$user->id,
         ]);
 
         $user->update($validated);
@@ -32,10 +32,10 @@ class AccountController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $request->validate([
-            'current_password' => 'required',
-            'password' => 'required|min:8|confirmed',
-            'password_confirmation' => 'required',
+        $request->strictValidate([
+            'current_password' => 'required|string|max:255',
+            'password' => 'required|string|min:8|max:255|confirmed',
+            'password_confirmation' => 'required|string|max:255',
         ]);
 
         $user = $request->user();
@@ -50,6 +50,12 @@ class AccountController extends Controller
             app(WhatsAppService::class)->sendEventWhatsApp('password_updated', $user);
         } catch (\Exception $e) {
             Log::error('Failed to send WhatsApp password updated: '.$e->getMessage());
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\PasswordUpdatedEmail($user));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Password Updated Email: '.$e->getMessage());
         }
 
         return response()->json(['message' => 'Password updated successfully.']);
@@ -69,14 +75,16 @@ class AccountController extends Controller
 
     public function storeAddress(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'line1' => 'required|string|max:255',
             'line2' => 'nullable|string|max:255',
             'city' => 'required|string|max:100',
+            'district' => 'nullable|string|max:100',
             'state' => 'required|string|max:100',
             'pincode' => 'required|string|max:10',
+            'country' => 'nullable|string|max:100',
         ]);
 
         $userId = $request->user()->id;
@@ -91,10 +99,18 @@ class AccountController extends Controller
             'address_line1' => $validated['line1'],
             'address_line2' => $validated['line2'] ?? null,
             'city' => $validated['city'],
+            'district' => $validated['district'] ?? null,
             'state' => $validated['state'],
             'zip_code' => $validated['pincode'],
+            'country' => $validated['country'] ?? 'IN',
             'is_default' => $isFirst,
         ]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($request->user()->email)->send(new \App\Mail\AddressUpdatedEmail($request->user(), 'added'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Address Updated Email (added): '.$e->getMessage());
+        }
 
         return response()->json($address, 201);
     }
@@ -105,14 +121,16 @@ class AccountController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'line1' => 'required|string|max:255',
             'line2' => 'nullable|string|max:255',
             'city' => 'required|string|max:100',
+            'district' => 'nullable|string|max:100',
             'state' => 'required|string|max:100',
             'pincode' => 'required|string|max:20',
+            'country' => 'nullable|string|max:100',
         ]);
 
         $address->update([
@@ -121,9 +139,17 @@ class AccountController extends Controller
             'address_line1' => $validated['line1'],
             'address_line2' => $validated['line2'] ?? null,
             'city' => $validated['city'],
+            'district' => $validated['district'] ?? null,
             'state' => $validated['state'],
             'zip_code' => $validated['pincode'],
+            'country' => $validated['country'] ?? 'IN',
         ]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($request->user()->email)->send(new \App\Mail\AddressUpdatedEmail($request->user(), 'updated'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Address Updated Email (updated): '.$e->getMessage());
+        }
 
         return response()->json($address);
     }
@@ -143,6 +169,12 @@ class AccountController extends Controller
             if ($next) {
                 $next->update(['is_default' => true]);
             }
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($request->user()->email)->send(new \App\Mail\AddressUpdatedEmail($request->user(), 'deleted'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Address Updated Email (deleted): '.$e->getMessage());
         }
 
         return response()->json(['success' => true]);

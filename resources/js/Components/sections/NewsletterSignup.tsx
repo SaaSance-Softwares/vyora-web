@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '@/lib/api';
 
 export default function NewsletterSignup({ data, isFluid, sectionBg }: { data: any; isFluid?: boolean; sectionBg?: string }) {
     const [email, setEmail] = useState('');
@@ -9,13 +10,29 @@ export default function NewsletterSignup({ data, isFluid, sectionBg }: { data: a
     const hasBgImage = data?.bg_style === 'image' && data?.bg_image;
     const sectionStyle = sectionBg ? { backgroundColor: sectionBg } : {};
 
+    const [error, setError] = useState('');
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) return;
         setLoading(true);
-        await new Promise(r => setTimeout(r, 800));
-        setSubmitted(true);
-        setLoading(false);
+        setError('');
+        try {
+            await api.post('/api/subscribe', { email });
+            setSubmitted(true);
+        } catch (err: any) {
+            if (err.response?.status === 422) {
+                if (err.response.data.errors?.email?.[0].includes('already')) {
+                    setError('This email is already subscribed.');
+                } else {
+                    setError(err.response.data.errors?.email?.[0] || 'Invalid email address.');
+                }
+            } else {
+                setError('Something went wrong. Please try again.');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -50,7 +67,8 @@ export default function NewsletterSignup({ data, isFluid, sectionBg }: { data: a
                         🎉 You're in! Thanks for subscribing.
                     </p>
                 ) : (
-                    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                    <div>
+                        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
                         <input
                             type="email"
                             value={email}
@@ -67,6 +85,8 @@ export default function NewsletterSignup({ data, isFluid, sectionBg }: { data: a
                             {loading ? '...' : (data?.button_text || 'Subscribe')}
                         </button>
                     </form>
+                    {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+                    </div>
                 )}
             </div>
         </section>

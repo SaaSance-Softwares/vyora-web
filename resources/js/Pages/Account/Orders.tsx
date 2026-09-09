@@ -200,7 +200,7 @@ export default function MyOrdersPage() {
                                                 </div>
                                                 <div className="flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto overflow-hidden">
                                                     {order.items?.slice(0, 4).map((item, idx) => (
-                                                        <div key={item.id} className="relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105">
+                                                        <div key={item.id} title={item.delivery_date ? `Delivered by: ${item.delivery_date}` : item.product_name} className="relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105">
                                                             {item.image_url ? (
                                                                 <img src={item.image_url} alt={item.product_name} fill className="object-cover" unoptimized />
                                                             ) : (

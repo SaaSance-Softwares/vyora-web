@@ -33,7 +33,7 @@ class AuthSettingsController extends Controller
         // Defaults
         $settings = [
             'auth_fields' => $mergedAuthFields,
-            'auth_social' => json_decode($rows->get('auth_social')?->value ?? '{"google":{"enabled":false,"client_id":""},"facebook":{"enabled":false,"client_id":""}}', true),
+            'social_login_enabled' => $rows->get('social_login_enabled')?->value === '1' ? 'true' : 'false',
             'auth_appearance' => json_decode($rows->get('auth_appearance')?->value ?? '{"ux_mode":"page","border_radius":"16","border_color":"#e5e7eb"}', true),
             'auth_header' => json_decode($rows->get('auth_header')?->value ?? '{"text":"Welcome Back","image":"","order":["image","text"],"image_width":"120"}', true),
             'auth_footer' => json_decode($rows->get('auth_footer')?->value ?? '{"text":"Secure payment powered by Dope Style"}', true),
@@ -57,7 +57,15 @@ class AuthSettingsController extends Controller
         $data = $request->all();
 
         // Handle JSON fields
-        $jsonFields = ['auth_methods', 'auth_fields', 'auth_social', 'auth_appearance', 'auth_header', 'auth_footer'];
+        $jsonFields = ['auth_methods', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer'];
+
+        // Save boolean toggle
+        if ($request->has('social_login_enabled')) {
+            ThemeSetting::updateOrCreate(
+                ['key' => 'social_login_enabled'],
+                ['value' => $request->input('social_login_enabled') ? '1' : '0', 'group' => self::GROUP]
+            );
+        }
 
         foreach ($jsonFields as $field) {
             if ($request->has($field)) {

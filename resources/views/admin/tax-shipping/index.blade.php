@@ -187,6 +187,25 @@
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">Description / Notes</label>
                                 <textarea name="shipping_rules[prepaid][notes]" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Free shipping on all prepaid orders">{{ $settings['shipping_rules']['prepaid']['notes'] ?? '' }}</textarea>
                             </div>
+
+                            <div class="border-t border-gray-200 pt-4 mt-4">
+                                <h5 class="font-semibold text-gray-700 text-sm mb-1">Order Action Fees (%)</h5>
+                                <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Note: Return & Exchange fees are calculated as a percentage of the base Order Value (subtotal of items, excluding shipping fees). Cancel fees apply during Pending/Processing.</p>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[prepaid][cancel_fee]" value="{{ $settings['shipping_rules']['prepaid']['cancel_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[prepaid][return_fee]" value="{{ $settings['shipping_rules']['prepaid']['return_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[prepaid][exchange_fee]" value="{{ $settings['shipping_rules']['prepaid']['exchange_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -197,62 +216,161 @@
                             <h4 class="font-bold text-gray-900">COD Orders</h4>
                         </div>
                         
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Type</label>
-                                <select name="shipping_rules[cod][type]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleShippingFields('cod', this.value)">
-                                    <option value="free" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'free' ? 'selected' : '' }}>Free Shipping</option>
-                                    <option value="flat" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'flat' ? 'selected' : '' }}>Flat Rate</option>
-                                    <option value="tiered" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'tiered' ? 'selected' : '' }}>Order Value Based (Tiered)</option>
-                                </select>
+                        <div class="space-y-6">
+                            <!-- Basic COD Shipping Settings -->
+                            <div class="space-y-4">
+                                <h5 class="font-semibold text-gray-700 text-sm border-b pb-2">1. COD Shipping Fee</h5>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Type</label>
+                                    <select name="shipping_rules[cod][type]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleShippingFields('cod', this.value)">
+                                        <option value="free" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'free' ? 'selected' : '' }}>Free Shipping</option>
+                                        <option value="flat" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'flat' ? 'selected' : '' }}>Flat Rate</option>
+                                        <option value="tiered" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'tiered' ? 'selected' : '' }}>Order Value Based (Tiered)</option>
+                                    </select>
+                                </div>
+
+                                <div class="flat-fields-cod" style="display: {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'flat' ? 'block' : 'none' }}">
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Fee (₹)</label>
+                                    <input type="number" name="shipping_rules[cod][fee]" value="{{ $settings['shipping_rules']['cod']['fee'] ?? '' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                </div>
+
+                                <div class="tiered-fields-cod border border-gray-100 bg-white p-3 rounded-lg" style="display: {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'tiered' ? 'block' : 'none' }}">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-xs font-semibold text-gray-600">Tier Rules (Up to Order Value -> Fee)</label>
+                                        <button type="button" onclick="addTierRow('cod')" class="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">+ Add Tier</button>
+                                    </div>
+                                    <div id="cod-tiers-container" class="space-y-2">
+                                        @php $codTiers = $settings['shipping_rules']['cod']['tiers'] ?? []; @endphp
+                                        @if(empty($codTiers))
+                                            <div class="flex items-center gap-3 tier-row">
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][tiers][0][up_to]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 599">
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Fee ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][tiers][0][fee]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 80">
+                                                </div>
+                                                <button type="button" onclick="this.closest('.tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
+                                            </div>
+                                        @else
+                                            @foreach($codTiers as $i => $tier)
+                                            <div class="flex items-center gap-3 tier-row">
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][tiers][{{$i}}][up_to]" value="{{ $tier['up_to'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 599">
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Fee ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][tiers][{{$i}}][fee]" value="{{ $tier['fee'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 80">
+                                                </div>
+                                                <button type="button" onclick="this.closest('.tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
+                                            </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 mt-2">Example: "Up to 599" -> "Fee 80", then "Up to 999" -> "Fee 100".</p>
+                                </div>
                             </div>
 
-                            <div class="flat-fields-cod" style="display: {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'flat' ? 'block' : 'none' }}">
-                                <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Fee (₹)</label>
-                                <input type="number" name="shipping_rules[cod][fee]" value="{{ $settings['shipping_rules']['cod']['fee'] ?? '' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                            </div>
+                            <!-- Advanced COD Settings (Upfront, Rules) -->
+                            <div class="space-y-4">
+                                <h5 class="font-semibold text-gray-700 text-sm border-b pb-2">2. COD Rules & Partial Upfront Payment</h5>
+                                
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Minimum Order Amount for COD (₹)</label>
+                                    <input type="number" name="shipping_rules[cod][min_order_amount]" value="{{ $settings['shipping_rules']['cod']['min_order_amount'] ?? '' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Leave empty for no minimum">
+                                    <p class="text-[10px] text-gray-400 mt-1">Orders below this amount will only have prepaid options.</p>
+                                </div>
 
-                            <div class="tiered-fields-cod border border-gray-100 bg-white p-3 rounded-lg" style="display: {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'tiered' ? 'block' : 'none' }}">
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-xs font-semibold text-gray-600">Tier Rules (Up to Order Value -> Fee)</label>
-                                    <button type="button" onclick="addTierRow('cod')" class="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">+ Add Tier</button>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">Partial Upfront Payment Rule</label>
+                                    <select name="shipping_rules[cod][upfront_type]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleUpfrontFields(this.value)">
+                                        <option value="none" {{ ($settings['shipping_rules']['cod']['upfront_type'] ?? 'none') === 'none' ? 'selected' : '' }}>None (Full amount on delivery)</option>
+                                        <option value="fee_only" {{ ($settings['shipping_rules']['cod']['upfront_type'] ?? '') === 'fee_only' ? 'selected' : '' }}>Pay COD Shipping Fee Upfront</option>
+                                        <option value="tiered" {{ ($settings['shipping_rules']['cod']['upfront_type'] ?? '') === 'tiered' ? 'selected' : '' }}>Pay Tiered Amount Upfront (Based on Order Total)</option>
+                                    </select>
+                                    <p class="text-[10px] text-gray-400 mt-1">Require customers to pay a partial amount online to place a COD order, reducing RTOs.</p>
                                 </div>
-                                <div id="cod-tiers-container" class="space-y-2">
-                                    @php $codTiers = $settings['shipping_rules']['cod']['tiers'] ?? []; @endphp
-                                    @if(empty($codTiers))
-                                        <div class="flex items-center gap-3 tier-row">
-                                            <div class="flex items-center gap-2 flex-1">
-                                                <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
-                                                <input type="number" name="shipping_rules[cod][tiers][0][up_to]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 599">
+
+                                <div class="tiered-upfront-fields border border-gray-100 bg-white p-3 rounded-lg" style="display: {{ ($settings['shipping_rules']['cod']['upfront_type'] ?? '') === 'tiered' ? 'block' : 'none' }}">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-xs font-semibold text-gray-600">Upfront Tiers (Up to Order Value -> Upfront ₹)</label>
+                                        <button type="button" onclick="addUpfrontTierRow()" class="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">+ Add Tier</button>
+                                    </div>
+                                    <div id="cod-upfront-tiers-container" class="space-y-2">
+                                        @php $upfrontTiers = $settings['shipping_rules']['cod']['upfront_tiers'] ?? []; @endphp
+                                        @if(empty($upfrontTiers))
+                                            <div class="flex items-center gap-3 upfront-tier-row">
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][upfront_tiers][0][up_to]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 1000">
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Upfront ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][upfront_tiers][0][fee]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 300">
+                                                </div>
+                                                <button type="button" onclick="this.closest('.upfront-tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
                                             </div>
-                                            <div class="flex items-center gap-2 flex-1">
-                                                <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Fee ₹</span>
-                                                <input type="number" name="shipping_rules[cod][tiers][0][fee]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 80">
+                                        @else
+                                            @foreach($upfrontTiers as $i => $tier)
+                                            <div class="flex items-center gap-3 upfront-tier-row">
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][upfront_tiers][{{$i}}][up_to]" value="{{ $tier['up_to'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 1000">
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-1">
+                                                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Upfront ₹</span>
+                                                    <input type="number" name="shipping_rules[cod][upfront_tiers][{{$i}}][fee]" value="{{ $tier['fee'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 300">
+                                                </div>
+                                                <button type="button" onclick="this.closest('.upfront-tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
                                             </div>
-                                            <button type="button" onclick="this.closest('.tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
-                                        </div>
-                                    @else
-                                        @foreach($codTiers as $i => $tier)
-                                        <div class="flex items-center gap-3 tier-row">
-                                            <div class="flex items-center gap-2 flex-1">
-                                                <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
-                                                <input type="number" name="shipping_rules[cod][tiers][{{$i}}][up_to]" value="{{ $tier['up_to'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 599">
-                                            </div>
-                                            <div class="flex items-center gap-2 flex-1">
-                                                <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Fee ₹</span>
-                                                <input type="number" name="shipping_rules[cod][tiers][{{$i}}][fee]" value="{{ $tier['fee'] ?? '' }}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 80">
-                                            </div>
-                                            <button type="button" onclick="this.closest('.tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
-                                        </div>
-                                        @endforeach
-                                    @endif
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 mt-2">Example: "Up to 1000" -> "Upfront 300", then "Up to 5000" -> "Upfront 500".</p>
                                 </div>
-                                <p class="text-[10px] text-gray-400 mt-2">Example: "Up to 599" -> "Fee 80", then "Up to 999" -> "Fee 100".</p>
                             </div>
 
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">Description / Notes</label>
-                                <textarea name="shipping_rules[cod][notes]" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. ₹50 additional for COD orders">{{ $settings['shipping_rules']['cod']['notes'] ?? '' }}</textarea>
+                                <textarea name="shipping_rules[cod][notes]" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. ₹50 additional for COD orders. Upfront payment non-refundable.">{{ $settings['shipping_rules']['cod']['notes'] ?? '' }}</textarea>
+                            </div>
+                            
+                            <div class="border-t border-gray-200 pt-4 mt-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <h5 class="font-semibold text-gray-700 text-sm">COD Upfront Amount Refundable</h5>
+                                    <div class="relative group cursor-pointer">
+                                        <svg class="w-4 h-4 text-gray-400 hover:text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-48 bg-black text-white text-xs rounded py-1 px-2 z-10 text-center">
+                                            If user cancels the order on COD, this amount will be refundable or not. Common practice is not refundable.
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer mb-1">
+                                    <input type="hidden" name="shipping_rules[cod][upfront_refundable]" value="0">
+                                    <input type="checkbox" name="shipping_rules[cod][upfront_refundable]" value="1" {{ ($settings['shipping_rules']['cod']['upfront_refundable'] ?? '0') == '1' ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                    <span class="ml-3 text-sm font-medium text-gray-900">Refundable</span>
+                                </label>
+                                <p class="text-[10px] text-gray-500 mt-1 mb-4 leading-relaxed">Note: If set to not refundable, any Upfront Shipping Fee or Tier Amount paid will be forfeited upon cancellation. (e.g., Order value ₹2000, Upfront ₹200 -> on cancel, the ₹200 upfront amount is not refunded).</p>
+                                
+                                <h5 class="font-semibold text-gray-700 text-sm mb-1">Order Action Fees (%)</h5>
+                                <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Note: Return & Exchange fees are calculated as a percentage of the base Order Value (e.g., applied on ₹2000, excluding the COD fee). Cancel fees apply during Pending/Processing.</p>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[cod][cancel_fee]" value="{{ $settings['shipping_rules']['cod']['cancel_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[cod][return_fee]" value="{{ $settings['shipping_rules']['cod']['return_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (%)</label>
+                                        <input type="number" step="0.01" name="shipping_rules[cod][exchange_fee]" value="{{ $settings['shipping_rules']['cod']['exchange_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -353,6 +471,35 @@
         `;
         container.insertAdjacentHTML('beforeend', html);
         tierIndex++;
+    }
+
+    function toggleUpfrontFields(value) {
+        const tieredFields = document.querySelector('.tiered-upfront-fields');
+        if (value === 'tiered') {
+            tieredFields.style.display = 'block';
+        } else {
+            tieredFields.style.display = 'none';
+        }
+    }
+
+    let upfrontTierIndex = 999;
+    function addUpfrontTierRow() {
+        const container = document.getElementById('cod-upfront-tiers-container');
+        const html = `
+            <div class="flex items-center gap-3 upfront-tier-row">
+                <div class="flex items-center gap-2 flex-1">
+                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Up to ₹</span>
+                    <input type="number" name="shipping_rules[cod][upfront_tiers][${upfrontTierIndex}][up_to]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 1000">
+                </div>
+                <div class="flex items-center gap-2 flex-1">
+                    <span class="text-xs text-gray-500 font-medium whitespace-nowrap">Upfront ₹</span>
+                    <input type="number" name="shipping_rules[cod][upfront_tiers][${upfrontTierIndex}][fee]" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="e.g. 300">
+                </div>
+                <button type="button" onclick="this.closest('.upfront-tier-row').remove()" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 w-7 h-7 flex items-center justify-center rounded transition-colors shrink-0">✕</button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        upfrontTierIndex++;
     }
 </script>
 @endpush

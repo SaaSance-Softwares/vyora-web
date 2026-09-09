@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Gift, Wallet, ArrowRight, CreditCard, Clock, CheckCircle,
-    AlertCircle, X, Check, Copy, Share2, MessageCircle, Mail, Link2,
+    AlertCircle, X, Check, Copy, Share2, MessageCircle, Mail,
     ShieldCheck, Zap, History, LayoutGrid, ListFilter
 } from 'lucide-react';
 
@@ -34,15 +34,19 @@ interface WalletSummary {
 }
 
 // ── Share Modal ─────────────────────────────────────────────────────────────
-function ShareModal({ card, onClose }: { card: GiftCard; onClose: () => void }) {
+function ShareModal({ card, onClose, settings }: { card: GiftCard; onClose: () => void; settings: any }) {
     const [codeCopied, setCodeCopied] = useState(false);
-    const [linkCopied, setLinkCopied] = useState(false);
+    const [showEmailInput, setShowEmailInput] = useState(false);
+    const [email, setEmail] = useState('');
+    const [sendingEmail, setSendingEmail] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
+    const [emailError, setEmailError] = useState('');
 
-    const shareUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/gift-cards/share/${card.share_token}`
+    const shopUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/shop`
         : '';
 
-    const shareText = `🎁 I'm gifting you a ₹${card.amount.toLocaleString()} Vyora Gift Card!\n\nUse code: *${card.plain_code}* at checkout.\n\nOr open this link to view & redeem: ${shareUrl}`;
+    const shareText = `🎁 I'm gifting you a ₹${card.amount.toLocaleString()} ${settings?.store_name || 'Store'} Gift Card!\n\nUse code: *${card.plain_code}* at checkout.\n\nShop now at: ${shopUrl}`;
 
     const copyCode = () => {
         navigator.clipboard.writeText(card.plain_code);
@@ -50,83 +54,179 @@ function ShareModal({ card, onClose }: { card: GiftCard; onClose: () => void }) 
         setTimeout(() => setCodeCopied(false), 2000);
     };
 
-    const copyLink = () => {
-        navigator.clipboard.writeText(shareUrl);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
-    };
-
     const shareWhatsApp = () => {
         window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
     };
 
-    const shareEmail = () => {
-        const subject = encodeURIComponent(`Your ₹${card.amount.toLocaleString()} Vyora Gift Card`);
-        const body = encodeURIComponent(shareText);
-        window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    const sendEmail = async () => {
+        if (!email) { setEmailError('Please enter an email address'); return; }
+        setSendingEmail(true);
+        setEmailError('');
+        try {
+            await api.post('/api/gift-cards/share-email', { token: card.share_token, email });
+            setEmailSent(true);
+            setTimeout(() => { setShowEmailInput(false); setEmailSent(false); setEmail(''); }, 3000);
+        } catch (e: any) {
+            setEmailError(e.response?.data?.message || 'Failed to send email.');
+        } finally {
+            setSendingEmail(false);
+        }
     };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-            <div className="relative bg-white w-full max-w-md rounded-[3rem] shadow-2xl z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-                <div className="absolute top-0 right-0 p-8">
-                    <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-full transition-all">
-                        <X className="w-5 h-5 text-gray-400" />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-xl z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-6 duration-300">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Share Gift Card</h3>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+                        <X className="w-4 h-4 text-gray-400" />
                     </button>
                 </div>
 
-                <div className="p-10 pt-16">
-                    <div className="mb-10 text-center">
-                        <div className="w-20 h-20 bg-black text-white rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                            <Share2 className="w-10 h-10" />
+                <div className="p-6 space-y-5">
+                    {/* Code */}
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Redemption Code</p>
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                            <p className="font-mono text-sm font-bold tracking-[0.15em] text-gray-900">
+                                {card.plain_code}
+                            </p>
+                            <button
+                                onClick={copyCode}
+                                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${codeCopied ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                            >
+                                {codeCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </button>
                         </div>
-                        <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Share Gift Card</h3>
-                        <p className="text-sm text-gray-400 font-medium tracking-tight">Send this digital asset to anyone instantly.</p>
                     </div>
 
-                    <div className="space-y-8">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4 text-center">Redemption Code</p>
-                            <div className="group relative">
-                                <div className="absolute inset-0 bg-black/5 blur-xl group-hover:bg-black/10 transition-all rounded-3xl" />
-                                <div className="relative bg-gray-50 border border-gray-100 rounded-3xl p-6 flex items-center justify-between">
-                                    <p className="font-mono text-xl font-black tracking-[0.3em] text-gray-900">
-                                        {card.plain_code}
-                                    </p>
-                                    <button
-                                        onClick={copyCode}
-                                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${codeCopied ? 'bg-emerald-500 text-white' : 'bg-black text-white hover:bg-gray-800'}`}
-                                    >
-                                        {codeCopied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                                    </button>
+                    {/* Share buttons or email form */}
+                    {!showEmailInput ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={shareWhatsApp}
+                                className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-700"
+                            >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                WhatsApp
+                            </button>
+                            <button
+                                onClick={() => setShowEmailInput(true)}
+                                className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-700"
+                            >
+                                <Mail className="w-3.5 h-3.5 text-blue-500" />
+                                Email
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            {emailSent ? (
+                                <div className="py-6 text-center">
+                                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <Check className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-sm font-bold text-gray-900">Email sent!</p>
+                                    <p className="text-xs text-gray-400 mt-1">Gift card delivered to {email}</p>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="Recipient's email address"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-300"
+                                        onKeyDown={(e) => e.key === 'Enter' && sendEmail()}
+                                        autoFocus
+                                    />
+                                    {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => { setShowEmailInput(false); setEmailError(''); }}
+                                            className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-500"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={sendEmail}
+                                            disabled={sendingEmail}
+                                            className="flex items-center justify-center py-3 px-4 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                                        >
+                                            {sendingEmail ? 'Sending…' : 'Send'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
+                    )}
 
-                        <div className="grid grid-cols-3 gap-4">
-                            {[
-                                { icon: <MessageCircle />, label: 'WhatsApp', color: 'bg-emerald-50 text-emerald-600', action: shareWhatsApp },
-                                { icon: <Mail />, label: 'Email', color: 'bg-blue-50 text-blue-600', action: shareEmail },
-                                { icon: linkCopied ? <CheckCircle /> : <Link2 />, label: linkCopied ? 'Copied' : 'Link', color: 'bg-gray-50 text-gray-900', action: copyLink }
-                            ].map((btn, i) => (
-                                <button
-                                    key={i}
-                                    onClick={btn.action}
-                                    className={`flex flex-col items-center gap-3 p-5 rounded-[2rem] transition-all hover:scale-105 ${btn.color}`}
-                                >
-                                    {btn.icon}
-                                    <span className="text-[9px] font-black uppercase tracking-widest">{btn.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mt-12 pt-8 border-t border-gray-50 text-center">
-                        <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest leading-relaxed">
-                            Secured Digital Transaction · Vyora Vault
+                    {/* Footer note */}
+                    {!showEmailInput && (
+                        <p className="text-center text-[9px] text-gray-300 uppercase tracking-widest font-bold pt-1">
+                            Secured · {settings?.store_name || 'Store'} Vault
                         </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ── Use Modal ─────────────────────────────────────────────────────────────
+function UseModal({ card, onClose }: { card: GiftCard; onClose: () => void }) {
+    const [codeCopied, setCodeCopied] = useState(false);
+
+    const copyCode = () => {
+        navigator.clipboard.writeText(card.plain_code);
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-xl z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-6 duration-300">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Use Gift Card</h3>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+                        <X className="w-4 h-4 text-gray-400" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-5">
+                    <p className="text-xs text-gray-400">Copy the code below and paste it at checkout to apply your balance.</p>
+
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Redemption Code</p>
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                            <p className="font-mono text-sm font-bold tracking-[0.15em] text-gray-900">
+                                {card.plain_code}
+                            </p>
+                            <button
+                                onClick={copyCode}
+                                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${codeCopied ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                            >
+                                {codeCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
+
+                    <a
+                        href="/shop"
+                        className="flex items-center justify-center gap-2.5 w-full py-3 px-4 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-colors"
+                    >
+                        Shop & Redeem Now
+                    </a>
+
+                    <p className="text-center text-[9px] text-gray-300 uppercase tracking-widest font-bold">
+                        ₹{Number(card.remaining_amount).toLocaleString()} available balance
+                    </p>
                 </div>
             </div>
         </div>
@@ -168,86 +268,97 @@ function AssignModal({ card, onClose, onSuccess }: { card: GiftCard; onClose: ()
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-            <div className="relative bg-white w-full max-w-md rounded-[3rem] shadow-2xl z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-                <div className="absolute top-0 right-0 p-8">
-                    <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-full transition-all">
-                        <X className="w-5 h-5 text-gray-400" />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-xl z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-6 duration-300">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Transfer Gift Card</h3>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+                        <X className="w-4 h-4 text-gray-400" />
                     </button>
                 </div>
 
                 {!success ? (
-                    <div className="p-10 pt-16">
-                        <div className="mb-10 text-center">
-                            <div className="w-20 h-20 bg-amber-500 text-white rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                                <ShieldCheck className="w-10 h-10" />
-                            </div>
-                            <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Transfer Ownership</h3>
-                            <p className="text-sm text-gray-400 font-medium tracking-tight">Permanent in-app digital asset transfer.</p>
-                        </div>
+                    <div className="p-6 space-y-4">
+                        {!foundUser ? (
+                            <>
+                                <p className="text-xs text-gray-400">Enter the recipient's email or phone to find their account.</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        value={identifier}
+                                        onChange={e => setIdentifier(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && lookup()}
+                                        placeholder="Email or phone"
+                                        className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-300"
+                                    />
+                                    <button
+                                        onClick={lookup}
+                                        disabled={searching || !identifier.trim()}
+                                        className="px-5 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 disabled:opacity-30 transition-colors"
+                                    >
+                                        {searching ? '…' : 'Find'}
+                                    </button>
+                                </div>
+                                {error && (
+                                    <p className="text-xs text-red-500 flex items-center gap-1.5">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />{error}
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {/* Recipient card */}
+                                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Sending to</p>
+                                    <p className="font-bold text-gray-900">{foundUser.name}</p>
+                                    <p className="text-xs text-gray-500">{foundUser.email}</p>
+                                </div>
 
-                        <div className="space-y-8">
-                            {!foundUser ? (
-                                <>
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 block mb-4">Recipient Identity</label>
-                                        <div className="flex gap-3">
-                                            <input value={identifier} onChange={e => setIdentifier(e.target.value)}
-                                                onKeyDown={e => e.key === 'Enter' && lookup()}
-                                                placeholder="Enter Email or Phone"
-                                                className="flex-1 border border-gray-100 bg-gray-50 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all" />
-                                            <button onClick={lookup} disabled={searching || !identifier.trim()}
-                                                className="px-8 py-4 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] hover:bg-gray-800 transition-all disabled:opacity-30">
-                                                {searching ? '...' : 'Find'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {error && <p className="text-xs text-red-500 font-bold flex items-center gap-2 px-2"><AlertCircle className="w-4 h-4" />{error}</p>}
-                                </>
-                            ) : (
-                                <>
-                                    <div className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 relative group overflow-hidden">
-                                        <div className="absolute -right-10 -top-10 w-32 h-32 bg-black/5 rounded-full blur-3xl" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Recipient Profile</p>
-                                        <p className="font-black text-2xl text-gray-900 mb-1">{foundUser.name}</p>
-                                        <p className="text-xs text-gray-500 font-bold">{foundUser.email}</p>
-                                    </div>
+                                {/* Warning */}
+                                <div className="flex gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                    <p className="text-xs text-amber-700 leading-relaxed">
+                                        This transfer is <strong>permanent</strong>. You will lose access to this gift card immediately.
+                                    </p>
+                                </div>
 
-                                    <div className="p-6 bg-amber-50 border border-amber-200 rounded-[2rem] flex gap-4">
-                                        <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
-                                        <p className="text-xs text-amber-800 font-bold leading-relaxed">
-                                            Warning: This transfer is permanent. You will lose access to this gift card immediately.
-                                        </p>
+                                {/* Confirm checkbox */}
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0 ${confirmed ? 'bg-black border-black' : 'border-gray-200'}`}>
+                                        {confirmed && <Check className="w-3 h-3 text-white" />}
                                     </div>
+                                    <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="hidden" />
+                                    <span className="text-xs text-gray-600 font-bold">I confirm this transfer</span>
+                                </label>
 
-                                    <div className="space-y-4">
-                                        <label className="flex items-center gap-4 cursor-pointer group">
-                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${confirmed ? 'bg-black border-black shadow-lg shadow-black/20' : 'border-gray-200'}`}>
-                                                {confirmed && <Check className="w-4 h-4 text-white" />}
-                                            </div>
-                                            <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="hidden" />
-                                            <span className="text-xs text-gray-600 font-black uppercase tracking-widest">Authorize Transfer</span>
-                                        </label>
+                                {error && <p className="text-xs text-red-500">{error}</p>}
 
-                                        <div className="flex gap-3">
-                                            <button onClick={assign} disabled={!confirmed || assigning}
-                                                className="flex-1 py-5 bg-black text-white text-[11px] font-black uppercase tracking-widest rounded-[1.5rem] hover:bg-gray-800 transition-all disabled:opacity-30 shadow-2xl active:scale-95">
-                                                {assigning ? 'Securing Transaction...' : `Transfer Asset to ${foundUser.name.split(' ')[0]}`}
-                                            </button>
-                                            <button onClick={() => setFoundUser(null)} className="px-8 py-5 bg-gray-50 text-[11px] font-black uppercase tracking-widest rounded-[1.5rem] hover:bg-gray-100 transition-all">Back</button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setFoundUser(null)}
+                                        className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-500"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={assign}
+                                        disabled={!confirmed || assigning}
+                                        className="flex items-center justify-center py-3 px-4 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                                    >
+                                        {assigning ? 'Sending…' : 'Transfer'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 ) : (
-                    <div className="p-16 text-center">
-                        <div className="w-24 h-24 bg-emerald-500 text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-emerald-500/30">
-                            <CheckCircle className="w-12 h-12" />
+                    <div className="p-8 text-center">
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="w-6 h-6" />
                         </div>
-                        <h3 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Transfer Complete</h3>
-                        <p className="text-gray-400 font-medium">{success}</p>
+                        <p className="font-bold text-gray-900 mb-1">Transfer Complete</p>
+                        <p className="text-xs text-gray-400">{success}</p>
                     </div>
                 )}
             </div>
@@ -256,10 +367,11 @@ function AssignModal({ card, onClose, onSuccess }: { card: GiftCard; onClose: ()
 }
 
 // ── Card Chip ────────────────────────────────────────────────────────────────
-function GiftCardChip({ card, onShare, onAssign }: {
+function GiftCardChip({ card, onShare, onAssign, onUse }: {
     card: GiftCard;
     onShare: (card: GiftCard) => void;
     onAssign: (card: GiftCard) => void;
+    onUse: (card: GiftCard) => void;
 }) {
     return (
         <div className={`bg-white border border-gray-200 rounded-2xl p-6 transition-all hover:shadow-sm flex flex-col justify-between ${card.is_redeemable ? 'opacity-100' : 'opacity-60 grayscale'}`}>
@@ -311,6 +423,12 @@ function GiftCardChip({ card, onShare, onAssign }: {
                 {card.is_redeemable && (
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={() => onUse(card)}
+                            className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl transition-all border border-gray-200"
+                        >
+                            Use
+                        </button>
+                        <button
                             onClick={() => onShare(card)}
                             className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl transition-all border border-gray-200"
                         >
@@ -331,6 +449,8 @@ function GiftCardChip({ card, onShare, onAssign }: {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function MyGiftCardsPage() {
+    const { props } = usePage();
+    const settings = props.settings as any;
     const { user } = useAuthStore();
     const [mounted, setMounted] = useState(false);
     const [cards, setCards] = useState<GiftCard[]>([]);
@@ -338,6 +458,7 @@ export default function MyGiftCardsPage() {
     const [loading, setLoading] = useState(true);
     const [shareCard, setShareCard] = useState<GiftCard | null>(null);
     const [assignCard, setAssignCard] = useState<GiftCard | null>(null);
+    const [useCard, setUseCard] = useState<GiftCard | null>(null);
 
     const load = async () => {
         setLoading(true);
@@ -439,6 +560,7 @@ export default function MyGiftCardsPage() {
                                     card={card}
                                     onShare={setShareCard}
                                     onAssign={setAssignCard}
+                                    onUse={setUseCard}
                                 />
                             ))}
                         </div>
@@ -446,8 +568,9 @@ export default function MyGiftCardsPage() {
                 </div>
             </div>
 
-            {shareCard && <ShareModal card={shareCard} onClose={() => setShareCard(null)} />}
+            {shareCard && <ShareModal card={shareCard} onClose={() => setShareCard(null)} settings={settings} />}
             {assignCard && <AssignModal card={assignCard} onClose={() => setAssignCard(null)} onSuccess={load} />}
+            {useCard && <UseModal card={useCard} onClose={() => setUseCard(null)} />}
         </div>
     );
 }

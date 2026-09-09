@@ -39,35 +39,42 @@ class WhatsAppWebhookController extends Controller
     public function handle(Request $request)
     {
         $payload = $request->all();
+        \Illuminate\Support\Facades\Log::info('WhatsApp Webhook Payload:', $payload);
 
-        if (isset($payload['object']) && $payload['object'] === 'whatsapp_business_account') {
+        try {
+            if (isset($payload['object']) && $payload['object'] === 'whatsapp_business_account') {
 
-            foreach ($payload['entry'] as $entry) {
-                foreach ($entry['changes'] as $change) {
-                    if ($change['value']['messaging_product'] === 'whatsapp') {
+                foreach ($payload['entry'] as $entry) {
+                    foreach ($entry['changes'] as $change) {
+                        if (isset($change['value']['messaging_product']) && strtolower($change['value']['messaging_product']) === 'whatsapp') {
 
-                        // Check if it's an incoming message
-                        if (isset($change['value']['messages'])) {
-                            $messages = $change['value']['messages'];
-                            $contacts = $change['value']['contacts'] ?? [];
+                            // Check if it's an incoming message
+                            if (isset($change['value']['messages'])) {
+                                $messages = $change['value']['messages'];
+                                $contacts = $change['value']['contacts'] ?? [];
 
-                            $customerName = $contacts[0]['profile']['name'] ?? 'Unknown';
+                                $customerName = 'Unknown';
+                                if (is_array($contacts) && count($contacts) > 0) {
+                                    $customerName = $contacts[0]['profile']['name'] ?? 'Unknown';
+                                }
 
-                            foreach ($messages as $message) {
-                                $customerPhone = $message['from'];
-                                app(WhatsAppService::class)->processIncomingMessage($message, $customerPhone, $customerName);
+                                foreach ($messages as $message) {
+                                    $customerPhone = $message['from'];
+                                    app(WhatsAppService::class)->processIncomingMessage($message, $customerPhone, $customerName);
+                                }
                             }
                         }
-
-                        // We can also handle delivery statuses here if needed
-                        // if (isset($change['value']['statuses'])) { ... }
                     }
                 }
+
+                return response('EVENT_RECEIVED', 200);
             }
 
+            return response('Not Found', 404);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('WhatsApp Webhook Processing Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            // Still return 200 so Meta doesn't disable the webhook
             return response('EVENT_RECEIVED', 200);
         }
-
-        return response('Not Found', 404);
     }
 }

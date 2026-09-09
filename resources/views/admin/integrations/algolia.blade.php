@@ -6,10 +6,7 @@
     {{-- Header --}}
     <div class="flex items-center gap-4">
         <div class="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-            <svg class="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                <!-- A simple magnifying glass for Algolia -->
-                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            </svg>
+            <img src="https://media.ffycdn.net/eu/algolia-brand/pGfha1j876LBGBHCHwjj.png?mod=v1/resize=2400" alt="Algolia" class="w-7 h-7 object-contain" />
         </div>
         <div>
             <div class="flex items-center gap-3 mb-1">
@@ -77,10 +74,16 @@
 
                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                         <div id="testResult" class="text-sm font-semibold hidden"></div>
-                        <button type="button" id="testBtn" onclick="testConnection()" class="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-blue-600 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            Test Connection
-                        </button>
+                        <div class="flex items-center gap-4 ml-auto">
+                            <button type="button" id="syncBtn" onclick="syncProducts()" class="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-green-600 transition-colors" title="Only necessary once for old products. New products are captured automatically!">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Sync Old Products
+                            </button>
+                            <button type="button" id="testBtn" onclick="testConnection()" class="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-blue-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Test Connection
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -116,13 +119,13 @@
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
                             <span class="text-xs text-gray-600 leading-relaxed">
-                                Run the initial product sync command (via CLI) or allow the system to sync automatically when saving products.
+                                Enable the integration to swap Vyora search with Algolia.
                             </span>
                         </li>
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">4</span>
                             <span class="text-xs text-gray-600 leading-relaxed">
-                                Enable the integration to swap Vyora search with Algolia.
+                                Click <strong>Sync Old Products</strong> at the bottom of the form to push your existing catalog. <em>(New products are synced automatically!)</em>
                             </span>
                         </li>
                     </ol>
@@ -144,6 +147,34 @@ function toggleSecret() {
         input.type = 'password';
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
     }
+}
+
+async function syncProducts() {
+    const btn    = document.getElementById('syncBtn');
+    const result = document.getElementById('testResult');
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Syncing...`;
+    result.className = 'text-sm font-semibold hidden';
+
+    try {
+        const res  = await fetch('{{ route('admin.online-store.integrations.algolia.sync') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+        });
+        const data = await res.json();
+        result.className = `text-sm font-semibold flex items-center gap-2 ${data.success ? 'text-green-600' : 'text-red-600'}`;
+        result.innerHTML = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${data.success ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}"/></svg> ${data.message}`;
+    } catch (e) {
+        result.className = 'text-sm font-semibold text-red-600 flex items-center gap-2';
+        result.innerHTML = '✗ Network error. Please try again.';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync Old Products`;
 }
 
 async function testConnection() {

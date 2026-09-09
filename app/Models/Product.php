@@ -24,6 +24,21 @@ class Product extends Model
 
     protected $guarded = [];
 
+    public function deliveryTimeline()
+    {
+        return $this->belongsTo(DeliveryTimeline::class);
+    }
+
+    public function fit()
+    {
+        return $this->belongsTo(Fit::class);
+    }
+
+    public function fabric()
+    {
+        return $this->belongsTo(Fabric::class);
+    }
+
     protected $appends = ['image_url'];
 
     public function getImageUrlAttribute()

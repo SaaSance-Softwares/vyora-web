@@ -21,12 +21,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-    <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-semibold">
-        <svg class="w-5 h-5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        {{ session('success') }}
-    </div>
-    @endif
 
     <form action="{{ route('admin.online-store.integrations.update', 'qikink') }}" method="POST" id="qikinkForm">
         @csrf @method('PUT')
@@ -52,26 +46,27 @@
                 {{-- Tracking ID / API Credentials --}}
                 <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                     <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-bold text-gray-900">Environment</h4>
+                            <p class="text-xs text-gray-500 mt-1">Use Live for real orders, Sandbox for testing.</p>
+                        </div>
+                        <div class="flex bg-gray-100 p-1 rounded-xl">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="mode" value="test" class="peer sr-only" {{ ($saved['mode'] ?? 'test') === 'test' ? 'checked' : '' }}>
+                                <span class="block px-4 py-1.5 text-xs font-bold rounded-lg peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-gray-500 transition-all">Sandbox</span>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="mode" value="live" class="peer sr-only" {{ ($saved['mode'] ?? 'test') === 'live' ? 'checked' : '' }}>
+                                <span class="block px-4 py-1.5 text-xs font-bold rounded-lg peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-gray-500 transition-all">Live</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                         <h2 class="text-base font-bold text-gray-900">API Credentials</h2>
                         <a href="https://dashboard.qikink.com/integration/api" target="_blank" class="text-xs font-semibold text-gray-400 hover:text-emerald-600 transition-colors">Qikink Dashboard →</a>
                     </div>
                     
                     <div class="p-6 space-y-6">
-                        {{-- Mode Toggle --}}
-                        <div>
-                            <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Mode</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="mode" value="test" class="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-600" {{ ($saved['mode'] ?? 'test') !== 'live' ? 'checked' : '' }}>
-                                    <span class="text-sm font-bold text-gray-900">Test Mode</span>
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="mode" value="live" class="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-600" {{ ($saved['mode'] ?? 'test') === 'live' ? 'checked' : '' }}>
-                                    <span class="text-sm font-bold text-gray-900">Live Mode</span>
-                                </label>
-                            </div>
-                        </div>
-
                         {{-- Client ID --}}
                         <div>
                             <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Client ID</label>
@@ -104,6 +99,36 @@
                     </div>
                 </div>
 
+                @if(($saved['mode'] ?? 'test') === 'test')
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl overflow-hidden mb-6">
+                    <div class="px-6 py-5 flex items-start justify-between gap-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-blue-900">Qikink Approval Required</h4>
+                            <p class="text-xs text-blue-700 mt-1">Send a test order to Qikink to prove your integration works. Send the details below to their support to get your Live API keys.</p>
+                            
+                            <div id="testOrderResult" class="hidden mt-4 space-y-3 w-full">
+                                <div class="text-sm font-bold text-green-700 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span id="testOrderMsg"></span>
+                                </div>
+                                <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+                                    <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Request Payload Sent</p>
+                                    <pre id="testOrderPayload" class="text-emerald-400 text-xs font-mono"></pre>
+                                </div>
+                                <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+                                    <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Response from Qikink</p>
+                                    <pre id="testOrderResponse" class="text-blue-400 text-xs font-mono"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" id="testOrderBtn" onclick="sendTestOrder()" class="shrink-0 flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-white hover:bg-blue-600 transition-colors bg-blue-100 px-5 py-2.5 rounded-xl">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            Send Test Order
+                        </button>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Action Buttons --}}
                 <div class="flex items-center gap-3 pt-2">
                     <button type="submit" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-emerald-200">
@@ -124,19 +149,31 @@
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
                             <span class="text-xs text-gray-600 leading-relaxed">
-                                Get <a href="https://dashboard.qikink.com/integration/api" target="_blank" class="font-bold text-emerald-600 hover:underline">API keys</a> from Qikink Dashboard
+                                Get <a href="https://dashboard.qikink.com/integration/api" target="_blank" class="font-bold text-emerald-600 hover:underline">Sandbox API keys</a> from the Qikink Dashboard.
                             </span>
                         </li>
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
                             <span class="text-xs text-gray-600 leading-relaxed">
-                                Enable the integration here and insert the API keys. Test connection.
+                                Choose <b>Sandbox</b> mode, insert your keys, and click <b>Send Test Order</b> below. Send the result to Qikink Support to get approved.
                             </span>
                         </li>
                         <li class="flex items-start gap-3">
                             <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
                             <span class="text-xs text-gray-600 leading-relaxed">
-                                Enable Qikink on the edit page of products you wish to fulfill.
+                                Once approved, get your <b>Live API Keys</b> from Qikink, insert them here, and switch the mode to <b>Live</b>.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">4</span>
+                            <span class="text-xs text-gray-600 leading-relaxed">
+                                To respect Qikink's <b>30 requests/minute</b> API limit, orders are sent in batches in the background. Tracking statuses are synced hourly.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3 mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                            <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-xs text-amber-900 leading-relaxed font-medium">
+                                <b>Required:</b> For this integration to work automatically, you must configure your server's Cron Job. <a href="/occ/settings/cron" class="text-emerald-600 hover:underline font-bold">View Cron Setup Instructions &rarr;</a>
                             </span>
                         </li>
                     </ol>
@@ -186,6 +223,46 @@ async function testConnection() {
 
     btn.disabled = false;
     btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Test Connection`;
+}
+
+async function sendTestOrder() {
+    const btn = document.getElementById('testOrderBtn');
+    const container = document.getElementById('testOrderResult');
+    const msg = document.getElementById('testOrderMsg');
+    const payloadPre = document.getElementById('testOrderPayload');
+    const responsePre = document.getElementById('testOrderResponse');
+    
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Sending...`;
+    
+    try {
+        const res = await fetch('{{ route('admin.online-store.integrations.qikink.test-order') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+        });
+        const data = await res.json();
+        
+        container.classList.remove('hidden');
+        msg.innerText = data.message;
+        msg.className = data.success ? 'text-green-700 font-bold' : 'text-red-600 font-bold';
+        
+        if (data.payload) {
+            payloadPre.innerText = data.payload;
+        }
+        if (data.response) {
+            responsePre.innerText = data.response;
+        }
+        
+    } catch (e) {
+        alert('Network error. Please try again.');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg> Send Test Order`;
 }
 </script>
 @endpush

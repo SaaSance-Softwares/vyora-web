@@ -26,12 +26,12 @@ class SizeChartController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'is_active' => 'boolean',
-            'table_data' => 'required|json',
-            'unit' => 'required|in:inches,cm',
+            'description' => 'nullable|string|max:5000',
+            'is_active' => 'nullable|boolean',
+            'table_data' => 'required|string|json|max:50000',
+            'unit' => 'required|string|max:255|in:inches,cm',
         ]);
 
         // Create size chart
@@ -61,12 +61,12 @@ class SizeChartController extends Controller
 
     public function update(Request $request, SizeChart $sizeChart)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'is_active' => 'boolean',
-            'table_data' => 'required|json',
-            'unit' => 'required|in:inches,cm',
+            'description' => 'nullable|string|max:5000',
+            'is_active' => 'nullable|boolean',
+            'table_data' => 'required|string|json|max:50000',
+            'unit' => 'required|string|max:255|in:inches,cm',
         ]);
 
         // Update size chart

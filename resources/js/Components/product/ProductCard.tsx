@@ -1,5 +1,6 @@
 import { ProductList, ProductDetail } from "@/types";
 import { formatPrice } from "@/lib/utils";
+import { trackAddToWishlist } from "@/lib/tracking";
 import { Link, usePage, router } from '@inertiajs/react';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -47,6 +48,7 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                     colorHex: colorAttr?.meta || undefined,
                     sizeName: sizeAttr?.value || undefined,
                     size: sizeAttr?.value || undefined,
+                    deliveryDate: data.delivery_timeline?.formatted_date || undefined,
                 });
                 if (action === 'buy') {
                     router.visit('/checkout');
@@ -75,8 +77,10 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                 image: product.image,
                 video: product.video,
                 brand: product.brand,
-                category: product.category,
+                category: product.category?.name || '',
+                deliveryDate: product.delivery_timeline?.formatted_date || undefined,
             });
+            trackAddToWishlist(product);
         }
     };
 
@@ -100,6 +104,8 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
     const wishlistText = settings?.pc_wishlist_text_color || '#9ca3af';
 
     const imageAspect = settings?.pc_image_aspect || 'aspect-[4/5]';
+    const showColors = settings?.pc_show_colors || '0';
+    const colorStyle = settings?.pc_color_style || 'overlap'; // 'overlap' or 'individual'
 
     // Build classes based on config
     let cardClasses = "group block transition-all duration-300 relative border overflow-hidden ";
@@ -204,10 +210,30 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
 
                 {/* Text and Actions Wrapper */}
                 <div className="mt-4 px-1 pb-1 flex flex-col gap-1 flex-grow">
-                    {/* Brand Name */}
-                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                        {product.brand || product.category}
-                    </span>
+                    {/* Brand Name & Colors row */}
+                    <div className="flex justify-between items-center gap-2 min-h-[14px]">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest truncate">
+                            {product.brand || product.category}
+                        </span>
+                        
+                        {showColors === '1' && product.colors && product.colors.length > 0 && (
+                            <div className={`flex items-center shrink-0 ${colorStyle === 'overlap' ? '-space-x-1.5' : 'space-x-1'}`}>
+                                {product.colors.slice(0, 4).map((c, i) => (
+                                    <div 
+                                        key={i} 
+                                        className="w-3.5 h-3.5 rounded-full border border-gray-200/50 shadow-sm relative z-10" 
+                                        style={{ backgroundColor: c.hex, zIndex: 10 - i }} 
+                                        title={c.name} 
+                                    />
+                                ))}
+                                {product.colors.length > 4 && (
+                                    <span className={`text-[9px] font-bold text-gray-500 ${colorStyle === 'overlap' ? 'ml-1 z-0' : ''}`}>
+                                        +{product.colors.length - 4}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     
                     {/* Product Name (Clickable) */}
                     <Link href={productUrl} className="block cursor-pointer">

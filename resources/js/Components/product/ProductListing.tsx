@@ -112,6 +112,12 @@ function ProductListingInner({ title, initialFilters, baseEndpoint = '/api/produ
                 setProducts(prev => [...prev, ...fetched]);
             } else {
                 setProducts(fetched);
+                // Also update filters if they come from the API (only on first load or filter change)
+                if ((res.data as any).filters) {
+                    const dynamicFilters = (res.data as any).filters;
+                    if (dynamicFilters.fits) setAvailableFits(dynamicFilters.fits);
+                    if (dynamicFilters.fabrics) setAvailableFabrics(dynamicFilters.fabrics);
+                }
             }
             
             setHasMore(res.data.meta.current_page < res.data.meta.last_page);
@@ -178,13 +184,14 @@ function ProductListingInner({ title, initialFilters, baseEndpoint = '/api/produ
         });
     };
 
+    const [availableFits, setAvailableFits] = useState<string[]>([]);
+    const [availableFabrics, setAvailableFabrics] = useState<string[]>([]);
+
     // Dummy filter options for UI demonstration. In a real app, these should come from API.
     const MOCK_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
     const MOCK_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy'];
-    const MOCK_FITS = ['Regular Fit', 'Slim Fit', 'Loose Fit', 'Oversize'];
-    const MOCK_FABRICS = ['Cotton', 'Polyester', 'Linen', 'Denim'];
 
-    const displayTitle = activeQueryValue ? activeQueryValue.split('-').join(' ') : title;
+    const displayTitle = title ? title : (activeQueryValue ? activeQueryValue.split('-').join(' ') : 'Products');
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 relative">
@@ -316,38 +323,42 @@ function ProductListingInner({ title, initialFilters, baseEndpoint = '/api/produ
                         </div>
 
                         {/* Fit */}
-                        <div className="border-t border-gray-100 pt-5">
-                            <button onClick={() => toggleSection('fit')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
-                                Fit <ChevronDown size={16} className={`transition-transform ${expandedSections.fit ? 'rotate-180' : ''}`} />
-                            </button>
-                            {expandedSections.fit && (
-                                <div className="space-y-2">
-                                    {MOCK_FITS.map(f => (
-                                        <label key={f} className="flex items-center gap-3 cursor-pointer group">
-                                            <input type="checkbox" checked={filters.fit.includes(f)} onChange={() => toggleArrayFilter('fit', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
-                                            <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {availableFits.length > 0 && (
+                            <div className="border-t border-gray-100 pt-5">
+                                <button onClick={() => toggleSection('fit')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                    Fit <ChevronDown size={16} className={`transition-transform ${expandedSections.fit ? 'rotate-180' : ''}`} />
+                                </button>
+                                {expandedSections.fit && (
+                                    <div className="space-y-2">
+                                        {availableFits.map(f => (
+                                            <label key={f} className="flex items-center gap-3 cursor-pointer group">
+                                                <input type="checkbox" checked={filters.fit.includes(f)} onChange={() => toggleArrayFilter('fit', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Fabric */}
-                        <div className="border-t border-gray-100 pt-5">
-                            <button onClick={() => toggleSection('fabric')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2">
-                                Fabric <ChevronDown size={16} className={`transition-transform ${expandedSections.fabric ? 'rotate-180' : ''}`} />
-                            </button>
-                            {expandedSections.fabric && (
-                                <div className="space-y-2 pt-2">
-                                    {MOCK_FABRICS.map(f => (
-                                        <label key={f} className="flex items-center gap-3 cursor-pointer group">
-                                            <input type="checkbox" checked={filters.fabric.includes(f)} onChange={() => toggleArrayFilter('fabric', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
-                                            <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {availableFabrics.length > 0 && (
+                            <div className="border-t border-gray-100 pt-5">
+                                <button onClick={() => toggleSection('fabric')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2">
+                                    Fabric <ChevronDown size={16} className={`transition-transform ${expandedSections.fabric ? 'rotate-180' : ''}`} />
+                                </button>
+                                {expandedSections.fabric && (
+                                    <div className="space-y-2 pt-2">
+                                        {availableFabrics.map(f => (
+                                            <label key={f} className="flex items-center gap-3 cursor-pointer group">
+                                                <input type="checkbox" checked={filters.fabric.includes(f)} onChange={() => toggleArrayFilter('fabric', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                     </div>
 

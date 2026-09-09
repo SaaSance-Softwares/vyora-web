@@ -15,6 +15,7 @@ class GiftCardTemplate extends Model
         'description',
         'is_active',
         'validity_days',
+        'background_image',
         'created_by',
     ];
 

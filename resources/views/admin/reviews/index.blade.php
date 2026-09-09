@@ -8,11 +8,6 @@
         <h1 class="text-2xl font-bold">Product Reviews</h1>
     </div>
 
-    @if(session('success'))
-        <div class="bg-green-50 border-l-4 border-green-500 p-4">
-            <p class="text-sm text-green-700">{{ session('success') }}</p>
-        </div>
-    @endif
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">

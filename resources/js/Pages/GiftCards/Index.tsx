@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import api from '@/lib/api';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { 
     Gift, ArrowRight, Check, Clock, ShieldCheck, 
     ShoppingBag, CreditCard, Users, Sparkles,
@@ -16,11 +16,59 @@ interface GiftCardTemplate {
     description: string | null;
     validity_days: number | null;
     purchased_count: number;
+    background_image: string | null;
     created_at: string;
 }
 
-function GiftCardOption({ card, onBuy, buying }: { card: GiftCardTemplate; onBuy: () => void; buying: boolean }) {
+function GiftCardOption({ card, onBuy, buying, settings }: { card: GiftCardTemplate; onBuy: () => void; buying: boolean; settings: any }) {
     const isPremium = card.amount >= 1000;
+
+    const getCardTheme = (amount: number) => {
+        if (amount >= 5000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#1a1a1a] via-black to-[#1a1a1a] text-[#ffd700] border border-[#ffd700]/30 shadow-[0_20px_50px_rgba(255,215,0,0.15)]',
+                glow: 'bg-[#ffd700]/10',
+                iconBg: 'bg-[#ffd700]/10 border-[#ffd700]/20 text-[#ffd700]',
+                logo: 'brightness-0 invert opacity-80 mix-blend-plus-lighter',
+                label: 'text-[#ffd700]/60',
+                chip: 'bg-[#ffd700]/10 border-[#ffd700]/20',
+                badgeText: 'ELITE'
+            };
+        }
+        if (amount >= 3000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#2c3e50] via-[#1a252f] to-[#111] text-[#fff] border border-[#34495e]',
+                glow: 'bg-blue-400/10',
+                iconBg: 'bg-white/10 border-white/20 text-white',
+                logo: 'brightness-0 invert opacity-70',
+                label: 'text-gray-400',
+                chip: 'bg-white/10 border-white/10',
+                badgeText: 'PREMIUM'
+            };
+        }
+        if (amount >= 1000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#434343] to-[#000000] text-white border border-gray-700',
+                glow: 'bg-white/10',
+                iconBg: 'bg-white/10 border-white/10 text-gray-200',
+                logo: 'brightness-0 invert opacity-60',
+                label: 'text-gray-400',
+                chip: 'bg-white/10 border-white/10',
+                badgeText: 'PLUS'
+            };
+        }
+        return {
+            bg: 'bg-gray-50 text-gray-900 border border-gray-200',
+            glow: 'bg-black/5',
+            iconBg: 'bg-white border border-gray-200 text-gray-900',
+            logo: 'opacity-40',
+            label: 'text-gray-400',
+            chip: 'bg-gray-200/50 border-gray-200',
+            badgeText: 'CLASSIC'
+        };
+    };
+
+    const theme = getCardTheme(card.amount);
 
     return (
         <div
@@ -28,37 +76,73 @@ function GiftCardOption({ card, onBuy, buying }: { card: GiftCardTemplate; onBuy
             onClick={onBuy}
         >
             {/* Visual Card Display */}
-            <div className={`relative aspect-[1.6/1] w-full rounded-[2rem] overflow-hidden p-8 flex flex-col justify-between transition-all duration-700 group-hover:scale-[1.02] shadow-2xl ${
-                isPremium
-                ? 'bg-black text-white'
-                : 'bg-gray-50 text-gray-900 border border-gray-100'
-            }`}>
-                {/* Background Patterns */}
-                <div className="absolute inset-0 opacity-10 bg-noise pointer-events-none" />
-                <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] pointer-events-none ${isPremium ? 'bg-white/10' : 'bg-black/5'}`} />
+            {card.background_image ? (
+                <div
+                    className="relative aspect-[1.6/1] w-full rounded-[2rem] overflow-hidden p-8 flex flex-col justify-between transition-all duration-700 group-hover:scale-[1.02] shadow-2xl text-white"
+                    style={{ backgroundImage: `url(${card.background_image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                >
+                    {/* Dark overlay for readability */}
+                    <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
-                <div className="flex justify-between items-start relative z-10">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isPremium ? 'bg-white/10 backdrop-blur-md border border-white/10' : 'bg-white border border-gray-200'}`}>
-                        <Gift className={`w-6 h-6 ${isPremium ? 'text-gray-300' : 'text-gray-900'}`} />
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/10 border border-white/20">
+                            <Gift className="w-6 h-6" />
+                        </div>
+                        {settings?.main_logo ? (
+                            <img src={`/${settings.main_logo}`} alt="Logo" className="h-5 w-auto object-contain brightness-0 invert" />
+                        ) : (
+                            <span className="text-[11px] font-black tracking-[0.4em] uppercase text-white/70">
+                                {settings?.store_name || 'VYORA'}
+                            </span>
+                        )}
                     </div>
-                    <span className={`text-[11px] font-black tracking-[0.4em] uppercase ${isPremium ? 'text-gray-500' : 'text-gray-300'}`}>
-                        VYORA
-                    </span>
-                </div>
 
-                <div className="relative z-10">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${isPremium ? 'text-gray-500' : 'text-gray-400'}`}>Gift Card Value</p>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-bold">₹</span>
-                        <p className="text-5xl font-black tracking-tighter">{card.amount.toLocaleString()}</p>
+                    <div className="relative z-10">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-white/60">Gift Card Value</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-bold">₹</span>
+                            <p className="text-5xl font-black tracking-tighter">{card.amount.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end relative z-10">
+                        <p className="text-[9px] font-mono tracking-[0.2em] opacity-40 uppercase">Authenticated Digital Asset</p>
+                        <div className="w-14 h-8 rounded-lg border border-white/20" />
                     </div>
                 </div>
+            ) : (
+                <div className={`relative aspect-[1.6/1] w-full rounded-[2rem] overflow-hidden p-8 flex flex-col justify-between transition-all duration-700 group-hover:scale-[1.02] shadow-2xl ${theme.bg}`}>
+                    {/* Background Patterns */}
+                    <div className="absolute inset-0 opacity-10 bg-noise pointer-events-none mix-blend-overlay" />
+                    <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] pointer-events-none ${theme.glow}`} />
 
-                <div className="flex justify-between items-end relative z-10">
-                    <p className={`text-[9px] font-mono tracking-[0.2em] opacity-40 uppercase`}>Authenticated Digital Asset</p>
-                    <div className={`w-14 h-8 rounded-lg border ${isPremium ? 'bg-white/5 border-white/10' : 'bg-gray-900/5 border-gray-900/10'}`} />
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${theme.iconBg}`}>
+                            <Gift className="w-6 h-6" />
+                        </div>
+                        {settings?.main_logo ? (
+                            <img src={`/${settings.main_logo}`} alt="Logo" className={`h-5 w-auto object-contain ${theme.logo}`} />
+                        ) : (
+                            <span className={`text-[11px] font-black tracking-[0.4em] uppercase ${theme.label}`}>
+                                {settings?.store_name || 'VYORA'}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="relative z-10">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${theme.label}`}>Gift Card Value</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-bold">₹</span>
+                            <p className="text-5xl font-black tracking-tighter">{card.amount.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end relative z-10">
+                        <p className={`text-[9px] font-mono tracking-[0.2em] opacity-40 uppercase`}>Authenticated Digital Asset</p>
+                        <div className={`w-14 h-8 rounded-lg border ${theme.chip}`} />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Information */}
             <div className="mt-8 px-2">
@@ -68,7 +152,7 @@ function GiftCardOption({ card, onBuy, buying }: { card: GiftCardTemplate; onBuy
                     </h3>
                     {isPremium && (
                         <div className="flex items-center gap-1.5 bg-black text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                            <Sparkles className="w-3 h-3 text-amber-400" /> Premium
+                            <Sparkles className="w-3 h-3 text-amber-400" /> {theme.badgeText}
                         </div>
                     )}
                 </div>
@@ -109,6 +193,8 @@ function GiftCardOption({ card, onBuy, buying }: { card: GiftCardTemplate; onBuy
 }
 
 export default function GiftCardsPage() {
+    const { props } = usePage();
+    const settings = props.settings as any;
     const { user } = useAuthStore();
     const { openAuthModal } = useUIStore();
     const [mounted, setMounted] = useState(false);
@@ -203,7 +289,7 @@ export default function GiftCardsPage() {
                                 <span className="text-gray-300">of style</span>
                             </h1>
                             <p className="text-gray-500 text-lg leading-relaxed max-w-lg mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-                                Surprise your loved ones with a Vyora gift card. Each purchase generates a 
+                                Surprise your loved ones with a gift card. Each purchase generates a 
                                 unique digital vault code you can redeem yourself or share instantly.
                             </p>
                             
@@ -317,6 +403,7 @@ export default function GiftCardsPage() {
                                     card={card}
                                     buying={buying === card.id}
                                     onBuy={() => handleBuy(card)}
+                                    settings={settings}
                                 />
                             ))}
                         </div>

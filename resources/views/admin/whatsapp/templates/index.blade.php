@@ -22,11 +22,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-    <div class="px-6 py-4 bg-[#D9FDD3] text-[#1DA851] text-sm font-bold border-b border-[#25D366]/20">
-        {{ session('success') }}
-    </div>
-    @endif
     @if(session('error'))
     <div class="px-6 py-4 bg-red-50 text-red-600 text-sm font-bold border-b border-red-100">
         {{ session('error') }}

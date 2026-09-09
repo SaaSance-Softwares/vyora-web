@@ -47,7 +47,9 @@ class GoogleMerchantController extends Controller
                 }
 
                 $item = $channel->addChild('item');
-                $item->addChild('g:id', htmlspecialchars($sku->product_sku ?? $sku->id, ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
+                // Use the database SKU ID to guarantee 100% uniqueness across the feed
+                $uniqueId = 'sku_' . $sku->id;
+                $item->addChild('g:id', $uniqueId, 'http://base.google.com/ns/1.0');
                 $item->addChild('g:item_group_id', $product->id, 'http://base.google.com/ns/1.0');
                 $item->addChild('g:title', htmlspecialchars($title, ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
                 $item->addChild('g:description', htmlspecialchars(strip_tags($product->short_description ?: $product->name), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');

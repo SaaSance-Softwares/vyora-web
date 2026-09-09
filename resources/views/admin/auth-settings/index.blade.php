@@ -9,7 +9,7 @@
         @method('PUT')
         
         <input type="hidden" name="auth_fields" x-ref="hiddenFields">
-        <input type="hidden" name="auth_social" x-ref="hiddenSocial">
+        <input type="hidden" name="social_login_enabled" x-ref="hiddenSocialEnabled" :value="config.social_enabled ? 1 : 0">
         <input type="hidden" name="auth_appearance" x-ref="hiddenAppearance">
         <input type="hidden" name="auth_header" x-ref="hiddenHeader">
         <input type="hidden" name="auth_footer" x-ref="hiddenFooter">
@@ -278,24 +278,30 @@
                         <p class="text-xs text-gray-500 mt-1 uppercase tracking-widest font-semibold italic">Boost conversion with one-tap login</p>
                     </div>
                     <div class="p-6 space-y-8">
-                        @foreach(['google' => 'Google Account', 'facebook' => 'Facebook Connect'] as $key => $label)
-                        <div class="space-y-4 p-4 border-2 rounded-2xl" :class="config.social.{{ $key }}.enabled ? 'border-gray-900' : 'border-gray-50'">
+                        <div class="space-y-4 p-6 border-2 border-gray-100 rounded-2xl bg-gray-50/30">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center font-black text-xs uppercase">{{ substr($key, 0, 1) }}</div>
-                                    <span class="font-bold text-sm">{{ $label }}</span>
+                                    <div class="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-black">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                                    </div>
+                                    <span class="font-bold text-sm">Enable Social Login Globally</span>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox"  x-model="config.social.{{ $key }}.enabled" class="sr-only peer">
+                                    <input type="checkbox" x-model="config.social_enabled" class="sr-only peer">
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                                 </label>
                             </div>
-                            <div x-show="config.social.{{ $key }}.enabled" class="space-y-2 pt-2 border-t">
-                                <label class="block text-[10px] font-black uppercase text-gray-400">Client ID / App Key</label>
-                                <input type="text"  x-model="config.social.{{ $key }}.client_id" class="w-full border p-3 rounded-xl text-xs font-mono" placeholder="paste_key_here">
+                            <p class="text-xs text-gray-500 mt-2">Turning this on will display the social login buttons on your storefront for any providers you have configured.</p>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <p class="text-sm font-bold text-gray-800 mb-2">Configure Providers</p>
+                                <p class="text-xs text-gray-600 mb-4">Set up your API keys and callback URLs for Google, Facebook, Apple, and GitHub in the Integrations portal.</p>
+                                <a href="{{ route('admin.online-store.integrations.index') }}" class="inline-flex items-center text-xs font-bold uppercase tracking-wider bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                                    Go to Integrations
+                                    <svg class="w-3 h-3 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                </a>
                             </div>
                         </div>
-                        @endforeach
                     </div>
                 </div>
 
@@ -434,10 +440,10 @@
 
         </div>
 
-        <!-- Sticky Save -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:pl-64 flex justify-end">
-            <button type="submit" class="bg-black text-white px-8 py-2 rounded-md font-bold text-sm hover:bg-gray-800 transition-colors shadow-lg">
-                Save Designer Changes
+        <!-- Save Section -->
+        <div class="bg-gray-50 border-t border-gray-200 p-5 flex justify-end rounded-b-lg">
+            <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-colors">
+                Save Auth Settings
             </button>
         </div>
     </form>
@@ -450,14 +456,13 @@
             tab: localStorage.getItem('auth_settings_tab') || 'fields',
             config: {
                 fields: @json($settings['auth_fields']),
-                social: @json($settings['social_login'] ?? $settings['auth_social']),
+                social_enabled: {{ $settings['social_login_enabled'] ?? 'false' }},
                 appearance: @json($settings['auth_appearance']),
                 header: @json($settings['auth_header']),
                 footer: @json($settings['auth_footer'])
             },
             prepSubmit(e) {
                 this.$refs.hiddenFields.value = JSON.stringify(this.config.fields);
-                this.$refs.hiddenSocial.value = JSON.stringify(this.config.social);
                 this.$refs.hiddenAppearance.value = JSON.stringify(this.config.appearance);
                 this.$refs.hiddenHeader.value = JSON.stringify(this.config.header);
                 this.$refs.hiddenFooter.value = JSON.stringify(this.config.footer);

@@ -11,9 +11,9 @@ class TrackingController extends Controller
     public function metaEvent(Request $request, MetaCapiService $capiService)
     {
         $request->validate([
-            'event_name' => 'required|string',
-            'event_id' => 'required|string',
-            'event_source_url' => 'required|string',
+            'event_name' => 'required|string|max:255',
+            'event_id' => 'required|string|max:255',
+            'event_source_url' => 'required|string|max:255',
             'custom_data' => 'nullable|array',
         ]);
 
@@ -26,6 +26,42 @@ class TrackingController extends Controller
             'client_user_agent' => $request->userAgent(),
             'fbp' => $request->cookie('_fbp') ?? $request->input('fbp'),
             'fbc' => $request->cookie('_fbc') ?? $request->input('fbc'),
+        ];
+
+        if (auth('sanctum')->check()) {
+            $user = auth('sanctum')->user();
+            $userData['email'] = $user->email;
+            $userData['phone'] = $user->phone;
+        }
+
+        $capiService->sendEvent(
+            $request->event_name,
+            $request->event_id,
+            $request->event_source_url,
+            $userData,
+            $request->custom_data ?? []
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    public function snapchatEvent(Request $request, \App\Services\SnapchatCapiService $capiService)
+    {
+        $request->validate([
+            'event_name' => 'required|string|max:255',
+            'event_id' => 'required|string|max:255',
+            'event_source_url' => 'required|string|max:255',
+            'custom_data' => 'nullable|array',
+        ]);
+
+        if (! $capiService->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'CAPI not configured']);
+        }
+
+        $userData = [
+            'client_ip_address' => $request->ip(),
+            'client_user_agent' => $request->userAgent(),
+            'sc_cookie1' => $request->cookie('_scid') ?? $request->input('sc_cookie1'),
         ];
 
         if (auth('sanctum')->check()) {

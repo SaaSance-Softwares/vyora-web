@@ -21,11 +21,29 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Main Content --}}
-        <div class="lg:col-span-2 space-y-6">
-            
-            {{-- Option 1: File --}}
+    <form action="{{ route('admin.online-store.integrations.update', 'google-merchant') }}" method="POST">
+        @csrf
+        @method('PUT')
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {{-- Main Content --}}
+            <div class="lg:col-span-2 space-y-6">
+
+                {{-- Status --}}
+                <div class="bg-white border border-gray-200 rounded-2xl p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-bold text-gray-900 mb-1">Integration Status</h2>
+                            <p class="text-sm text-gray-500">Enable this once you have successfully connected the XML link in Google Merchant Center.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="enabled" value="1" class="sr-only peer" {{ ($saved['enabled'] ?? false) ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+                
+                {{-- Option 1: File --}}
             <div class="bg-white border border-blue-200 rounded-2xl overflow-hidden shadow-sm relative ring-1 ring-blue-50">
                 <div class="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
                     Recommended
@@ -78,46 +96,50 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 pt-2">
-                <a href="{{ route('admin.online-store.integrations.index') }}" class="px-5 py-3 border border-gray-200 text-sm font-bold rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
-                    &larr; Back to Integrations
-                </a>
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-blue-200">
+                        Save Configuration
+                    </button>
+                    <a href="{{ route('admin.online-store.integrations.index') }}" class="px-5 py-3 border border-gray-200 text-sm font-bold rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
+                        Cancel
+                    </a>
+                </div>
             </div>
-        </div>
 
-        {{-- Sidebar --}}
-        <div class="space-y-5">
-            {{-- Instructions --}}
-            <div class="bg-white border border-gray-200 rounded-2xl p-5">
-                <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Setup Instructions</h3>
-                <ol class="space-y-4">
-                    <li class="flex items-start gap-3">
-                        <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
-                        <span class="text-xs text-gray-600 leading-relaxed">
-                            Log in to <strong>Google Merchant Center Next</strong>.
-                        </span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
-                        <span class="text-xs text-gray-600 leading-relaxed">
-                            Click the <strong>Settings Gear</strong> icon and go to <strong>Data sources</strong>.
-                        </span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
-                        <span class="text-xs text-gray-600 leading-relaxed">
-                            Click <strong>Add product source</strong> and select <strong>Add products from a file</strong>.
-                        </span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">4</span>
-                        <span class="text-xs text-gray-600 leading-relaxed">
-                            Choose <strong>Scheduled fetch</strong> and paste your store's XML link.
-                        </span>
-                    </li>
-                </ol>
+            {{-- Sidebar --}}
+            <div class="space-y-5">
+                {{-- Instructions --}}
+                <div class="bg-white border border-gray-200 rounded-2xl p-5">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Setup Instructions</h3>
+                    <ol class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
+                            <span class="text-xs text-gray-600 leading-relaxed">
+                                Log in to <strong>Google Merchant Center Next</strong>.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
+                            <span class="text-xs text-gray-600 leading-relaxed">
+                                Click the <strong>Settings Gear</strong> icon and go to <strong>Data sources</strong>.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
+                            <span class="text-xs text-gray-600 leading-relaxed">
+                                Click <strong>Add product source</strong> and select <strong>Add products from a file</strong>.
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">4</span>
+                            <span class="text-xs text-gray-600 leading-relaxed">
+                                Choose <strong>Scheduled fetch</strong> and paste your store's XML link.
+                            </span>
+                        </li>
+                    </ol>
+                </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
 @endsection

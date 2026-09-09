@@ -188,4 +188,33 @@ class TwilioSmsService
 
         return $this->sendSms($to, $message);
     }
+
+    /**
+     * Helper to send dynamic SMS from database template.
+     */
+    public function sendDynamicSms(Order $order, \App\Models\SmsTemplate $smsTemplate): bool
+    {
+        if (! $this->enabled) {
+            return false;
+        }
+
+        $order->loadMissing(['shippingAddress']);
+        $phone = $order->shippingAddress?->phone;
+
+        if (! $phone) {
+            return false;
+        }
+
+        $message = $this->parseTemplate($smsTemplate->content, [
+            'customer_name' => $order->shippingAddress->name ?? 'Customer',
+            'order_number' => $order->order_number ?? $order->id,
+            'total_amount' => 'Rs. ' . number_format($order->total_amount, 2),
+            'tracking_url' => $order->tracking_url ?? '',
+            'tracking_number' => $order->tracking_number ?? '',
+            'courier_partner' => $order->courier_partner ?? '',
+            'store_name' => ThemeSetting::where('key', 'store_name')->first()?->value ?? config('app.name', 'Store'),
+        ]);
+
+        return $this->sendSms($phone, $message);
+    }
 }

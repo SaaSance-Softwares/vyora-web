@@ -11,8 +11,8 @@ class PageUploadController extends Controller
 {
     public function upload(Request $request)
     {
-        $request->validate([
-            'image' => 'required|image|max:2048', // Max 2MB
+        $request->strictValidate([
+            'image' => 'required|file|image|max:2048', // Max 2MB
         ]);
 
         if ($request->hasFile('image')) {

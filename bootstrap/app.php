@@ -23,6 +23,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+
+        $middleware->validateCsrfTokens(except: [
+            'api/mobile/*',
+            'api/login',
+            'api/login/*',
+            'api/register',
+            'api/register/*',
+            'api/tracking/*',
+        ]);
+
         $middleware->web(append: [
             CheckInstalled::class,
             HandleInertiaRequests::class,
@@ -44,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin_access' => AdminMiddleware::class,
+            'throttle.auth.backoff' => \App\Http\Middleware\ThrottleAuthWithBackoff::class,
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {

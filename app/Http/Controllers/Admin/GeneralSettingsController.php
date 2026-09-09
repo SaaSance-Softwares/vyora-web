@@ -31,6 +31,10 @@ class GeneralSettingsController extends Controller
         'social_youtube',
         'social_tiktok',
         'social_pinterest',
+        'social_whatsapp',
+        'social_arattai',
+        'social_linkedin',
+        'social_custom_links',
         'business_name',
         'tax_id',
         'customer_support_hours',
@@ -103,6 +107,14 @@ class GeneralSettingsController extends Controller
             );
         }
 
+        // Sync tax_id to tax_shipping's store_tax_number
+        if ($request->has('tax_id')) {
+            ThemeSetting::updateOrCreate(
+                ['key' => 'store_tax_number'],
+                ['value' => $request->input('tax_id', ''), 'group' => 'tax_shipping']
+            );
+        }
+
         // 2. Save dynamic theme settings (colors, typography)
         $dynamicData = $request->except(array_merge(['_token', '_method', 'logos'], self::KEYS));
         foreach ($dynamicData as $key => $value) {
@@ -138,6 +150,40 @@ class GeneralSettingsController extends Controller
 
                 if ($key === 'favicon') {
                     Cache::forget('site_favicon');
+                    
+                    // Generate PWA icons from the new favicon
+                    try {
+                        $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                        $img = $manager->read($finalPath);
+                        
+                        // Scale down to 70% (134x134) and place on a 192x192 transparent canvas
+                        $img192 = clone $img;
+                        $img192->scaleDown(134, 134);
+                        $canvas192 = $manager->create(192, 192)->fill('rgba(255,255,255,0)');
+                        $canvas192->place($img192, 'center');
+                        $canvas192->toPng()->save(public_path('pwa-icon-192.png'));
+                        
+                        // --- GOOGLE SEO FAVICONS ---
+                        // 1. Generate 192x192 exact square for /favicon.png
+                        $faviconPng = clone $img;
+                        $faviconPng->cover(192, 192); // Crop to perfect square
+                        $faviconPng->toPng()->save(public_path('favicon.png'));
+                        
+                        // 2. Generate smaller fallback for /favicon.ico (browsers accept PNG data named .ico)
+                        $faviconIco = clone $img;
+                        $faviconIco->cover(48, 48); // Google prefers 48x48 multiple for classic
+                        $faviconIco->toPng()->save(public_path('favicon.ico'));
+                        
+                        // Scale down to 70% (358x358) and place on a 512x512 transparent canvas
+                        $img512 = clone $img;
+                        $img512->scaleDown(358, 358);
+                        $canvas512 = $manager->create(512, 512)->fill('rgba(255,255,255,0)');
+                        $canvas512->place($img512, 'center');
+                        $canvas512->toPng()->save(public_path('pwa-icon-512.png'));
+                        
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Failed to generate PWA icons: ' . $e->getMessage());
+                    }
                 }
             }
         }

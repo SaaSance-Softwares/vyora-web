@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AdminSettingController extends Controller
@@ -28,11 +30,11 @@ class AdminSettingController extends Controller
         /** @var User $user */
         $user = auth()->user();
 
-        $request->validate([
+        $request->strictValidate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', 'min:8', 'max:255', 'confirmed'],
         ]);
 
         $user->name = $request->name;
@@ -78,12 +80,12 @@ class AdminSettingController extends Controller
      */
     public function storeUser(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'string'],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'max:255'],
+            'role' => ['required', 'string', 'max:255'],
             'module_access' => ['nullable', 'array'],
         ]);
 
@@ -104,12 +106,12 @@ class AdminSettingController extends Controller
      */
     public function updateUser(Request $request, User $user)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
-            'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', 'string'],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
+            'role' => ['required', 'string', 'max:255'],
             'module_access' => ['nullable', 'array'],
         ]);
 
@@ -147,6 +149,56 @@ class AdminSettingController extends Controller
      */
     public function vyora()
     {
-        return view('admin.settings.vyora');
+        $currentVersion = config('app.version', '1.0.0');
+        $latestVersion = $currentVersion;
+
+        try {
+            $response = Http::withHeaders(['Accept' => 'application/vnd.github.v3+json'])
+                ->timeout(5)
+                ->get('https://api.github.com/repos/SaaSance-Softwares/vyora-web/releases/latest');
+
+            if ($response->successful()) {
+                $release = $response->json();
+                $latestVersion = str_replace('v', '', $release['tag_name'] ?? $currentVersion);
+            }
+        } catch (\Exception $e) {
+            Log::error('GitHub Version Check Failed in vyora: '.$e->getMessage());
+        }
+
+        return view('admin.settings.vyora', compact('currentVersion', 'latestVersion'));
+    }
+    public function manifest()
+    {
+        $adminPath = config('app.admin_path', 'admin');
+        $appName = \App\Models\ThemeSetting::where('group', 'general')->where('key', 'store_name')->value('value') ?? 'Store Admin';
+        
+        return response()->json([
+            "name" => $appName . " Admin",
+            "short_name" => $appName . " Admin",
+            "description" => $appName . " Administration Panel",
+            "start_url" => "/" . $adminPath,
+            "display" => "standalone",
+            "background_color" => "#ffffff",
+            "theme_color" => "#0f172a",
+            "icons" => [
+                [
+                    "src" => asset("favicon.ico"),
+                    "sizes" => "64x64 32x32 24x24 16x16",
+                    "type" => "image/x-icon"
+                ],
+                [
+                    "src" => asset("favicon.png"),
+                    "type" => "image/png",
+                    "sizes" => "192x192",
+                    "purpose" => "any maskable"
+                ],
+                [
+                    "src" => asset("favicon.png"),
+                    "type" => "image/png",
+                    "sizes" => "512x512",
+                    "purpose" => "any maskable"
+                ]
+            ]
+        ]);
     }
 }

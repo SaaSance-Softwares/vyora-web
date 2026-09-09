@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CustomersExport;
 
 class CustomerController extends Controller
 {
@@ -58,5 +60,18 @@ class CustomerController extends Controller
         return view('admin.customers.show', [
             'customer' => $customer,
         ]);
+    }
+    /**
+     * Export customers data.
+     */
+    public function export(Request $request)
+    {
+        $format = $request->input('format', 'csv');
+
+        if ($format === 'excel') {
+            return Excel::download(new CustomersExport, 'customers_'.date('Y_m_d_H_i').'.xlsx');
+        }
+
+        return Excel::download(new CustomersExport, 'customers_'.date('Y_m_d_H_i').'.csv');
     }
 }

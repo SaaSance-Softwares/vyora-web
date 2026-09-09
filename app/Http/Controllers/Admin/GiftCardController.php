@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\GiftCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class GiftCardController extends Controller
 {
@@ -45,9 +46,13 @@ class GiftCardController extends Controller
 
         if ($type === 'direct') {
             // Admin-to-user direct gift
-            $request->validate([
+            $request->strictValidate([
+                'type' => 'required|string|in:direct,template',
                 'amount' => 'required|numeric|min:1',
                 'assigned_to' => 'required|exists:users,id',
+                'name' => 'nullable|string|max:100',
+                'description' => 'nullable|string|max:500',
+                'validity_days' => 'nullable|integer|min:1',
             ]);
 
             $this->service->createDirectCard(
@@ -61,12 +66,37 @@ class GiftCardController extends Controller
         }
 
         // Storefront template
-        $request->validate([
+        $request->strictValidate([
+            'type' => 'required|string|in:direct,template',
             'amount' => 'required|numeric|min:1',
             'name' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
             'validity_days' => 'nullable|integer|min:1',
+            'assigned_to' => 'nullable|exists:users,id',
+            'background_image' => 'nullable|image|max:5120',
         ]);
+
+        $bgImagePath = null;
+        if ($request->hasFile('background_image')) {
+            $file = $request->file('background_image');
+            $dir = public_path('storage/gift-cards/backgrounds');
+            if (! is_dir($dir)) { mkdir($dir, 0755, true); }
+            $filename = 'gc_bg_' . time() . '_' . Str::random(8) . '.webp';
+            $destPath = $dir . '/' . $filename;
+
+            // Convert to WebP using GD
+            $mime = $file->getMimeType();
+            $src = match (true) {
+                str_contains($mime, 'png')  => imagecreatefrompng($file->getRealPath()),
+                str_contains($mime, 'gif')  => imagecreatefromgif($file->getRealPath()),
+                str_contains($mime, 'webp') => imagecreatefromwebp($file->getRealPath()),
+                default                     => imagecreatefromjpeg($file->getRealPath()),
+            };
+            imagewebp($src, $destPath, 85);
+            imagedestroy($src);
+
+            $bgImagePath = 'storage/gift-cards/backgrounds/' . $filename;
+        }
 
         $this->service->createTemplate(
             amount: (float) $request->amount,
@@ -74,10 +104,64 @@ class GiftCardController extends Controller
             name: $request->name,
             description: $request->description,
             validityDays: $request->validity_days ? (int) $request->validity_days : null,
+            backgroundImage: $bgImagePath,
         );
 
         return redirect()->route('admin.online-store.gift-cards.index')
             ->with('success', 'Gift card denomination created successfully! It is now live on the storefront.');
+    }
+
+    public function edit(GiftCardTemplate $giftCard)
+    {
+        return view('admin.gift-cards.edit', compact('giftCard'));
+    }
+
+    public function update(Request $request, GiftCardTemplate $giftCard)
+    {
+        $request->strictValidate([
+            'amount' => 'required|numeric|min:1',
+            'name' => 'nullable|string|max:100',
+            'description' => 'nullable|string|max:500',
+            'validity_days' => 'nullable|integer|min:1',
+            'background_image' => 'nullable|image|max:5120',
+        ]);
+
+        $data = [
+            'amount' => (float) $request->amount,
+            'name' => $request->name,
+            'description' => $request->description,
+            'validity_days' => $request->validity_days ? (int) $request->validity_days : null,
+        ];
+
+        if ($request->hasFile('background_image')) {
+            $file = $request->file('background_image');
+            $dir = public_path('storage/gift-cards/backgrounds');
+            if (! is_dir($dir)) { mkdir($dir, 0755, true); }
+            $filename = 'gc_bg_' . time() . '_' . Str::random(8) . '.webp';
+            $destPath = $dir . '/' . $filename;
+
+            // Convert to WebP using GD
+            $mime = $file->getMimeType();
+            $src = match (true) {
+                str_contains($mime, 'png')  => imagecreatefrompng($file->getRealPath()),
+                str_contains($mime, 'gif')  => imagecreatefromgif($file->getRealPath()),
+                str_contains($mime, 'webp') => imagecreatefromwebp($file->getRealPath()),
+                default                     => imagecreatefromjpeg($file->getRealPath()),
+            };
+            imagewebp($src, $destPath, 85);
+            imagedestroy($src);
+
+            if ($giftCard->background_image && file_exists(public_path($giftCard->background_image))) {
+                unlink(public_path($giftCard->background_image));
+            }
+
+            $data['background_image'] = 'storage/gift-cards/backgrounds/' . $filename;
+        }
+
+        $giftCard->update($data);
+
+        return redirect()->route('admin.online-store.gift-cards.index')
+            ->with('success', 'Gift card template updated successfully.');
     }
 
     public function show(GiftCardTemplate $giftCard)
@@ -118,7 +202,7 @@ class GiftCardController extends Controller
     {
         $card->load(['purchaser', 'recipient', 'transactions.performer', 'template']);
 
-        return view('admin.gift-cards.show-card', compact('card'));
+        return view('admin.gift-cards.show-card', ['giftCard' => $card]);
     }
 
     public function withdraw(Request $request, GiftCard $card)

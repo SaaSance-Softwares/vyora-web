@@ -120,7 +120,7 @@ class ShiprocketService
             'weight' => $weight,
         ];
 
-        $response = Http::withToken($token)->post("{$this->baseUrl}/orders/create/ad-hoc", $payload);
+        $response = Http::withToken($token)->post("{$this->baseUrl}/orders/create/adhoc", $payload);
 
         if ($response->successful()) {
             $data = $response->json();

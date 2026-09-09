@@ -42,6 +42,8 @@ export default function QuickViewModal() {
 
     const currentVariant = useMemo(() => {
         if (!product) return null;
+    
+    const isPDP = typeof window !== 'undefined' && window.location.pathname.startsWith('/product/');
         
         if (colors.length > 0 && !selectedColor) return null;
         if (sizes.length > 0 && !selectedSize) return null;
@@ -67,6 +69,8 @@ export default function QuickViewModal() {
     }, [product, selectedColor, colors]);
 
     if (!product) return null;
+    
+    const isPDP = typeof window !== 'undefined' && window.location.pathname.startsWith('/product/');
 
     const handleAction = () => {
         if (!currentVariant) return alert('Please select all options.');
@@ -93,6 +97,7 @@ export default function QuickViewModal() {
             colorHex: colorObj?.meta || undefined,
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
+            deliveryDate: product.delivery_timeline?.formatted_date || undefined,
         });
         
         closeQuickView();
@@ -113,7 +118,7 @@ export default function QuickViewModal() {
                 
                 <div className="p-6 overflow-y-auto flex-1 space-y-6 flex flex-col md:flex-row gap-6">
                     {/* Image Area */}
-                    <div className="w-full md:w-2/5 shrink-0">
+                    <div className={`${isPDP ? 'w-[40%] md:w-[30%]' : 'w-[50%] md:w-2/5'} mx-auto shrink-0`}>
                         <div className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden relative border border-gray-200">
                             {displayImage ? (
                                 <img src={displayImage} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
@@ -202,13 +207,15 @@ export default function QuickViewModal() {
                         )}
                     </div>
                     <div className="flex gap-2 flex-1 max-w-[360px]">
-                        <Link 
-                            href={`/product/${product.slug}`}
-                            onClick={closeQuickView}
-                            className="flex-1 bg-white border border-gray-300 text-gray-800 px-4 py-3 rounded-xl font-bold tracking-widest text-[10px] hover:bg-gray-50 text-center uppercase flex items-center justify-center whitespace-nowrap"
-                        >
-                            View Details
-                        </Link>
+                        {!isPDP && (
+                            <Link 
+                                href={`/product/${product.slug}`}
+                                onClick={closeQuickView}
+                                className="flex-1 bg-white border border-gray-300 text-gray-800 px-4 py-3 rounded-xl font-bold tracking-widest text-[10px] hover:bg-gray-50 text-center uppercase flex items-center justify-center whitespace-nowrap"
+                            >
+                                View Details
+                            </Link>
+                        )}
                         <button 
                             onClick={handleAction}
                             disabled={!currentVariant || currentVariant.stock <= 0}

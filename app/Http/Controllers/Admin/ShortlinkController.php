@@ -12,9 +12,14 @@ class ShortlinkController extends Controller
 {
     public function store(Request $request, Product $product)
     {
-        $request->validate([
-            'actual_link' => 'required|url',
+        $request->strictValidate([
+            'actual_link' => 'required|string|url|max:2048',
             'short_code' => 'nullable|string|max:50|unique:shortlinks,short_code',
+            'utm_source' => 'nullable|string|max:255',
+            'utm_medium' => 'nullable|string|max:255',
+            'utm_campaign' => 'nullable|string|max:255',
+            'utm_term' => 'nullable|string|max:255',
+            'utm_content' => 'nullable|string|max:255',
         ]);
 
         $shortCode = $request->short_code ?: Str::random(6);

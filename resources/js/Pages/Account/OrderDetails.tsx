@@ -61,6 +61,34 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [actionModal, setActionModal] = useState<'cancel' | 'return' | 'exchange' | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    
+    const getActionFee = (action: 'cancel' | 'return' | 'exchange') => {
+        const method = order?.payment_method === 'cod' ? 'cod' : 'prepaid';
+        const rules = settings?.shipping_rules?.[method];
+        if (rules && rules[`${action}_fee`]) {
+            const percent = parseFloat(rules[`${action}_fee`]);
+            const baseValue = order?.items.reduce((acc: number, item: any) => acc + (parseFloat(item.price as string || "0") * item.quantity), 0) || 0;
+            return (percent / 100) * baseValue;
+        }
+        return 0;
+    };
+
+    const handleActionSubmit = async () => {
+        if (!actionModal || !order) return;
+        setActionLoading(true);
+        try {
+            await api.post(`/api/my-orders/${order.uuid}/${actionModal}`);
+            setActionModal(null);
+            fetchOrder();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to process request.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!user) {
             router.visit('/login');
@@ -106,6 +134,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
 
     const safeSubtotal = order.items.reduce((acc, item) => acc + (parseFloat(item.price as string || "0") * item.quantity), 0);
 
+    const hasNonReturnableItems = order.items.some((item: any) => {
+        return item.sku?.product?.is_returnable === 0 || item.sku?.product?.is_returnable === false;
+    });
+
     return (
         <div className="min-h-screen bg-gray-50 py-12 md:py-20 font-sans">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -137,7 +169,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                 </div>
 
                 {/* Tracking Banner */}
-                {(order.status === 'shipped' || order.status === 'delivered') && (
+                {(order.status === 'shipped' || (order.status === 'delivered' && order.tracking_number)) && (
                     <div className="mb-8 bg-gradient-to-r from-gray-900 to-black rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none"></div>
                         <div className="relative z-10">
@@ -191,6 +223,11 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                         {item.variant_name && (
                                                             <p className="text-sm text-gray-500 mt-1 font-medium">{item.variant_name}</p>
                                                         )}
+                                                        {item.delivery_date && (
+                                                            <p className="text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100">
+                                                                Delivered by: <span className="font-bold">{item.delivery_date}</span>
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 
@@ -215,43 +252,103 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                         
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             <div className="p-6 sm:p-8">
-                                <h2 className="text-lg font-bold text-gray-900 mb-6">Payment Summary</h2>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between text-sm text-gray-600 font-medium">
-                                        <span>Subtotal</span>
-                                        <span className="text-gray-900">{formatPrice(safeSubtotal)}</span>
+                                <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Order Summary</h2>
+                                <div className="space-y-2.5 text-sm">
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>MRP Total</span>
+                                        <span className="font-medium text-gray-900">
+                                            {formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0))}
+                                        </span>
                                     </div>
-                                    {parseFloat(order.shipping_amount as string || "0") > 0 && (
-                                        <div className="flex justify-between text-sm text-gray-600 font-medium">
-                                            <span>Shipping</span>
-                                            <span className="text-gray-900">{formatPrice(parseFloat(order.shipping_amount as string || "0"))}</span>
+                                    
+                                    {order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) > safeSubtotal && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Discount on MRP</span>
+                                            <span>−{formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal)}</span>
                                         </div>
                                     )}
+
+                                    <div className="flex justify-between text-gray-600 font-medium">
+                                        <span>Cart Subtotal</span>
+                                        <span>{formatPrice(safeSubtotal)}</span>
+                                    </div>
+
+                                    {(parseFloat(order.coupon_discount_amount as string || "0") > 0 || parseFloat(order.prepaid_discount_amount as string || "0") > 0 || parseFloat(order.gift_card_discount_amount as string || "0") > 0) ? (
+                                        <>
+                                            {parseFloat(order.coupon_discount_amount as string || "0") > 0 && (
+                                                <div className="flex justify-between text-green-600">
+                                                    <span>Coupon Discount {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
+                                                    <span>−{formatPrice(parseFloat(order.coupon_discount_amount as string || "0"))}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(order.prepaid_discount_amount as string || "0") > 0 && (
+                                                <div className="flex justify-between text-green-600">
+                                                    <span>Prepaid Discount</span>
+                                                    <span>−{formatPrice(parseFloat(order.prepaid_discount_amount as string || "0"))}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(order.gift_card_discount_amount as string || "0") > 0 && (
+                                                <div className="flex justify-between text-green-600">
+                                                    <span>Gift Card Applied</span>
+                                                    <span>−{formatPrice(parseFloat(order.gift_card_discount_amount as string || "0"))}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        parseFloat(order.discount_amount as string || "0") > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Coupon Discount</span>
+                                                <span>−{formatPrice(parseFloat(order.discount_amount as string || "0"))}</span>
+                                            </div>
+                                        )
+                                    )}
+
+                                    <div className="flex justify-between text-gray-500">
+                                        <span>Shipping</span>
+                                        <span>{parseFloat(order.shipping_amount as string || "0") === 0 ? 'Free' : formatPrice(parseFloat(order.shipping_amount as string || "0"))}</span>
+                                    </div>
+
                                     {order.tax_breakdown && Object.keys(order.tax_breakdown).length > 0 ? (
                                         Object.entries(order.tax_breakdown).map(([rate, amount]: any) => (
-                                            <div key={rate} className="flex justify-between text-sm text-gray-600 font-medium">
-                                                <span>Tax @ {rate}% {Math.abs((parseFloat(order.total_amount as string || "0") + parseFloat(order.discount_amount as string || "0")) - (safeSubtotal + parseFloat(order.shipping_amount as string || "0"))) < 0.1 ? '(Included)' : ''}</span>
-                                                <span className="text-gray-900">{formatPrice(amount)}</span>
+                                            <div key={rate} className="flex justify-between text-gray-500 text-xs">
+                                                <span>Tax @ {rate}% {Math.abs((parseFloat(order.total_amount as string || "0") + parseFloat(order.discount_amount as string || "0")) - (safeSubtotal + parseFloat(order.shipping_amount as string || "0"))) < 0.1 ? '(Included)' : '(Excluded)'}</span>
+                                                <span>{formatPrice(amount)}</span>
                                             </div>
                                         ))
                                     ) : (
                                         parseFloat(order.tax_amount as string || "0") > 0 && (
-                                            <div className="flex justify-between text-sm text-gray-600 font-medium">
-                                                <span>Tax {Math.abs((parseFloat(order.total_amount as string || "0") + parseFloat(order.discount_amount as string || "0")) - (safeSubtotal + parseFloat(order.shipping_amount as string || "0"))) < 0.1 ? '(Included)' : ''}</span>
-                                                <span className="text-gray-900">{formatPrice(parseFloat(order.tax_amount as string || "0"))}</span>
+                                            <div className="flex justify-between text-gray-500 text-xs">
+                                                <span>Tax {Math.abs((parseFloat(order.total_amount as string || "0") + parseFloat(order.discount_amount as string || "0")) - (safeSubtotal + parseFloat(order.shipping_amount as string || "0"))) < 0.1 ? '(Included)' : '(Excluded)'}</span>
+                                                <span>{formatPrice(parseFloat(order.tax_amount as string || "0"))}</span>
                                             </div>
                                         )
                                     )}
-                                    {parseFloat(order.discount_amount as string || "0") > 0 && (
-                                        <div className="flex justify-between text-sm text-emerald-600 font-bold">
-                                            <span>Discount</span>
-                                            <span>-{formatPrice(parseFloat(order.discount_amount as string || "0"))}</span>
+
+                                    {(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal + parseFloat(order.discount_amount as string || "0")) > 0 && (
+                                        <div className="flex justify-between text-green-600 font-medium pt-1">
+                                            <span>Total Savings</span>
+                                            <span>{formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal + parseFloat(order.discount_amount as string || "0"))}</span>
                                         </div>
                                     )}
-                                </div>
-                                <div className="mt-6 pt-6 border-t border-gray-100 flex justify-between items-center">
-                                    <span className="text-lg font-bold text-gray-900">Total</span>
-                                    <span className="text-2xl font-extrabold text-gray-900">{formatPrice(parseFloat(order.total_amount as string || "0"))}</span>
+
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    <div className="flex justify-between font-bold text-gray-900 text-base">
+                                        <span>Total</span>
+                                        <span>{formatPrice(parseFloat(order.total_amount as string || "0"))}</span>
+                                    </div>
+
+                                    {parseFloat(order.upfront_amount as string || "0") > 0 && (
+                                        <div className="mt-2 p-3 bg-orange-50 border border-orange-100 rounded-lg space-y-2">
+                                            <div className="flex justify-between text-sm text-orange-800 font-semibold">
+                                                <span>Upfront (Non Refundable)</span>
+                                                <span>{formatPrice(parseFloat(order.upfront_amount as string || "0"))}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-orange-700 font-bold">
+                                                <span>Due on Delivery</span>
+                                                <span>{formatPrice(Math.max(0, parseFloat(order.total_amount as string || "0") - parseFloat(order.upfront_amount as string || "0")))}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -301,9 +398,83 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                             </div>
                         </div>
 
+                        {/* Order Actions */}
+                        {(order.status === 'pending' || order.status === 'processing' || order.status === 'delivered') && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="p-6 sm:p-8">
+                                    <h2 className="text-lg font-bold text-gray-900 mb-4">Order Actions</h2>
+                                    <div className="flex flex-col gap-3">
+                                        {(order.status === 'pending' || order.status === 'processing') && (
+                                            <button onClick={() => setActionModal('cancel')} className="w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">
+                                                Cancel Order
+                                            </button>
+                                        )}
+                                        {order.status === 'delivered' && (
+                                            <>
+                                                {!hasNonReturnableItems ? (
+                                                    <button onClick={() => setActionModal('return')} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
+                                                        Return Order
+                                                    </button>
+                                                ) : (
+                                                    <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1">
+                                                        <p className="text-xs text-orange-800 font-semibold text-center">
+                                                            This order contains non-returnable items. You can only exchange this order.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                <button onClick={() => setActionModal('exchange')} className="w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors">
+                                                    Exchange Order
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
                 
+                {/* Action Modal */}
+                {actionModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-6">
+                                <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{actionModal} Order</h3>
+                                <p className="text-sm text-gray-600 mb-6">Are you sure you want to {actionModal} this order?</p>
+                                
+                                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                                    <div className="flex justify-between items-center text-sm font-medium">
+                                        <span className="text-gray-700 capitalize">{actionModal} Fee</span>
+                                        <span className="text-gray-900">{formatPrice(getActionFee(actionModal))}</span>
+                                    </div>
+                                    {order?.payment_method === 'cod' && actionModal === 'cancel' && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != '1') && (
+                                        <p className="text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200">Note: The upfront shipping amount is non-refundable.</p>
+                                    )}
+                                    {order?.payment_method === 'prepaid' && (
+                                        <p className="text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200">Note: The fee will be automatically deducted from your refund.</p>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setActionModal(null)} 
+                                        className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                                    >
+                                        No, Keep It
+                                    </button>
+                                    <button 
+                                        onClick={handleActionSubmit}
+                                        disabled={actionLoading}
+                                        className={`flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                    >
+                                        {actionLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Confirm'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

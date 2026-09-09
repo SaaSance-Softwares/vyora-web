@@ -131,6 +131,8 @@ class ProductResource extends JsonResource
             'long_description' => $this->long_description,
             'brand' => $this->brand_name,
             'product_type' => $this->productType?->name,
+            'fit' => $this->fit?->name,
+            'fabric' => $this->fabric?->name,
             'tax_class' => $this->tax_class,
 
             // Global List Properties mapping securely
@@ -143,6 +145,13 @@ class ProductResource extends JsonResource
             'video' => $videoUrl,
             'category' => $this->categories->first()?->name ?? 'General',
             'is_new' => $this->created_at->diffInDays(now()) < 7,
+
+            'delivery_timeline' => $this->deliveryTimeline ? [
+                'min_days' => $this->deliveryTimeline->min_days,
+                'max_days' => $this->deliveryTimeline->max_days,
+                'formatted_date' => now()->addDays($this->deliveryTimeline->max_days)->format('jS F'),
+                'show_to_user' => $this->deliveryTimeline->show_to_user,
+            ] : null,
 
             // Categories
             'categories' => $this->categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'slug' => $c->slug]),

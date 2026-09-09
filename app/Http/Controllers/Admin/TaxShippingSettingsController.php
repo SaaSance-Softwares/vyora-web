@@ -49,6 +49,15 @@ class TaxShippingSettingsController extends Controller
                                 $val[$method]['tiers'] = $tiers;
                             }
                         }
+
+                        if (isset($val['cod']['upfront_tiers']) && is_array($val['cod']['upfront_tiers'])) {
+                            $upfrontTiers = array_values($val['cod']['upfront_tiers']);
+                            // Sort by up_to ascending
+                            usort($upfrontTiers, function ($a, $b) {
+                                return (float) ($a['up_to'] ?? 0) <=> (float) ($b['up_to'] ?? 0);
+                            });
+                            $val['cod']['upfront_tiers'] = $upfrontTiers;
+                        }
                     }
                     $val = json_encode($val);
                 }
@@ -57,6 +66,14 @@ class TaxShippingSettingsController extends Controller
                     ['value' => $val, 'group' => self::GROUP]
                 );
             }
+        }
+
+        // Sync store_tax_number back to general settings tax_id
+        if ($request->has('store_tax_number')) {
+            ThemeSetting::updateOrCreate(
+                ['key' => 'tax_id'],
+                ['value' => $request->input('store_tax_number', ''), 'group' => 'general']
+            );
         }
 
         return redirect()->back()->with('success', 'Tax and Shipping settings updated successfully.');

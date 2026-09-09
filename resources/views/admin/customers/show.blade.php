@@ -63,6 +63,52 @@
                         <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Phone Number</div>
                         <div class="text-sm text-gray-900 font-medium mt-0.5">{{ $customer->phone ?? 'Not provided' }}</div>
                     </div>
+                    @if($customer->registration_ip)
+                    <div class="pt-4 border-t border-gray-100">
+                        <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Registration Location</div>
+                        <div class="text-sm text-gray-900 font-medium mt-0.5">
+                            @if($customer->city || $customer->state || $customer->country)
+                                {{ collect([$customer->city, $customer->state, $customer->country])->filter()->join(', ') }}
+                            @else
+                                Unknown Location
+                            @endif
+                        </div>
+                        <div class="text-xs text-gray-500 mt-0.5">IP: {{ $customer->registration_ip }}</div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- DPDP Privacy & Consent --}}
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+                    <h3 class="font-bold text-gray-900">DPDP Consent Records</h3>
+                    <span class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded uppercase tracking-wider">Privacy</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 font-medium">Terms of Service</div>
+                        @if($customer->has_consented_to_terms)
+                            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Consented</span>
+                        @else
+                            <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded">No Record</span>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 font-medium">Marketing Emails</div>
+                        @if($customer->has_consented_to_marketing)
+                            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Consented</span>
+                        @else
+                            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Opted Out</span>
+                        @endif
+                    </div>
+                    @if($customer->consent_timestamp)
+                        <div class="pt-3 border-t border-gray-100">
+                            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Consent Audit Trail</div>
+                            <div class="text-xs text-gray-600">Timestamp: <span class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($customer->consent_timestamp)->format('d M Y, h:i A') }}</span></div>
+                            <div class="text-xs text-gray-600 mt-0.5">IP Address: <span class="font-medium text-gray-900">{{ $customer->consent_ip_address ?? 'Unknown' }}</span></div>
+                        </div>
+                    @endif
                 </div>
             </div>
 

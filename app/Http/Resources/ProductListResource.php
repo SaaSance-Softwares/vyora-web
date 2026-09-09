@@ -106,6 +106,13 @@ class ProductListResource extends JsonResource
             }
         }
 
+        $colors = $this->skus->pluck('color')->unique('id')->filter()->map(function($c) {
+            return [
+                'name' => $c->name,
+                'hex' => $c->hex_code ?? '#000000',
+            ];
+        })->values()->toArray();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -121,6 +128,7 @@ class ProductListResource extends JsonResource
             'hover_image' => $hoverImage ? $hoverImage->url : null,
             'category' => $this->categories->first()?->name ?? 'General',
             'is_new' => $this->created_at->diffInDays(now()) < 7,
+            'colors' => $colors,
         ];
     }
 }

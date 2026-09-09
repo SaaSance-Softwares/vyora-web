@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\ColorsExport;
 use App\Exports\ProductTypesExport;
 use App\Exports\SizesExport;
+use App\Exports\FitsExport;
+use App\Exports\FabricsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ColorsImport;
 use App\Imports\ProductTypesImport;
 use App\Imports\SizesImport;
+use App\Imports\FitsImport;
+use App\Imports\FabricsImport;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -33,6 +37,26 @@ class AttributeImportExportController extends Controller
                 ['Name', 'Code'],
                 ['Small', 'S'],
                 ['Large', 'L'],
+            ],
+        ],
+        'fits' => [
+            'export' => FitsExport::class,
+            'import' => FitsImport::class,
+            'tab' => 'fit',
+            'sample' => [
+                ['Name'],
+                ['Regular Fit'],
+                ['Slim Fit'],
+            ],
+        ],
+        'fabrics' => [
+            'export' => FabricsExport::class,
+            'import' => FabricsImport::class,
+            'tab' => 'fabric',
+            'sample' => [
+                ['Name'],
+                ['Cotton'],
+                ['Polyester'],
             ],
         ],
         'hsn' => [
@@ -64,8 +88,8 @@ class AttributeImportExportController extends Controller
             abort(404);
         }
 
-        $request->validate([
-            'file' => 'required|mimes:csv,txt,xlsx,xls|max:10240', // max 10mb
+        $request->strictValidate([
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240', // max 10mb
         ]);
 
         try {

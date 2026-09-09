@@ -82,7 +82,16 @@
                         <select name="header_type" x-model="headerType" class="bg-white border-0 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-inset focus:ring-[#25D366] rounded-lg px-3 py-1.5 text-xs font-medium text-gray-900">
                             <option value="NONE">None</option>
                             <option value="TEXT">Text</option>
+                            <option value="IMAGE">Image</option>
                         </select>
+                    </div>
+                    
+                    <div x-show="headerType === 'IMAGE'" class="space-y-4" style="display: none;">
+                        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                            <p class="text-xs text-amber-700">
+                                <strong>Important:</strong> Image headers cannot be created directly from this Admin Panel. To use an Image header, you must first create the template inside your <strong>Meta Business Manager</strong>, and then click "Sync Templates" on the main WhatsApp page.
+                            </p>
+                        </div>
                     </div>
 
                     <div x-show="headerType === 'TEXT'" class="space-y-4" style="display: none;">
@@ -150,6 +159,7 @@
                                             <option value="QUICK_REPLY">Quick Reply</option>
                                             <option value="URL">Visit Website (URL)</option>
                                             <option value="PHONE_NUMBER">Call Phone Number</option>
+                                            <option value="OTP">Authentication (OTP - Copy Code)</option>
                                         </select>
                                     </div>
                                     <div>
@@ -214,6 +224,17 @@
                             </div>
 
                             <div>
+                                <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Abandoned Carts</h4>
+                                <ul class="space-y-1 mb-3">
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{product_name}</li>
+                                    <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{cart_token}</li>
+                                </ul>
+                                <div class="bg-blue-100/50 p-2 rounded text-[10px] text-blue-800 border border-blue-200">
+                                    <strong>To setup abandoned carts:</strong> Create a Marketing template named <code>abandoned_cart</code> in Meta. Set Header to Image (the product image is sent automatically). Map <code>{cart_token}</code> to a Dynamic URL button formatted like: <code>https://yoursite.com/cart/recover/{{1}}</code>
+                                </div>
+                            </div>
+
+                            <div>
                                 <h4 class="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-2">Authentication</h4>
                                 <ul class="space-y-1">
                                     <li class="text-xs font-mono bg-white px-2 py-1 rounded border border-blue-100 text-blue-900">{otp}</li>
@@ -229,7 +250,10 @@
                 <a href="{{ route('admin.whatsapp.templates.index') }}" class="px-5 py-3 border border-gray-200 text-sm font-bold rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
                     Cancel
                 </a>
-                <button type="submit" class="px-8 py-3 bg-[#25D366] hover:bg-[#1DA851] text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-[#25D366]/30">
+                <button type="submit" 
+                        :disabled="headerType === 'IMAGE'"
+                        :class="headerType === 'IMAGE' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#1DA851]'"
+                        class="px-8 py-3 bg-[#25D366] text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-[#25D366]/30">
                     Submit for Approval
                 </button>
             </div>

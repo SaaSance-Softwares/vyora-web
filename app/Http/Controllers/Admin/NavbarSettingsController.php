@@ -66,12 +66,12 @@ class NavbarSettingsController extends Controller
 
     public function update(Request $request)
     {
-        $validated = $request->validate([
-            'navbar_style' => 'required|in:default,mega_menu,custom',
-            'nav_alignment' => 'required|in:left,center,right',
-            'nav_position' => 'required|in:inline,below',
-            'nav_hover_style' => 'nullable|in:none,underline,left_to_right',
-            'menu_structure' => 'nullable|string',
+        $validated = $request->strictValidate([
+            'navbar_style' => 'required|string|max:255|in:default,mega_menu,custom',
+            'nav_alignment' => 'required|string|max:255|in:left,center,right',
+            'nav_position' => 'required|string|max:255|in:inline,below',
+            'nav_hover_style' => 'nullable|string|max:255|in:none,underline,left_to_right',
+            'menu_structure' => 'nullable|string|max:5000',
         ]);
 
         foreach ($validated as $key => $value) {

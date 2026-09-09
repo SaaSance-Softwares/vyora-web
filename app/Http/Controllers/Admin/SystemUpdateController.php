@@ -24,10 +24,10 @@ class SystemUpdateController extends Controller
             }
 
             $response = Http::withHeaders($headers)
-                ->get("https://api.github.com/repos/{$repo}/releases/latest");
+                ->get("https://api.github.com/repos/{$repo}/releases?per_page=1");
 
-            if ($response->successful()) {
-                $release = $response->json();
+            if ($response->successful() && !empty($response->json())) {
+                $release = $response->json()[0];
                 $version = str_replace('v', '', $release['tag_name'] ?? '1.0.0');
                 $notes = $release['body'] ?? 'No release notes provided.';
 
@@ -42,6 +42,7 @@ class SystemUpdateController extends Controller
                     'version' => $version,
                     'notes' => $notes,
                     'download_url' => $downloadUrl,
+                    'is_prerelease' => $release['prerelease'] ?? false,
                 ];
             }
         } catch (\Exception $e) {
@@ -67,9 +68,9 @@ class SystemUpdateController extends Controller
 
     public function update(Request $request)
     {
-        $request->validate([
-            'download_url' => 'required|url',
-            'type' => 'required|in:backend',
+        $request->strictValidate([
+            'download_url' => 'required|string|url|max:2048',
+            'type' => 'required|string|max:255|in:backend',
         ]);
 
         try {

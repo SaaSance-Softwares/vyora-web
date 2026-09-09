@@ -8,7 +8,7 @@ export interface Country {
     flag: string;
 }
 
-const COUNTRIES: Country[] = [
+export const COUNTRIES: Country[] = [
     { name: "Afghanistan", dial_code: "+93", code: "AF", flag: "🇦🇫" },
     { name: "Albania", dial_code: "+355", code: "AL", flag: "🇦🇱" },
     { name: "Algeria", dial_code: "+213", code: "DZ", flag: "🇩🇿" },

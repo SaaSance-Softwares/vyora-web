@@ -5,6 +5,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - Dope Style Admin</title>
+    @php
+        $faviconUrl = \Illuminate\Support\Facades\Cache::remember('site_favicon', 86400, function() {
+            return \App\Models\ThemeSetting::where('group', 'logos')->where('key', 'favicon')->value('value');
+        });
+    @endphp
+    @if($faviconUrl)
+        <link rel="icon" href="{{ asset($faviconUrl) }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -84,7 +94,7 @@
 
         </div>
         <div class="text-center mt-6">
-            <a href="#" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="{{ route('admin.password.request') }}" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
                 Forgot your password?
             </a>
         </div>

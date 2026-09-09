@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Gift, Copy, CheckCircle, Clock, AlertCircle, ShoppingBag, MessageCircle, Mail } from 'lucide-react';
 
 interface SharedCardInfo {
@@ -20,7 +20,9 @@ interface SharedCardInfo {
 export default function GiftCardSharePage() {
     // In Inertia, route parameters are often passed as props, or we can parse window.location.
     // For simplicity, let's get token from props if provided, or from URL path directly.
-    const { token } = usePage().props;
+    const { props } = usePage();
+    const token = props.token;
+    const settings = props.settings as any;
 
     const [info, setInfo] = useState<SharedCardInfo | null>(null);
     const [loading, setLoading] = useState(true);
@@ -68,8 +70,59 @@ export default function GiftCardSharePage() {
 
     const isRedeemable = info.is_redeemable && info.status !== 'used' && info.status !== 'withdrawn';
 
+    const getCardTheme = (amount: number) => {
+        if (amount >= 5000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#1a1a1a] via-black to-[#1a1a1a] text-[#ffd700] border border-[#ffd700]/30 shadow-[0_20px_50px_rgba(255,215,0,0.15)]',
+                glow: 'bg-[#ffd700]/10',
+                iconBg: 'bg-[#ffd700]/10 border-[#ffd700]/20 text-[#ffd700]',
+                logo: 'brightness-0 invert opacity-80 mix-blend-plus-lighter',
+                label: 'text-[#ffd700]/60',
+                chip: 'bg-[#ffd700]/10 border-[#ffd700]/20',
+            };
+        }
+        if (amount >= 3000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#2c3e50] via-[#1a252f] to-[#111] text-[#fff] border border-[#34495e]',
+                glow: 'bg-blue-400/10',
+                iconBg: 'bg-white/10 border-white/20 text-white',
+                logo: 'brightness-0 invert opacity-70',
+                label: 'text-gray-400',
+                chip: 'bg-white/10 border-white/10',
+            };
+        }
+        if (amount >= 1000) {
+            return {
+                bg: 'bg-gradient-to-br from-[#434343] to-[#000000] text-white border border-gray-700',
+                glow: 'bg-white/10',
+                iconBg: 'bg-white/10 border-white/10 text-gray-200',
+                logo: 'brightness-0 invert opacity-60',
+                label: 'text-gray-400',
+                chip: 'bg-white/10 border-white/10',
+            };
+        }
+        return {
+            bg: 'bg-gray-50 text-gray-900 border border-gray-200',
+            glow: 'bg-black/5',
+            iconBg: 'bg-white border border-gray-200 text-gray-900',
+            logo: 'opacity-40',
+            label: 'text-gray-400',
+            chip: 'bg-gray-200/50 border-gray-200',
+        };
+    };
+
+
+    
+    const ogImage = settings?.favicon ? `/${settings.favicon}` : (settings?.main_logo ? `/${settings.main_logo}` : '/favicon.ico');
+    
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            <Head>
+                <title>{`Gift Card | ${settings?.store_name || 'Store'}`}</title>
+                <meta property="og:title" content={`You received a Gift Card!`} />
+                <meta property="og:description" content={`Open to view and redeem your gift card at ${settings?.store_name || 'our store'}.`} />
+                <meta property="og:image" content={ogImage} />
+            </Head>
             <div className="max-w-xl mx-auto px-4 pt-16">
 
                 {/* From badge */}
@@ -85,41 +138,48 @@ export default function GiftCardSharePage() {
                 </div>
 
                 {/* Card Visual */}
-                <div className="relative bg-gray-900 rounded-[2rem] p-8 text-white shadow-2xl shadow-gray-300 mb-8 overflow-hidden">
+                <div className={`relative rounded-[2rem] p-8 shadow-2xl shadow-gray-200 mb-8 overflow-hidden ${getCardTheme(Number(info.amount)).bg}`}>
                     {/* Background pattern */}
-                    <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/5" />
-                    <div className="absolute -left-8 -bottom-8 w-36 h-36 rounded-full bg-white/5" />
+                    <div className="absolute inset-0 opacity-10 bg-noise pointer-events-none mix-blend-overlay" />
+                    <div className={`absolute -right-12 -top-12 w-48 h-48 rounded-full blur-[40px] pointer-events-none ${getCardTheme(Number(info.amount)).glow}`} />
+                    <div className={`absolute -left-8 -bottom-8 w-36 h-36 rounded-full blur-[40px] pointer-events-none ${getCardTheme(Number(info.amount)).glow}`} />
 
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
-                                <Gift className="w-6 h-6 text-gray-300" />
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${getCardTheme(Number(info.amount)).iconBg}`}>
+                                <Gift className="w-6 h-6" />
                             </div>
-                            <span className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-600">VYORA</span>
+                            {settings?.main_logo ? (
+                                <img src={`/${settings.main_logo}`} alt="Logo" className={`h-5 w-auto object-contain ${getCardTheme(Number(info.amount)).logo}`} />
+                            ) : (
+                                <span className={`text-[10px] font-black tracking-[0.3em] uppercase ${getCardTheme(Number(info.amount)).label}`}>
+                                    {settings?.store_name || 'VYORA'}
+                                </span>
+                            )}
                         </div>
 
-                        <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Gift Card Value</p>
-                        <p className="text-5xl font-black tracking-tight mb-6">₹{info.amount.toLocaleString()}</p>
+                        <p className={`text-[10px] uppercase tracking-widest mb-1 ${getCardTheme(Number(info.amount)).label}`}>Gift Card Value</p>
+                        <p className="text-5xl font-black tracking-tight mb-6">₹{Number(info.amount).toLocaleString()}</p>
 
-                        {info.remaining_amount < info.amount && (
+                        {Number(info.remaining_amount) < Number(info.amount) && (
                             <p className="text-[11px] text-amber-400 mb-4 font-medium">
-                                ₹{info.remaining_amount.toLocaleString()} remaining (₹{(info.amount - info.remaining_amount).toLocaleString()} used)
+                                ₹{Number(info.remaining_amount).toLocaleString()} remaining (₹{(Number(info.amount) - Number(info.remaining_amount)).toLocaleString()} used)
                             </p>
                         )}
 
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <div className={`flex items-center justify-between pt-4 border-t mt-6 ${Number(info.amount) >= 1000 ? 'border-white/10' : 'border-gray-200'}`}>
                             <div>
-                                <p className="text-[9px] uppercase tracking-widest text-gray-600 mb-1">{info.template_name}</p>
-                                <p className="font-mono text-[11px] tracking-[0.2em] text-gray-500">{info.card_number}</p>
+                                <p className={`text-[9px] uppercase tracking-widest mb-1 ${getCardTheme(Number(info.amount)).label}`}>{info.template_name}</p>
+                                <p className={`font-mono text-[11px] tracking-[0.2em] ${getCardTheme(Number(info.amount)).label}`}>{info.card_number}</p>
                             </div>
                             <div className="text-right">
                                 {info.expires_at ? (
-                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+                                    <div className={`flex items-center gap-1.5 text-[10px] ${getCardTheme(Number(info.amount)).label}`}>
                                         <Clock className="w-3 h-3" />
                                         <span>Exp {new Date(info.expires_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                     </div>
                                 ) : (
-                                    <p className="text-[10px] text-gray-600">No Expiry</p>
+                                    <p className={`text-[10px] ${getCardTheme(Number(info.amount)).label}`}>No Expiry</p>
                                 )}
                             </div>
                         </div>
@@ -153,7 +213,7 @@ export default function GiftCardSharePage() {
                             </p>
                         )}
                         <p className="text-[11px] text-gray-400 text-center mt-4 leading-relaxed">
-                            Enter this code at checkout to redeem your ₹{info.remaining_amount.toLocaleString()} balance.
+                            Enter this code at checkout to redeem your ₹{Number(info.remaining_amount).toLocaleString()} balance.
                         </p>
                     </div>
                 ) : (

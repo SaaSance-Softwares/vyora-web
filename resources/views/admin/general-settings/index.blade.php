@@ -120,6 +120,51 @@
                         placeholder="https://pinterest.com/..."
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp URL</label>
+                    <input type="url" name="social_whatsapp" value="{{ $settings['social_whatsapp'] ?? '' }}"
+                        placeholder="https://wa.me/..."
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
+                    <input type="url" name="social_linkedin" value="{{ $settings['social_linkedin'] ?? '' }}"
+                        placeholder="https://linkedin.com/in/..."
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Arattai URL</label>
+                    <input type="url" name="social_arattai" value="{{ $settings['social_arattai'] ?? '' }}"
+                        placeholder="https://arattai.in/..."
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+            </div>
+
+            <div class="mt-8 border-t border-gray-100 pt-6" x-data="customSocialLinks()">
+                <h4 class="text-md font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                    <span>Custom Social Links</span>
+                    <button type="button" @click="addLink" class="text-xs bg-black text-white px-3 py-1.5 rounded hover:bg-gray-800">
+                        + Add Custom Link
+                    </button>
+                </h4>
+                <input type="hidden" name="social_custom_links" :value="JSON.stringify(links)">
+                
+                <div class="space-y-3">
+                    <template x-for="(link, index) in links" :key="index">
+                        <div class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                            <div class="flex-1">
+                                <input type="text" x-model="link.label" placeholder="Platform Name (e.g. LinkedIn)" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs mb-2">
+                                <input type="url" x-model="link.url" placeholder="https://..." class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs">
+                            </div>
+                            <button type="button" @click="removeLink(index)" class="text-gray-400 hover:text-red-500 pt-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    </template>
+                    <div x-show="links.length === 0" class="text-sm text-gray-500 italic py-2">
+                        No custom links added.
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -298,11 +343,9 @@
         </div>
     </div>
 
-    {{-- ── STICKY SAVE BAR ──────────────────────────────── --}}
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:pl-64 flex items-center justify-between shadow-lg">
-        <p class="text-sm text-gray-500">Global store settings will be applied immediately.</p>
-        <button type="submit"
-            class="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 text-sm font-medium transition-colors">
+    {{-- ── SAVE BAR ──────────────────────────────── --}}
+    <div class="bg-gray-50 border-t border-gray-200 p-5 flex justify-end rounded-b-lg">
+        <button type="submit" class="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 text-sm font-medium transition-colors">
             Save General Settings
         </button>
     </div>
@@ -325,6 +368,29 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('customSocialLinks', () => ({
+            links: [],
+            init() {
+                try {
+                    let saved = {!! json_encode($settings['social_custom_links'] ?? '[]') !!};
+                    if (typeof saved === 'string') {
+                        saved = JSON.parse(saved);
+                    }
+                    this.links = Array.isArray(saved) ? saved : [];
+                } catch (e) {
+                    this.links = [];
+                }
+            },
+            addLink() {
+                this.links.push({ label: '', url: '' });
+            },
+            removeLink(index) {
+                this.links.splice(index, 1);
+            }
+        }));
+    });
 </script>
 @endpush
 @endsection

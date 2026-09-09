@@ -86,7 +86,40 @@ class WhatsAppService
             if ($response->successful()) {
                 $data = $response->json();
                 $messageId = $data['messages'][0]['id'] ?? null;
-                $this->logMessage($to, $templateName, 'template', $messageId);
+                
+                // Resolve template text with components before logging
+                $resolvedBody = $templateName;
+                $template = \App\Models\WhatsappTemplate::where('name', $templateName)->first();
+                if ($template) {
+                    $templateComponents = $template->components ?? [];
+                    $templateText = '';
+                    foreach ($templateComponents as $component) {
+                        if (in_array($component['type'] ?? '', ['HEADER', 'BODY', 'FOOTER']) && !empty($component['text'])) {
+                            $compText = $component['text'];
+                            $compType = strtolower($component['type']);
+                            
+                            // Replace variables in this specific component
+                            if (!empty($components)) {
+                                foreach ($components as $comp) {
+                                    if (($comp['type'] ?? '') === $compType && !empty($comp['parameters'])) {
+                                        foreach ($comp['parameters'] as $index => $param) {
+                                            if (($param['type'] ?? '') === 'text' && isset($param['text'])) {
+                                                $placeholder = '{{' . ($index + 1) . '}}';
+                                                $compText = str_replace($placeholder, $param['text'], $compText);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            $templateText .= $compText . "\n\n";
+                        }
+                    }
+                    if (trim($templateText)) {
+                        $resolvedBody = trim($templateText);
+                    }
+                }
+
+                $this->logMessage($to, $resolvedBody, 'template', $messageId);
 
                 return true;
             }
@@ -363,6 +396,14 @@ class WhatsAppService
      */
     private function logMessage(string $to, string $body, string $type, ?string $messageId = null)
     {
+        // Redact any OTP before saving it to the database for security
+        if (stripos($body, 'is your verification code') !== false || 
+            stripos($body, 'do not share this code') !== false || 
+            stripos($body, 'login OTP') !== false ||
+            stripos($body, 'OTP') !== false) {
+            $body = preg_replace('/[0-9]{4,8}/', '******', $body);
+        }
+
         $conversation = WhatsappConversation::firstOrCreate(
             ['phone_number' => $to],
             ['last_message_at' => now()]
@@ -435,7 +476,6 @@ class WhatsAppService
 
         $template = \App\Models\WhatsappTemplate::where('name', $templateName)->first();
         $mapping = $template ? $template->variables_mapping : null;
-
         $components = [];
 
         if (!empty($mapping) && is_array($mapping)) {
@@ -477,7 +517,7 @@ class WhatsAppService
                 }
             }
         } else {
-            // Fallback
+            // Fallback for non-authentication templates or unmapped templates
             $components = [
                 [
                     'type' => 'body',
@@ -491,7 +531,242 @@ class WhatsAppService
             ];
         }
 
+        // Explicitly inject the button parameter for AUTHENTICATION templates if not already present
+        if ($template && $template->category === 'AUTHENTICATION') {
+            $hasButton = false;
+            foreach ($components as $comp) {
+                if ($comp['type'] === 'button') {
+                    $hasButton = true;
+                    break;
+                }
+            }
+            if (!$hasButton) {
+                $components[] = [
+                    'type' => 'button',
+                    'sub_type' => 'url',
+                    'index' => '0',
+                    'parameters' => [
+                        [
+                            'type' => 'text',
+                            'text' => $otp,
+                        ],
+                    ],
+                ];
+            }
+        }
+
         return $this->sendTemplate($to, $templateName, $template ? $template->language : 'en_US', $components);
+    }
+
+    /**
+     * Send dynamic WhatsApp template based on database linking.
+     */
+    public function sendDynamicWhatsApp(Order $order, \App\Models\WhatsappTemplate $template): bool
+    {
+        if (! $this->isEnabled()) {
+            return false;
+        }
+
+        $order->loadMissing(['shippingAddress', 'user']);
+        
+        // Priority 1: Registered Account Phone Number (Protects gift recipients)
+        // Priority 2: Shipping Phone Number (For Guest Checkouts)
+        $phone = null;
+        
+        if ($order->user && !empty($order->user->phone)) {
+            $phone = $order->user->phone;
+        } elseif ($order->shippingAddress && !empty($order->shippingAddress->phone)) {
+            $phone = $order->shippingAddress->phone;
+        }
+
+        if (! $phone) {
+            return false;
+        }
+
+        // Clean formatting
+        $phone = $this->formatPhoneNumber($phone);
+
+        if (empty($phone)) {
+            return false;
+        }
+
+        $mapping = $template->variables_mapping;
+        $components = [];
+
+        if (!empty($mapping) && is_array($mapping)) {
+            // Header
+            if (isset($mapping['header']) && is_array($mapping['header'])) {
+                $params = [];
+                foreach ($mapping['header'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $order)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'header', 'parameters' => $params];
+                }
+            }
+            // Body
+            if (isset($mapping['body']) && is_array($mapping['body'])) {
+                $params = [];
+                foreach ($mapping['body'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $order)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'body', 'parameters' => $params];
+                }
+            }
+            // Buttons
+            if (isset($mapping['buttons']) && is_array($mapping['buttons'])) {
+                foreach ($mapping['buttons'] as $btnIndex => $vars) {
+                    $params = [];
+                    foreach ($vars as $varName) {
+                        $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $order)];
+                    }
+                    if (!empty($params)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string)$btnIndex,
+                            'parameters' => $params
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $this->sendTemplate($phone, $template->name, $template->language, $components);
+    }
+
+    public function sendAbandonedCartWhatsApp(\App\Models\Cart $cart, \App\Models\WhatsappTemplate $template): bool
+    {
+        if (! $this->isEnabled()) {
+            return false;
+        }
+
+        $phone = $cart->user ? $cart->user->phone : null;
+        if (! $phone) {
+            return false;
+        }
+
+        $mapping = $template->variables_mapping ?? [];
+        $components = [];
+
+        // 1. Automatically inject Image Header if the template defines one
+        $hasImageHeader = false;
+        if (is_array($template->components)) {
+            foreach ($template->components as $c) {
+                if (isset($c['type']) && $c['type'] === 'HEADER' && isset($c['format']) && $c['format'] === 'IMAGE') {
+                    $hasImageHeader = true;
+                    break;
+                }
+            }
+        }
+
+        if ($hasImageHeader) {
+            // Find the first product image in the cart
+            $cart->loadMissing(['items.sku.product.categoryMasterImages']);
+            $firstItem = $cart->items->first();
+            $imageUrl = null;
+            
+            if ($firstItem && $firstItem->sku && $firstItem->sku->product) {
+                $imageObj = $firstItem->sku->product->categoryMasterImages->first();
+                if ($imageObj) {
+                    $imageUrl = $imageObj->image_url;
+                }
+            }
+            
+            // Fallback image if product has no image
+            if (! $imageUrl) {
+                $imageUrl = asset('pwa-icon-512.png'); // generic fallback
+            }
+            
+            // Meta WhatsApp API strictly blocks .webp images. Convert to .jpg on the fly and cache it.
+            if (str_ends_with(strtolower($imageUrl), '.webp')) {
+                $filename = md5($imageUrl) . '.jpg';
+                $waCachePath = public_path('storage/wa-cache');
+                if (!file_exists($waCachePath)) {
+                    @mkdir($waCachePath, 0755, true);
+                }
+                
+                $localPath = $waCachePath . '/' . $filename;
+                
+                if (!file_exists($localPath)) {
+                    try {
+                        // We must fetch it and convert it. Encode spaces to %20 to prevent 400 Bad Request.
+                        $fetchUrl = str_replace(' ', '%20', $imageUrl);
+                        $contents = file_get_contents($fetchUrl);
+                        if ($contents) {
+                            $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                            $img = $manager->read($contents);
+                            $img->toJpeg(90)->save($localPath);
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("Failed to convert WebP for WhatsApp: " . $e->getMessage());
+                    }
+                }
+                
+                if (file_exists($localPath)) {
+                    $imageUrl = asset('storage/wa-cache/' . $filename);
+                } else {
+                    // Ultimate fallback if conversion fails
+                    $imageUrl = asset('pwa-icon-512.png');
+                }
+            }
+
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [
+                    [
+                        'type' => 'image',
+                        'image' => [
+                            'link' => $imageUrl
+                        ]
+                    ]
+                ]
+            ];
+        }
+
+        // 2. Handle Text variables (if mapped)
+        if (!empty($mapping) && is_array($mapping)) {
+            // Header Text (if it's not an image)
+            if (isset($mapping['header']) && is_array($mapping['header']) && !$hasImageHeader) {
+                $params = [];
+                foreach ($mapping['header'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $cart)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'header', 'parameters' => $params];
+                }
+            }
+            // Body
+            if (isset($mapping['body']) && is_array($mapping['body'])) {
+                $params = [];
+                foreach ($mapping['body'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $cart)];
+                }
+                if (!empty($params)) {
+                    $components[] = ['type' => 'body', 'parameters' => $params];
+                }
+            }
+            // Buttons
+            if (isset($mapping['buttons']) && is_array($mapping['buttons'])) {
+                foreach ($mapping['buttons'] as $btnIndex => $vars) {
+                    $params = [];
+                    foreach ($vars as $varName) {
+                        $params[] = ['type' => 'text', 'text' => (string) $this->resolveVariable($varName, $cart)];
+                    }
+                    if (!empty($params)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string)$btnIndex,
+                            'parameters' => $params
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $this->sendTemplate($phone, $template->name, $template->language, $components);
     }
 
     private function formatPhoneNumber(string $number): string
@@ -511,7 +786,7 @@ class WhatsAppService
         if ($target instanceof Order) {
             switch ($varName) {
                 case 'customer_name':
-                    return $target->customer_name ?? $target->billing_first_name ?? 'Customer';
+                    return $target->customer_name ?? $target->billing_first_name ?? ($target->user->name ?? 'Customer');
                 case 'order_number':
                     return $target->order_number ?? '';
                 case 'order_total':
@@ -525,6 +800,17 @@ class WhatsAppService
                     return $target->tracking_number ?? 'N/A';
                 case 'tracking_url':
                     return $target->tracking_url ?? 'N/A';
+            }
+        } elseif ($target instanceof \App\Models\Cart) {
+            switch ($varName) {
+                case 'customer_name':
+                    return $target->user ? ($target->user->first_name ?? $target->user->name ?? 'Customer') : 'Customer';
+                case 'product_name':
+                    $target->loadMissing(['items.sku.product']);
+                    $firstItem = $target->items->first();
+                    return $firstItem && $firstItem->sku && $firstItem->sku->product ? $firstItem->sku->product->name : 'Items';
+                case 'cart_token':
+                    return $target->cart_token ?? '';
             }
         } elseif ($target instanceof User) {
             switch ($varName) {

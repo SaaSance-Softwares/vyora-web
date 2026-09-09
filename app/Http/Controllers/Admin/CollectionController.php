@@ -26,14 +26,35 @@ class CollectionController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:collections',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:5000',
             'is_active' => 'boolean',
+            'social_title' => 'nullable|string|max:255',
+            'social_description' => 'nullable|string|max:5000',
+            'social_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'products' => 'nullable|array',
+            'products.*' => 'string|max:255',
         ]);
 
-        Collection::create($request->all());
+        $data = $request->except(['social_image']);
+        $data['is_active'] = $request->has('is_active');
+
+        if ($request->hasFile('social_image')) {
+            $file = $request->file('social_image');
+            $fileName = time().'_'.$file->getClientOriginalName();
+            $relativePath = 'storage/collections/social';
+            $destinationPath = public_path($relativePath);
+            if (! file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $file->move($destinationPath, $fileName);
+            $data['social_image'] = "{$relativePath}/{$fileName}";
+        }
+
+        Collection::create($data);
 
         return redirect()->route('admin.collections.index')->with('success', 'Collection created successfully.');
     }
@@ -47,19 +68,49 @@ class CollectionController extends Controller
 
     public function update(Request $request, Collection $collection)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:collections,slug,'.$collection->id,
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:5000',
             'is_active' => 'boolean',
+            'social_title' => 'nullable|string|max:255',
+            'social_description' => 'nullable|string|max:5000',
+            'social_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'products' => 'nullable|array',
+            'products.*' => 'string|max:255',
         ]);
 
-        $collection->update([
+        $data = [
             'name' => $request->name,
             'slug' => $request->slug,
             'description' => $request->description,
             'is_active' => $request->has('is_active'),
-        ]);
+            'social_title' => $request->social_title,
+            'social_description' => $request->social_description,
+        ];
+
+        if ($request->hasFile('social_image')) {
+            // Delete old image if exists
+            if ($collection->social_image) {
+                $oldPath = public_path("/{$collection->social_image}");
+                if (file_exists($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+
+            $file = $request->file('social_image');
+            $fileName = time().'_'.$file->getClientOriginalName();
+            $relativePath = 'storage/collections/social';
+            $destinationPath = public_path($relativePath);
+            if (! file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $file->move($destinationPath, $fileName);
+            $data['social_image'] = "{$relativePath}/{$fileName}";
+        }
+
+        $collection->update($data);
 
         if ($request->has('products')) {
             $collection->products()->sync($request->products);

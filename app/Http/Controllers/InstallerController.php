@@ -15,7 +15,7 @@ class InstallerController extends Controller
     {
         // Check PHP requirements
         $requirements = [
-            'PHP Version >= 8.2' => version_compare(phpversion(), '8.2.0', '>='),
+            'PHP Version >= 8.4' => version_compare(phpversion(), '8.4.0', '>='),
             'BCMath' => extension_loaded('bcmath'),
             'Ctype' => extension_loaded('ctype'),
             'JSON' => extension_loaded('json'),
@@ -39,11 +39,12 @@ class InstallerController extends Controller
 
     public function processDatabase(Request $request)
     {
-        $request->validate([
-            'db_host' => 'required',
-            'db_port' => 'required',
-            'db_database' => 'required',
-            'db_username' => 'required',
+        $request->strictValidate([
+            'db_host' => 'required|string|max:255',
+            'db_port' => 'required|integer',
+            'db_database' => 'required|string|max:255',
+            'db_username' => 'required|string|max:255',
+            'db_password' => 'nullable|string|max:255',
         ]);
 
         // Try connection
@@ -79,6 +80,9 @@ class InstallerController extends Controller
             'DB_DATABASE' => $request->db_database,
             'DB_USERNAME' => $request->db_username,
             'DB_PASSWORD' => $request->db_password,
+            'SESSION_DRIVER' => 'database',
+            'CACHE_STORE' => 'database',
+            'QUEUE_CONNECTION' => 'database',
         ]);
 
         return redirect()->route('install.admin');
@@ -91,12 +95,12 @@ class InstallerController extends Controller
 
     public function processAdmin(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'store_name' => 'required|string|max:50',
             'admin_path' => 'required|string|min:3|max:20|alpha_dash',
-            'name' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|confirmed|min:8',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255',
+            'password' => 'required|string|confirmed|min:8|max:255',
         ]);
 
         User::create([

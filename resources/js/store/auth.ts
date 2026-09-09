@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '@/lib/api';
+import { useCartStore } from '@/store/cart';
+import { useWishlistStore } from '@/store/wishlist';
 
 interface User {
     id: number;
@@ -22,10 +24,18 @@ export const useAuthStore = create<AuthState>()(
         (set) => ({
             user: null,
             token: null,
-            login: (token, user) => set({ token, user }),
+            login: (token, user) => {
+                set({ token, user });
+                // Make sure API instance uses the new token immediately
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                useCartStore.getState().fetchFromServer(true);
+                useWishlistStore.getState().fetchFromServer(true);
+            },
             logout: () => {
                 set({ token: null, user: null });
                 api.defaults.headers.common['Authorization'] = '';
+                useCartStore.getState().clearCart();
+                useWishlistStore.getState().clearWishlist();
             },
             checkAuth: async () => {
                 const token = useAuthStore.getState().token;
@@ -34,6 +44,8 @@ export const useAuthStore = create<AuthState>()(
                 try {
                     const res = await api.get('/api/user');
                     set({ user: res.data });
+                    useCartStore.getState().fetchFromServer(false);
+                    useWishlistStore.getState().fetchFromServer(false);
                 } catch (error) {
                     set({ token: null, user: null });
                 }

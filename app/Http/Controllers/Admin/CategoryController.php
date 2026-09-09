@@ -30,7 +30,7 @@ class CategoryController extends Controller
 
     public function reorder(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'categories' => 'required|array',
         ]);
 
@@ -66,14 +66,15 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:categories',
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image',
             'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
+            'meta_description' => 'nullable|string|max:5000',
             'social_image' => 'nullable|image',
+            'is_active' => 'boolean',
         ]);
 
         $data = $request->all();
@@ -118,14 +119,15 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
-        $request->validate([
+        $request->strictValidate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:categories,slug,'.$category->id,
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image',
             'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
+            'meta_description' => 'nullable|string|max:5000',
             'social_image' => 'nullable|image',
+            'is_active' => 'boolean',
         ]);
 
         $data = $request->all();

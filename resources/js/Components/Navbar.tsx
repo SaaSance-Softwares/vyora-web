@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { ShoppingBag, User, LogOut, ChevronDown, Heart, Search, TrendingUp, Menu, X } from 'lucide-react';
+import { ShoppingBag, User, LogOut, ChevronDown, Heart, Search, TrendingUp, Menu, X, Home } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useState, useEffect } from 'react';
@@ -150,9 +150,9 @@ export default function Navbar({ settings }: { settings?: any }) {
     const renderDynamicLink = (item: any, isChild = false, parentId: string | null = null) => {
         let href = '/shop';
         if (item.type === 'link') href = item.link || '/';
-        if (item.type === 'category') href = `/shop?category=${item.ref_id}`;
-        if (item.type === 'collection') href = `/shop?collection=${item.ref_id}`;
-        if (item.type === 'page') href = `/${item.ref_id}`;
+        if (item.type === 'category') href = `/category/${item.ref_id}`;
+        if (item.type === 'collection') href = `/collection/${item.ref_id}`;
+        if (item.type === 'page') href = `/p/${item.ref_id}`;
 
         const handleClick = () => {
             if (parentId) {
@@ -282,7 +282,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     };
 
     const ActionsComponent = () => (
-        <div className="flex items-center space-x-6 ml-auto shrink-0">
+        <div className="hidden md:flex items-center space-x-6 ml-auto shrink-0">
             {user ? (
                 <div className="flex items-center space-x-4">
                     <Link href="/orders" className="text-sm font-medium hover:text-gray-600">
@@ -341,18 +341,10 @@ export default function Navbar({ settings }: { settings?: any }) {
     );
 
     return (
-        <header className="bg-white sticky top-0 z-50 shadow-sm">
+        <header className="bg-white sticky top-0 z-50 shadow-sm relative">
             {/* Top Bar / Inline Position */}
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between relative">
-                <div className="flex items-center gap-4">
-                    {/* Mobile Menu Toggle */}
-                    <button 
-                        className="md:hidden text-gray-900 hover:text-gray-600 transition-colors"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
-                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                    </button>
-
+            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center md:justify-between relative">
+                <div className="flex items-center gap-4 absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2 shrink-0">
                         {logoRelPath ? (
@@ -430,9 +422,9 @@ export default function Navbar({ settings }: { settings?: any }) {
 
             {/* Below Nav Position */}
             {position === 'below' && isCustom && (
-                <div className="border-t border-gray-100 bg-gray-50/50 hidden md:block">
+                <div className="border-t border-gray-100 bg-gray-50/50 hidden md:block relative">
                     <div className="max-w-7xl mx-auto px-4">
-                        <div className={`flex items-center ${alignment === 'left' ? 'justify-start' : alignment === 'right' ? 'justify-end' : 'justify-center'} space-x-8 relative`}>
+                        <div className={`flex items-center ${alignment === 'left' ? 'justify-start' : alignment === 'right' ? 'justify-end' : 'justify-center'} space-x-8`}>
                             <DynamicNavItems />
                         </div>
                     </div>
@@ -441,8 +433,8 @@ export default function Navbar({ settings }: { settings?: any }) {
 
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
-                <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b shadow-lg overflow-y-auto z-50 flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
-                    <div className="p-4 flex flex-col gap-4">
+                <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b shadow-lg overflow-y-auto z-50 flex flex-col" style={{ maxHeight: 'calc(100vh - 7.5rem - env(safe-area-inset-bottom))' }}>
+                    <div className="p-4 flex flex-col gap-4 pb-20">
                         {isMegaMenu && categories.map((cat) => (
                             <div key={cat.id} className="border-b pb-2">
                                 <div 
@@ -550,6 +542,76 @@ export default function Navbar({ settings }: { settings?: any }) {
                     <SearchModalContent closeSearch={closeSearch} />
                 </div>
             )}
+
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[100] pb-[env(safe-area-inset-bottom)]">
+                <div className="flex items-center justify-between px-1 h-14">
+                    <Link href="/" className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black">
+                        <Home className="w-5 h-5" />
+                        <span className="text-[9px] font-medium tracking-wide">Home</span>
+                    </Link>
+                    
+                    {user ? (
+                        <Link href="/account" className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black">
+                            <User className="w-5 h-5" />
+                            <span className="text-[9px] font-medium tracking-wide">User</span>
+                        </Link>
+                    ) : (
+                        isModalMode ? (
+                            <button onClick={() => openAuthModal('login')} className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black">
+                                <User className="w-5 h-5" />
+                                <span className="text-[9px] font-medium tracking-wide">User</span>
+                            </button>
+                        ) : (
+                            <Link href="/login" className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black">
+                                <User className="w-5 h-5" />
+                                <span className="text-[9px] font-medium tracking-wide">User</span>
+                            </Link>
+                        )
+                    )}
+
+                    <button onClick={openSearch} className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black">
+                        <Search className="w-5 h-5" />
+                        <span className="text-[9px] font-medium tracking-wide">Search</span>
+                    </button>
+
+                    <Link 
+                        href={user ? "/wishlist" : "#"} 
+                        onClick={(e) => { if (!user) { e.preventDefault(); openAuthModal(); } }}
+                        className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black relative"
+                    >
+                        <div className="relative">
+                            <Heart className="w-5 h-5" />
+                            {wishlistItems.length > 0 && (
+                                <span className="absolute -top-1.5 -right-2 bg-black text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
+                                    {wishlistItems.length}
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[9px] font-medium tracking-wide">Wishlist</span>
+                    </Link>
+
+                    <Link href="/cart" className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black relative">
+                        <div className="relative">
+                            <ShoppingBag className="w-5 h-5" />
+                            {cart.items.length > 0 && (
+                                <span className="absolute -top-1.5 -right-2 bg-primary text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
+                                    {cart.items.length}
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[9px] font-medium tracking-wide">Cart</span>
+                    </Link>
+
+                    <button 
+                        className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black"
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    >
+                        {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        <span className="text-[9px] font-medium tracking-wide">Menu</span>
+                    </button>
+                </div>
+            </div>
         </header>
     );
 }

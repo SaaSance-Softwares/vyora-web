@@ -1,7 +1,7 @@
 @extends('admin.whatsapp.layout')
 
 @section('whatsapp_content')
-<div class="flex h-[calc(100vh-14rem)] bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden" x-data="whatsappChat()">
+<div class="flex h-[calc(100vh-8rem)] bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden" x-data="whatsappChat()">
     
     {{-- Sidebar: Conversations List --}}
     <div class="w-1/3 border-r border-gray-200 flex flex-col bg-gray-50/50 relative">
@@ -33,21 +33,22 @@
         </div>
 
         <div class="flex-1 overflow-y-auto">
-            @forelse($conversations as $conv)
-                <button @click="openConversation({{ $conv->id }}, '{{ $conv->customer_name ?? $conv->phone_number }}', '{{ $conv->phone_number }}')"
-                        class="w-full text-left p-4 border-b border-gray-100 hover:bg-white transition-colors focus:outline-none"
-                        :class="activeConvId === {{ $conv->id }} ? 'bg-white border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'">
+            <template x-for="conv in conversations" :key="conv.id">
+                <button @click="openConversation(conv.id, conv.customer_name || conv.phone_number, conv.phone_number)"
+                        class="w-full text-left p-4 border-b border-gray-100 hover:bg-white transition-colors focus:outline-none relative"
+                        :class="activeConvId === conv.id ? 'bg-white border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'">
                     <div class="flex justify-between items-start mb-1">
-                        <span class="font-bold text-gray-900 text-sm truncate">{{ $conv->customer_name ?? $conv->phone_number }}</span>
-                        <span class="text-[10px] text-gray-400 whitespace-nowrap">{{ $conv->last_message_at ? $conv->last_message_at->diffForHumans() : '' }}</span>
+                        <span class="font-bold text-gray-900 text-sm truncate" x-text="conv.customer_name || conv.phone_number"></span>
+                        <div class="flex items-center gap-1.5">
+                            <span x-show="conv.messages_count > 0" class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full" x-text="conv.messages_count"></span>
+                        </div>
                     </div>
-                    <p class="text-xs text-gray-500 truncate">{{ $conv->phone_number }}</p>
+                    <p class="text-xs text-gray-500 truncate" x-text="conv.phone_number"></p>
                 </button>
-            @empty
-                <div class="p-8 text-center text-gray-500 text-sm">
-                    No conversations yet.
-                </div>
-            @endforelse
+            </template>
+            <div x-show="conversations.length === 0" style="display: none;" class="p-8 text-center text-gray-500 text-sm">
+                No conversations yet.
+            </div>
         </div>
     </div>
 
@@ -189,19 +190,37 @@ document.addEventListener('alpine:init', () => {
     const BASE_URL = '{{ route('admin.whatsapp.index') }}';
     
     Alpine.data('whatsappChat', () => ({
+        conversations: @json($conversations),
         activeConvId: null,
-        activeName: '',
-        activePhone: '',
+        activeName: null,
+        activePhone: null,
         messages: [],
         newMessage: '',
         loading: false,
         sending: false,
         pollInterval: null,
+        convPollInterval: null,
         searchQuery: '',
         searchResults: [],
         showCustomerModal: false,
         allCustomers: [],
         loadingCustomers: false,
+
+        init() {
+            this.convPollInterval = setInterval(() => {
+                this.fetchConversations();
+            }, 3000);
+        },
+
+        async fetchConversations() {
+            try {
+                const res = await fetch(`${BASE_URL}/conversations`);
+                const data = await res.json();
+                this.conversations = data.conversations;
+            } catch (err) {
+                console.error('Failed to fetch conversations', err);
+            }
+        },
 
         async openCustomerModal() {
             this.showCustomerModal = true;

@@ -43,9 +43,10 @@ class ReviewController extends Controller
             return back()->with('error', 'You have already reviewed this product.');
         }
 
-        $request->validate([
+        $request->strictValidate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
             'images.*' => 'nullable|image|max:5120', // Max 5MB per image
         ]);
 

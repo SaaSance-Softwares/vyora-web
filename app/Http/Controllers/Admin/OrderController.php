@@ -78,9 +78,36 @@ class OrderController extends Controller
             'shippingAddress',
             'billingAddress',
             'user',
+            'orderStatus',
         ]);
 
-        return view('admin.orders.show', compact('order'));
+        $isQikinkEnabled = \App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') === '1';
+        
+        $statusesQuery = \App\Models\OrderStatus::orderBy('sort_order');
+        if (!$isQikinkEnabled) {
+            $statusesQuery->where(function($q) {
+                $q->whereNull('fulfillment_type')
+                  ->orWhere('fulfillment_type', '!=', 'QikInk')
+                  ->orWhere('is_system', true);
+            });
+        }
+        $orderStatuses = $statusesQuery->get();
+
+        return view('admin.orders.show', compact('order', 'orderStatuses'));
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Retry Qikink Sync */
+    /* ------------------------------------------------------------------ */
+
+    public function retryQikink(Order $order)
+    {
+        $order->update([
+            'qikink_sync_attempts' => 0,
+            'qikink_sync_error' => null,
+        ]);
+
+        return redirect()->back()->with('success', 'Order queued for Qikink sync. It will be processed within the next minute.');
     }
 
     /* ------------------------------------------------------------------ */
@@ -89,17 +116,25 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
-        $validated = $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled,refunded',
+        $validated = $request->strictValidate([
+            'order_status_id' => 'required|exists:order_statuses,id',
             'courier_partner' => 'nullable|string|max:255',
             'tracking_number' => 'nullable|string|max:255',
-            'tracking_url' => 'nullable|url|max:2048',
-            'notes' => 'nullable|string',
+            'tracking_url' => 'nullable|string|url|max:2048',
+            'notes' => 'nullable|string|max:5000',
         ]);
 
-        $previousStatus = $order->status;
+        $previousStatusId = $order->order_status_id;
+        $newStatusId = $validated['order_status_id'];
+        
+        $newStatus = \App\Models\OrderStatus::with(['smsTemplate', 'emailTemplate', 'whatsappTemplate'])->find($newStatusId);
+        $statusName = $newStatus->name;
+        $statusNameLower = strtolower($statusName);
 
-        $updateData = ['status' => $validated['status']];
+        $updateData = [
+            'order_status_id' => $newStatusId,
+            'status' => strtolower($statusName) // fallback
+        ];
 
         // Save tracking fields when provided
         if (array_key_exists('courier_partner', $validated)) {
@@ -116,27 +151,117 @@ class OrderController extends Controller
         }
 
         // Set timestamps
-        if ($validated['status'] === 'shipped' && $previousStatus !== 'shipped') {
+        $previousStatusNameLower = strtolower($order->orderStatus?->name ?? $order->status);
+        if ($statusNameLower === 'shipped' && $previousStatusNameLower !== 'shipped') {
             $updateData['shipped_at'] = now();
         }
-        if ($validated['status'] === 'delivered' && $previousStatus !== 'delivered') {
+        if ($statusNameLower === 'delivered' && $previousStatusNameLower !== 'delivered') {
             $updateData['delivered_at'] = now();
         }
 
         $order->update($updateData);
 
-        // Fire shipped notification
-        if ($validated['status'] === 'shipped' && $previousStatus !== 'shipped') {
-            $this->fireShippedNotification($order);
+        // Fire notifications for any status change
+        if ($newStatusId !== $previousStatusId) {
+            
+            // Handle dynamic Email Template
+            if ($newStatus->emailTemplate) {
+                try {
+                    $email = $order->user?->email ?? $order->shippingAddress?->email;
+                    if ($email) {
+                        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\DynamicOrderStatusEmail($order, $newStatus->emailTemplate));
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Failed to send Dynamic Order Status Email ({$statusName}): ".$e->getMessage());
+                }
+            } else {
+                // Fallback to legacy hardcoded email if we want, or just do nothing.
+                // It's better to just do nothing if no template is attached.
+                if (in_array($statusNameLower, ['shipped', 'cancelled', 'delivered', 'returned'])) {
+                     try {
+                        $email = $order->user?->email ?? $order->shippingAddress?->email;
+                        if ($email) {
+                            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderStatusEmail($order, $statusNameLower));
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Failed to send Legacy Order Status Email ({$statusNameLower}): ".$e->getMessage());
+                    }
+                }
+            }
+
+            // Handle dynamic SMS Template
+            if ($newStatus->smsTemplate) {
+                try {
+                    app(\App\Services\TwilioSmsService::class)->sendDynamicSms($order, $newStatus->smsTemplate);
+                } catch (\Exception $e) {
+                    \Log::error("Failed to send Dynamic Order SMS ({$statusName}): ".$e->getMessage());
+                }
+            }
+
+            // Handle dynamic WhatsApp Template
+            if ($newStatus->whatsappTemplate) {
+                try {
+                    app(\App\Services\WhatsAppService::class)->sendDynamicWhatsApp($order, $newStatus->whatsappTemplate);
+                } catch (\Exception $e) {
+                    \Log::error("Failed to send Dynamic Order WhatsApp ({$statusName}): ".$e->getMessage());
+                }
+            }
+            
+            // Standard Push Notification
+            try {
+                if ($order->user) {
+                    $statusTitles = [
+                        'processing' => 'Order Processing ⏳',
+                        'shipped' => 'Order Shipped 🚚',
+                        'delivered' => 'Order Delivered 🎉',
+                        'cancelled' => 'Order Cancelled ❌',
+                    ];
+                    
+                    app(\App\Services\PushNotificationService::class)->sendToUser(
+                        $order->user,
+                        $statusTitles[$statusNameLower] ?? "Order Update: {$statusName}",
+                        "Your order #{$order->id} is now {$statusName}.",
+                        ['type' => 'order', 'id' => $order->id]
+                    );
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send Order Push ({$statusNameLower}): ".$e->getMessage());
+            }
+        }
+        return back()->with('success', 'Order status updated successfully.');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Update Payment Status */
+    /* ------------------------------------------------------------------ */
+
+    public function updatePaymentStatus(Request $request, Order $order)
+    {
+        $validated = $request->strictValidate([
+            'payment_status' => 'required|string|in:pending,paid,failed',
+            'payment_received_via' => 'nullable|string|max:255',
+            'payment_received_by' => 'nullable|string|max:255',
+        ]);
+
+        $updateData = [
+            'payment_status' => $validated['payment_status'],
+            'payment_received_via' => $validated['payment_received_via'],
+            'payment_received_by' => $validated['payment_received_by'],
+        ];
+
+        // If marked as paid, we might want to update amount_paid and balance_due
+        if ($validated['payment_status'] === 'paid' && $order->payment_status !== 'paid') {
+            $updateData['amount_paid'] = $order->total_amount;
+            $updateData['balance_due'] = 0;
+        } elseif ($validated['payment_status'] !== 'paid') {
+            // Reset if marked back to pending or failed (optional logic)
+            $updateData['amount_paid'] = 0;
+            $updateData['balance_due'] = $order->total_amount;
         }
 
-        // Fire cancelled SMS and WhatsApp
-        if ($validated['status'] === 'cancelled' && $previousStatus !== 'cancelled') {
-            app(TwilioSmsService::class)->sendEventSms('cancelled', $order);
-            app(WhatsAppService::class)->sendEventWhatsApp('cancelled', $order);
-        }
+        $order->update($updateData);
 
-        return back()->with('success', 'Order updated successfully.');
+        return back()->with('success', 'Payment status updated successfully.');
     }
 
     /* ------------------------------------------------------------------ */
@@ -145,10 +270,10 @@ class OrderController extends Controller
 
     public function updateTracking(Request $request, Order $order)
     {
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'courier_partner' => 'nullable|string|max:255',
             'tracking_number' => 'nullable|string|max:255',
-            'tracking_url' => 'nullable|url|max:2048',
+            'tracking_url' => 'nullable|string|url|max:2048',
         ]);
 
         $order->update($validated);

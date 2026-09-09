@@ -9,6 +9,8 @@
         <div class="bg-gray-200 p-1 rounded-lg flex space-x-1">
             <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="colors">Colors</button>
             <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="sizes">Sizes</button>
+            <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="fit">Fit</button>
+            <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="fabric">Fabric</button>
             <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="hsn">HSN Types</button>
             <button class="tab-button px-4 py-1.5 text-xs font-bold rounded-md" data-tab="size-chart">Size Charts</button>
         </div>
@@ -95,6 +97,7 @@
                         <input type="text" name="code" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-black focus:border-black" placeholder="XL">
                     </div>
                     <button type="submit" id="btn-save-sizes" class="w-full bg-black text-white py-2 rounded-lg text-sm font-bold">Save Size</button>
+                    <button type="button" id="btn-cancel-sizes" onclick="cancelEditSize()" class="hidden w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-bold mt-2">Cancel</button>
                 </form>
             </div>
         </div>
@@ -121,9 +124,116 @@
                                 <td class="px-6 py-3 font-bold">{{ $size->name }}</td>
                                 <td class="px-6 py-3 text-gray-500 font-mono">{{ $size->code }}</td>
                                 <td class="px-6 py-3 text-right">
+                                    <button type="button" onclick="editSize('{{ route('admin.attributes.sizes.update', $size->id) }}', '{{ addslashes($size->name) }}', '{{ addslashes($size->code) }}')" class="text-blue-600 hover:underline mr-3 text-xs font-bold">Edit</button>
                                     <form action="{{ route('admin.attributes.sizes.destroy', $size) }}" method="POST" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-red-500 hover:underline text-xs font-bold" onclick="return confirm('Delete size?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fits Section -->
+    <div id="tab-fit" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="font-bold mb-4" id="fit-form-title">Add New Fit</h3>
+                <form id="form-fits" action="{{ route('admin.attributes.fits.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                            Fit Name 
+                        </label>
+                        <input type="text" name="name" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-black focus:border-black">
+                    </div>
+                    <button type="submit" id="btn-save-fits" class="w-full bg-black text-white py-2 rounded-lg text-sm font-bold">Save Fit</button>
+                    <button type="button" id="btn-cancel-fits" onclick="cancelEditFit()" class="hidden w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-bold mt-2">Cancel</button>
+                </form>
+            </div>
+        </div>
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-700">Fits</h3>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="openImportModal('fits')" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 shadow-sm">Import</button>
+                        <a href="{{ route('admin.attributes.export', 'fits') }}" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 shadow-sm">Export</a>
+                    </div>
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-100 font-bold text-gray-500">
+                        <tr>
+                            <th class="px-6 py-3">Fit Name</th>
+                            <th class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($fits as $fit)
+                            <tr>
+                                <td class="px-6 py-3 font-bold">{{ $fit->name }}</td>
+                                <td class="px-6 py-3 text-right">
+                                    <button type="button" onclick="editFit('{{ route('admin.attributes.fits.update', $fit->id) }}', '{{ addslashes($fit->name) }}')" class="text-blue-600 hover:underline mr-3 text-xs font-bold">Edit</button>
+                                    <form action="{{ route('admin.attributes.fits.destroy', $fit) }}" method="POST" class="inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:underline text-xs font-bold" onclick="return confirm('Delete fit?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fabrics Section -->
+    <div id="tab-fabric" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="font-bold mb-4" id="fabric-form-title">Add New Fabric</h3>
+                <form id="form-fabrics" action="{{ route('admin.attributes.fabrics.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                            Fabric Name 
+                        </label>
+                        <input type="text" name="name" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-black focus:border-black">
+                    </div>
+                    <button type="submit" id="btn-save-fabrics" class="w-full bg-black text-white py-2 rounded-lg text-sm font-bold">Save Fabric</button>
+                    <button type="button" id="btn-cancel-fabrics" onclick="cancelEditFabric()" class="hidden w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-bold mt-2">Cancel</button>
+                </form>
+            </div>
+        </div>
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-700">Fabrics</h3>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="openImportModal('fabrics')" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 shadow-sm">Import</button>
+                        <a href="{{ route('admin.attributes.export', 'fabrics') }}" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 shadow-sm">Export</a>
+                    </div>
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-100 font-bold text-gray-500">
+                        <tr>
+                            <th class="px-6 py-3">Fabric Name</th>
+                            <th class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($fabrics as $fabric)
+                            <tr>
+                                <td class="px-6 py-3 font-bold">{{ $fabric->name }}</td>
+                                <td class="px-6 py-3 text-right">
+                                    <button type="button" onclick="editFabric('{{ route('admin.attributes.fabrics.update', $fabric->id) }}', '{{ addslashes($fabric->name) }}')" class="text-blue-600 hover:underline mr-3 text-xs font-bold">Edit</button>
+                                    <form action="{{ route('admin.attributes.fabrics.destroy', $fabric) }}" method="POST" class="inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:underline text-xs font-bold" onclick="return confirm('Delete fabric?')">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -139,7 +249,7 @@
         <div class="lg:col-span-1">
             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 class="font-bold mb-4">Add Product Type (HSN)</h3>
-                <form action="{{ route('admin.attributes.types.store') }}" method="POST" class="space-y-4">
+                <form id="form-types" action="{{ route('admin.attributes.types.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Type Name</label>
@@ -149,7 +259,8 @@
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">HSN Code</label>
                         <input type="text" name="hsn_code" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-black focus:border-black">
                     </div>
-                    <button type="submit" class="w-full bg-black text-white py-2 rounded-lg text-sm font-bold">Save Type</button>
+                    <button type="submit" id="btn-save-types" class="w-full bg-black text-white py-2 rounded-lg text-sm font-bold">Save Type</button>
+                    <button type="button" id="btn-cancel-types" onclick="cancelEditType()" class="hidden w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-bold mt-2">Cancel</button>
                 </form>
             </div>
         </div>
@@ -176,6 +287,7 @@
                                 <td class="px-6 py-3 font-bold">{{ $type->name }}</td>
                                 <td class="px-6 py-3 text-gray-500">{{ $type->hsn_code }}</td>
                                 <td class="px-6 py-3 text-right">
+                                    <button type="button" onclick="editType('{{ route('admin.attributes.types.update', $type->id) }}', '{{ addslashes($type->name) }}', '{{ addslashes($type->hsn_code) }}')" class="text-blue-600 hover:underline mr-3 text-xs font-bold">Edit</button>
                                     <form action="{{ route('admin.attributes.types.destroy', $type) }}" method="POST" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-red-500 hover:underline text-xs font-bold" onclick="return confirm('Delete type?')">Delete</button>
@@ -278,7 +390,7 @@
         
         // Persistent tab on load
         let initialTab = window.location.hash.replace('#', '');
-        if (!['colors', 'sizes', 'hsn', 'size-chart'].includes(initialTab)) {
+        if (!['colors', 'sizes', 'fit', 'fabric', 'hsn', 'size-chart'].includes(initialTab)) {
             initialTab = 'colors';
         }
         activateTab(initialTab);
@@ -319,6 +431,90 @@
         form.reset();
         document.getElementById('btn-save-colors').innerText = 'Save Color';
         document.getElementById('btn-cancel-colors').classList.add('hidden');
+    }
+
+    function editSize(url, name, code) {
+        const form = document.getElementById('form-sizes');
+        form.action = url;
+        if (!form.querySelector('input[name="_method"]')) {
+            const m = document.createElement('input'); m.type='hidden'; m.name='_method'; m.value='PUT'; form.appendChild(m);
+        }
+        form.querySelector('input[name="name"]').value = name;
+        form.querySelector('input[name="code"]').value = code;
+        document.getElementById('btn-save-sizes').innerText = 'Update Size';
+        document.getElementById('btn-cancel-sizes').classList.remove('hidden');
+    }
+    function cancelEditSize() {
+        const form = document.getElementById('form-sizes');
+        form.action = "{{ route('admin.attributes.sizes.store') }}";
+        const m = form.querySelector('input[name="_method"]');
+        if (m) m.remove();
+        form.querySelector('input[name="name"]').value = '';
+        form.querySelector('input[name="code"]').value = '';
+        document.getElementById('btn-save-sizes').innerText = 'Save Size';
+        document.getElementById('btn-cancel-sizes').classList.add('hidden');
+    }
+
+    function editFit(url, name) {
+        const form = document.getElementById('form-fits');
+        form.action = url;
+        if (!form.querySelector('input[name="_method"]')) {
+            const m = document.createElement('input'); m.type='hidden'; m.name='_method'; m.value='PUT'; form.appendChild(m);
+        }
+        form.querySelector('input[name="name"]').value = name;
+        document.getElementById('btn-save-fits').innerText = 'Update Fit';
+        document.getElementById('btn-cancel-fits').classList.remove('hidden');
+    }
+    function cancelEditFit() {
+        const form = document.getElementById('form-fits');
+        form.action = "{{ route('admin.attributes.fits.store') }}";
+        const m = form.querySelector('input[name="_method"]');
+        if (m) m.remove();
+        form.querySelector('input[name="name"]').value = '';
+        document.getElementById('btn-save-fits').innerText = 'Save Fit';
+        document.getElementById('btn-cancel-fits').classList.add('hidden');
+    }
+
+    function editFabric(url, name) {
+        const form = document.getElementById('form-fabrics');
+        form.action = url;
+        if (!form.querySelector('input[name="_method"]')) {
+            const m = document.createElement('input'); m.type='hidden'; m.name='_method'; m.value='PUT'; form.appendChild(m);
+        }
+        form.querySelector('input[name="name"]').value = name;
+        document.getElementById('btn-save-fabrics').innerText = 'Update Fabric';
+        document.getElementById('btn-cancel-fabrics').classList.remove('hidden');
+    }
+    function cancelEditFabric() {
+        const form = document.getElementById('form-fabrics');
+        form.action = "{{ route('admin.attributes.fabrics.store') }}";
+        const m = form.querySelector('input[name="_method"]');
+        if (m) m.remove();
+        form.querySelector('input[name="name"]').value = '';
+        document.getElementById('btn-save-fabrics').innerText = 'Save Fabric';
+        document.getElementById('btn-cancel-fabrics').classList.add('hidden');
+    }
+
+    function editType(url, name, hsn) {
+        const form = document.getElementById('form-types');
+        form.action = url;
+        if (!form.querySelector('input[name="_method"]')) {
+            const m = document.createElement('input'); m.type='hidden'; m.name='_method'; m.value='PUT'; form.appendChild(m);
+        }
+        form.querySelector('input[name="name"]').value = name;
+        form.querySelector('input[name="hsn_code"]').value = hsn;
+        document.getElementById('btn-save-types').innerText = 'Update Type';
+        document.getElementById('btn-cancel-types').classList.remove('hidden');
+    }
+    function cancelEditType() {
+        const form = document.getElementById('form-types');
+        form.action = "{{ route('admin.attributes.types.store') }}";
+        const m = form.querySelector('input[name="_method"]');
+        if (m) m.remove();
+        form.querySelector('input[name="name"]').value = '';
+        form.querySelector('input[name="hsn_code"]').value = '';
+        document.getElementById('btn-save-types').innerText = 'Save Type';
+        document.getElementById('btn-cancel-types').classList.add('hidden');
     }
 </script>
 @endpush

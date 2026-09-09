@@ -14,9 +14,24 @@ export default function CmsPage({ page, content, layout }) {
         );
     }
 
+    const getPageSchema = () => {
+        return {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": page.title,
+            "description": page.meta_description || page.title,
+            "dateModified": page.updated_at
+        };
+    };
+
     return (
         <main className="min-h-screen bg-gray-50">
-            <Head title={page.title || 'Page'} />
+            <Head>
+                <title>{page.title || 'Page'}</title>
+                <script type="application/ld+json" head-key="jsonld">
+                    {JSON.stringify(getPageSchema())}
+                </script>
+            </Head>
             <PageRenderer content={content} layout={layout} settings={settings} />
         </main>
     );

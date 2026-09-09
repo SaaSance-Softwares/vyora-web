@@ -35,19 +35,7 @@
                     {{-- Controls --}}
                     <div class="space-y-6">
 
-                        {{-- Label --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Card Label</label>
-                            <div class="group relative rounded-xl shadow-sm ring-1 ring-inset ring-gray-200 focus-within:ring-2 focus-within:ring-inset focus-within:ring-violet-500 transition-all bg-white overflow-hidden">
-                                <input type="text" name="mega_deal_label"
-                                    id="mega_deal_label"
-                                    value="{{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_label')->first()->value ?? 'Mega Deal' }}"
-                                    class="block w-full border-0 py-2.5 px-4 text-gray-900 focus:ring-0 sm:text-sm bg-transparent"
-                                    placeholder="e.g. Mega Deal, Hot Offer, Flash Sale"
-                                    oninput="updatePreview()">
-                            </div>
-                            <p class="mt-1.5 text-xs text-gray-400">The title text shown on the card next to the icon.</p>
-                        </div>
+
 
                         {{-- Icon --}}
                         <div>
@@ -150,36 +138,37 @@
                                 class="relative overflow-hidden rounded-xl px-4 py-3 w-full shadow-lg"
                                 style="background: linear-gradient(to right, {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_bg_from')->first()->value ?? '#4f46e5' }}, {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_bg_to')->first()->value ?? '#7c3aed' }});">
                                 
-                                {{-- Badge in Preview --}}
-                                <div id="preview-badge-container"
-                                    class="absolute top-0 right-0 px-2 py-0.5 rounded-bl-lg bg-black/10 backdrop-blur-md border-l border-b border-white/10 {{ ($badgeValue = ($settings->get('mega_deal', collect())->where('key', 'mega_deal_badge')->first()->value ?? 'Limited')) ? '' : 'hidden' }}">
-                                    <span id="preview-badge-text" style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}"
-                                        class="text-[8px] font-black uppercase tracking-tighter opacity-80">{{ $badgeValue }}</span>
-                                </div>
                                 <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <span id="preview-icon" class="text-base">{{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_icon')->first()->value ?? '⚡' }}</span>
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span id="preview-icon" class="text-xl leading-none">
+                                            @if($iconValue = $settings->get('mega_deal', collect())->where('key', 'mega_deal_icon')->first()->value)
+                                                @if(str_starts_with($iconValue, 'http'))
+                                                    <img src="{{ $iconValue }}" class="h-6 w-auto object-contain" />
+                                                @else
+                                                    {{ $iconValue }}
+                                                @endif
+                                            @else
+                                                ⚡
+                                            @endif
+                                        </span>
                                         <div>
-                                            <div class="flex items-baseline gap-1.5 flex-wrap">
-                                                <span id="preview-label"
-                                                    style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}; opacity: 0.7;"
-                                                    class="text-[10px] font-black uppercase tracking-[0.15em]">{{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_label')->first()->value ?? 'Mega Deal' }}</span>
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span id="preview-badge-text"
+                                                    style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}"
+                                                    class="text-lg font-bold">{{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_badge')->first()->value ?? 'Get at' }}</span>
                                                 <span id="preview-text" style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}"
-                                                    class="text-sm font-black">Get at ₹719</span>
+                                                    class="text-lg font-extrabold">₹1,229</span>
                                             </div>
-                                            <p id="preview-subtext"
-                                                style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_subtext_color')->first()->value ?? '#c7d2fe' }}"
-                                                class="text-[10px] font-semibold">10% off (₹80 saved) · ✨ Pre-Applied</p>
                                         </div>
                                     </div>
-                                    <div class="shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border"
-                                        style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2);">
-                                        <span id="preview-code" style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}"
-                                            class="text-[11px] font-black tracking-widest font-mono uppercase">SAVE10</span>
-                                        <span id="preview-badge-inline"
-                                            style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_subtext_color')->first()->value ?? '#c7d2fe' }}"
-                                            class="text-[9px]">⎘</span>
+                                    <div class="shrink-0">
+                                        <span class="inline-block px-3 py-1.5 rounded-lg text-white text-xs font-bold whitespace-nowrap bg-[#2ecc71] shadow-sm">
+                                            Extra ₹283 Off
+                                        </span>
                                     </div>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <span id="preview-subtext" style="color: {{ $settings->get('mega_deal', collect())->where('key', 'mega_deal_text_color')->first()->value ?? '#ffffff' }}; opacity: 0.8;" class="text-xs font-medium">With Pre-Applyed Coupon</span>
                                 </div>
                             </div>
                         </div>
@@ -205,46 +194,34 @@
     function updatePreview() {
         try {
             // Get values
-            const label = document.getElementById('mega_deal_label')?.value || 'Mega Deal';
             const icon = document.getElementById('mega_deal_icon')?.value || '⚡';
-            const badgeTextValue = document.getElementById('mega_deal_badge')?.value || '';
+            const badgeTextValue = document.getElementById('mega_deal_badge')?.value || 'Get at';
             const bgFrom = document.getElementById('mega_deal_bg_from_color')?.value || '#4f46e5';
             const bgTo = document.getElementById('mega_deal_bg_to_color')?.value || '#7c3aed';
             const textColor = document.getElementById('mega_deal_text_color_color')?.value || '#ffffff';
-            const subtextColor = document.getElementById('mega_deal_subtext_color_color')?.value || '#c7d2fe';
 
             // Get elements
             const preview = document.getElementById('mega-deal-preview');
             const previewIcon = document.getElementById('preview-icon');
-            const previewLabel = document.getElementById('preview-label');
             const previewText = document.getElementById('preview-text');
-            const previewSubtext = document.getElementById('preview-subtext');
-            const previewCode = document.getElementById('preview-code');
-            const previewBadgeInline = document.getElementById('preview-badge-inline');
-            const previewBadgeContainer = document.getElementById('preview-badge-container');
             const previewBadgeText = document.getElementById('preview-badge-text');
+            const previewSubtext = document.getElementById('preview-subtext');
 
             // Update styles & content
             if (preview) preview.style.background = `linear-gradient(to right, ${bgFrom}, ${bgTo})`;
-            if (previewIcon) previewIcon.innerText = icon;
-            if (previewLabel) {
-                previewLabel.innerText = label;
-                previewLabel.style.color = textColor;
-            }
-            if (previewText) previewText.style.color = textColor;
-            if (previewCode) previewCode.style.color = textColor;
-            if (previewSubtext) previewSubtext.style.color = subtextColor;
-            if (previewBadgeInline) previewBadgeInline.style.color = subtextColor;
-            
-            if (previewBadgeContainer && previewBadgeText) {
-                if (badgeTextValue) {
-                    previewBadgeContainer.classList.remove('hidden');
-                    previewBadgeText.innerText = badgeTextValue;
-                    previewBadgeText.style.color = textColor;
+            if (previewIcon) {
+                if (icon.startsWith('http')) {
+                    previewIcon.innerHTML = `<img src="${icon}" class="h-6 w-auto object-contain" />`;
                 } else {
-                    previewBadgeContainer.classList.add('hidden');
+                    previewIcon.innerText = icon;
                 }
             }
+            if (previewText) previewText.style.color = textColor;
+            if (previewBadgeText) {
+                previewBadgeText.innerText = badgeTextValue;
+                previewBadgeText.style.color = textColor;
+            }
+            if (previewSubtext) previewSubtext.style.color = textColor;
         } catch (err) {
             console.error("Preview Update Error:", err);
         }

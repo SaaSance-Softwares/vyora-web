@@ -87,6 +87,8 @@
                                     </form>
                                 </td>
                                 <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                    <a href="{{ route('admin.online-store.gift-cards.edit', $template->id) }}"
+                                        class="text-xs font-bold text-gray-600 hover:underline">Edit</a>
                                     <a href="{{ route('admin.online-store.gift-cards.show', $template->id) }}"
                                         class="text-xs font-bold text-blue-600 hover:underline">View</a>
                                     @if($template->issued_cards_count === 0)

@@ -16,7 +16,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::where('is_active', true)
-            ->with(['skus', 'images', 'categories.parent.parent', 'categoryMasterImages']);
+            ->with(['skus.color', 'images', 'categories.parent.parent', 'categoryMasterImages']);
 
         // Slugs filter
         if ($request->has('slugs')) {
@@ -109,24 +109,18 @@ class ProductController extends Controller
 
         // Fit & Fabric (Custom Attributes)
         if ($request->filled('fit') || $request->filled('fabric')) {
-            // Assuming attributes relation exists on Product or via SKUs
-            // For now we'll write a generic hook. If it's via skus -> attributeValues
-            $query->whereHas('skus.attributeValues', function ($q) use ($request) {
-                if ($request->filled('fit')) {
-                    $fits = explode(',', $request->fit);
-                    $q->whereHas('attribute', function ($aq) {
-                        $aq->where('name', 'like', '%Fit%');
-                    })->whereIn('value', $fits);
-                }
-            });
-            $query->whereHas('skus.attributeValues', function ($q) use ($request) {
-                if ($request->filled('fabric')) {
-                    $fabrics = explode(',', $request->fabric);
-                    $q->whereHas('attribute', function ($aq) {
-                        $aq->where('name', 'like', '%Fabric%');
-                    })->whereIn('value', $fabrics);
-                }
-            });
+            if ($request->filled('fit')) {
+                $fits = explode(',', $request->fit);
+                $query->whereHas('fit', function ($q) use ($fits) {
+                    $q->whereIn('name', $fits);
+                });
+            }
+            if ($request->filled('fabric')) {
+                $fabrics = explode(',', $request->fabric);
+                $query->whereHas('fabric', function ($q) use ($fabrics) {
+                    $q->whereIn('name', $fabrics);
+                });
+            }
         }
 
         // Sorting
@@ -174,9 +168,17 @@ class ProductController extends Controller
         $limit = $request->input('limit', 20);
         $products = $query->paginate($limit);
 
-        return ProductListResource::collection($products);
+        return ProductListResource::collection($products)->additional([
+            'filters' => [
+                'fits' => \App\Models\Fit::whereHas('products', function($q) {
+                    $q->where('is_active', true);
+                })->pluck('name'),
+                'fabrics' => \App\Models\Fabric::whereHas('products', function($q) {
+                    $q->where('is_active', true);
+                })->pluck('name'),
+            ]
+        ]);
     }
-
     public function show(Request $request, $slug)
     {
         $product = Product::where('slug', $slug)

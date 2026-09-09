@@ -2,12 +2,13 @@ import { ProductDetail, Variant } from "@/types";
 import { formatPrice, cn } from "@/lib/utils";
 import { useState, useMemo, useEffect } from "react";
 
-import { trackViewContent, trackAddToCart } from "@/lib/tracking";
+import { trackViewContent, trackAddToCart, trackAddToWishlist } from "@/lib/tracking";
+import axios from "axios";
 import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
 import { useUIStore } from "@/store/ui";
 import { usePage, router, useForm } from '@inertiajs/react';
-import { Star, Heart, ShoppingBag, Truck, ShieldCheck, ChevronDown, ChevronUp, X, Ruler, Zap, Camera } from "lucide-react";
+import { Star, Heart, ShoppingBag, Truck, ShieldCheck, ChevronDown, ChevronUp, X, Ruler, Zap, Camera, Share2 } from "lucide-react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -39,7 +40,7 @@ function CouponChip({ code, parentTextColor, parentSubtextColor }: { code: strin
 
 
 export default function ProductDetailClient({ product, policies = {}, coupons = [] }: { product: ProductDetail; policies?: Record<string, string>; coupons?: any[] }) {
-    const { openAuthModal } = useUIStore();
+    const { openAuthModal, openQuickView } = useUIStore();
     const { auth, settings } = usePage<any>().props;
     
     // Mega Deal Settings
@@ -47,8 +48,9 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     const megaDealBgTo = settings?.mega_deal_bg_to || '#2c2c2c';
     const megaDealTextColor = settings?.mega_deal_text_color || '#ffffff';
     const megaDealSubtextColor = settings?.mega_deal_subtext_color || '#9ca3af';
-    const megaDealBadge = settings?.mega_deal_badge || 'Dope Deal';
-    const megaDealLabel = settings?.mega_deal_label || 'Get at';
+    const megaDealIcon = settings?.mega_deal_icon || '⚡';
+    const megaDealBadge = settings?.mega_deal_badge || 'Get at';
+    
     const wishlist = useWishlistStore();
     const wishlisted = wishlist.isInWishlist(product.id);
 
@@ -163,20 +165,30 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     const [pincode, setPincode] = useState(auth?.user?.default_pincode || '');
     const [pincodeResult, setPincodeResult] = useState<{available: boolean, message: string} | null>(null);
     const [isCheckingPincode, setIsCheckingPincode] = useState(false);
+    const [actionsInView, setActionsInView] = useState(true);
+
+    useEffect(() => {
+        const target = document.getElementById('actions-container');
+        if (!target) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setActionsInView(entry.isIntersecting);
+            },
+            { root: null, threshold: 0 }
+        );
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, []);
 
     const checkPincode = async (code: string) => {
         if (!code || code.trim().length < 3) return;
         setIsCheckingPincode(true);
         try {
-            const res = await fetch('/api/check-delivery', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ pincode: code.trim() })
-            });
-            const data = await res.json();
-            setPincodeResult(data);
-        } catch (e) {
-            setPincodeResult({ available: false, message: 'Could not verify PIN code.' });
+            const res = await axios.post('/api/check-delivery', { pincode: code.trim() });
+            setPincodeResult(res.data);
+        } catch (e: any) {
+            const msg = e.response?.data?.message || 'Could not verify PIN code.';
+            setPincodeResult({ available: false, message: msg });
         } finally {
             setIsCheckingPincode(false);
         }
@@ -238,8 +250,31 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
 
     const cart = useCartStore();
 
+    const handleShare = async () => {
+        const shareData = {
+            title: product.name,
+            text: `Check out ${product.name} on ${settings?.store_name || 'VYORA'}!`,
+            url: window.location.href,
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.error('Error sharing:', err);
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Product link copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy link:', err);
+            }
+        }
+    };
+
     function addToCart() {
-        if (!currentVariant) return alert('Please select a size first.');
+        if (!currentVariant) return openQuickView(product, 'cart');
         const colorObj = colors.find(c => c.value === selectedColor);
         const colorImg = colorObj ? product.images?.find((img: any) => img.color_id?.toString() === colorObj.id?.toString()) : null;
         
@@ -258,6 +293,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             colorHex: colorObj?.meta || undefined,
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
+            deliveryDate: product.delivery_timeline?.formatted_date || undefined,
         });
         trackAddToCart(product, 1);
     }
@@ -292,12 +328,14 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                 image: colorObj?.image || cleanMasterImage || '',
                 brand: product.brand,
                 category: product.category?.name || '',
+                deliveryDate: product.delivery_timeline?.formatted_date || undefined,
             });
+            trackAddToWishlist(product);
         }
     }
 
     function buyNow() {
-        if (!currentVariant) return alert('Please select a size first.');
+        if (!currentVariant) return openQuickView(product, 'buy');
         const colorObj = colors.find(c => c.value === selectedColor);
         const colorImg = colorObj ? product.images?.find((img: any) => img.color_id?.toString() === colorObj.id?.toString()) : null;
 
@@ -316,6 +354,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             colorHex: colorObj?.meta || undefined,
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
+            deliveryDate: product.delivery_timeline?.formatted_date || undefined,
         });
         trackAddToCart(product, 1);
         router.visit('/checkout');
@@ -323,7 +362,31 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
 
     return (
         <>
-            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 grid grid-cols-1 md:grid-cols-12 gap-y-10 md:gap-x-8 lg:gap-x-12">
+            {/* Floating Mobile Action Bar */}
+            <div 
+                className={cn(
+                    "fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-gray-200 p-3 sm:hidden transition-transform duration-300 ease-in-out",
+                    actionsInView ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+                )}
+            >
+                <div className="flex gap-2">
+                    <button
+                        onClick={buyNow}
+                        className="flex-1 bg-black text-white py-3 px-2 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-gray-900 transition-colors shadow-lg shadow-black/20 active:scale-95"
+                    >
+                        Buy Now
+                    </button>
+                    <button
+                        onClick={addToCart}
+                        disabled={currentVariant && currentVariant.stock <= 0}
+                        className="flex-1 bg-white border-2 border-black text-black py-3 px-2 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-gray-50 transition-colors active:scale-95 disabled:opacity-50"
+                    >
+                        {currentVariant && currentVariant.stock <= 0 ? "Out of Stock" : "Add to Cart"}
+                    </button>
+                </div>
+            </div>
+
+            <div className="w-full px-0 sm:px-6 lg:px-8 xl:px-12 grid grid-cols-1 md:grid-cols-12 gap-y-4 md:gap-y-10 md:gap-x-8 lg:gap-x-12">
                 {/* LEFT COLUMN: Media Gallery */}
                 <div className="md:col-span-7">
                     {/* Desktop Masonry Grid (Hidden on Mobile) */}
@@ -346,9 +409,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                     <img
                                         src={img.url}
                                         alt={`${product.name} view ${idx + 1}`}
-                                        fill
-                                        className={cn(idx === 0 && !selectedColor ? "object-contain" : "object-cover", "object-center")}
-                                        priority={idx < 2}
+                                        className={cn(idx === 0 && !selectedColor ? "object-contain bg-gray-100/50" : "object-cover", "object-center w-full h-full absolute inset-0")}
                                     />
                                 )}
                             </div>
@@ -367,9 +428,9 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             {displayedImages.map((img, idx) => (
                                 <SwiperSlide key={img.id || idx} className="relative w-full h-full bg-gray-50">
                                     {img.url.match(/\.(mp4|webm|mov|qt)$/i) ? (
-                                        <video src={img.url} className="w-full h-full object-cover object-center absolute inset-0" autoPlay loop muted playsInline />
+                                        <video src={img.url} className="w-full h-full object-contain bg-gray-100/50 object-center absolute inset-0" autoPlay loop muted playsInline />
                                     ) : (
-                                        <img src={img.url} alt={`${product.name} view ${idx + 1}`} fill className="object-cover object-center" priority={idx === 0} />
+                                        <img src={img.url} alt={`${product.name} view ${idx + 1}`} className="w-full h-full absolute inset-0 object-contain bg-gray-100/50 object-center" />
                                     )}
                                 </SwiperSlide>
                             ))}
@@ -378,14 +439,21 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                 </div>
 
                 {/* RIGHT COLUMN: Product Details (Sticky scrolling on Desktop) */}
-                <div className="md:col-span-5 relative px-0 md:px-4 lg:px-8 xl:pr-16 pt-8 md:pt-12">
-                    <div className="md:sticky md:top-24 space-y-8 pb-12">
+                <div className="md:col-span-5 relative px-4 md:px-0 lg:px-4 xl:pr-16 pt-0 md:pt-12">
+                    <div className="md:sticky md:top-24 flex flex-col gap-y-6 md:gap-y-8 pb-12">
                         {/* 1-3. Metadata Header */}
-                        <div>
-                            {product.brand && (
-                                <h2 className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">{product.brand}</h2>
-                            )}
-                            <h1 className="text-2xl sm:text-3xl font-heading font-medium text-gray-900 mb-3 leading-tight">{product.name}</h1>
+                        <div className="order-1 md:order-1 -mt-1 md:-mt-2">
+                            <div className="flex justify-between items-start gap-4">
+                                <div>
+                                    {product.brand && (
+                                        <h2 className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">{product.brand}</h2>
+                                    )}
+                                    <h1 className="text-2xl sm:text-3xl font-heading font-medium text-gray-900 mb-3 leading-tight">{product.name}</h1>
+                                </div>
+                                <button onClick={handleShare} className="p-2 sm:p-2.5 mt-1 sm:mt-0 shrink-0 border border-gray-200 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors" title="Share this product">
+                                    <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+                                </button>
+                            </div>
                             {(product as any).reviews_summary && (product as any).reviews_summary.total_reviews > 0 && (
                                 <div className="flex items-center gap-2">
                                     <div className="flex text-black">
@@ -401,15 +469,46 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                     </span>
                                 </div>
                             )}
-                            {product.short_description && (
-                                <div className="mt-3 text-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: product.short_description }} />
-                            )}
                         </div>
 
-                        <hr className="border-gray-200" />
+                        {/* 6. Delivery Timeline */}
+                        {product.delivery_timeline && (
+                            <div className="order-6 md:order-7 flex items-start gap-2 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
+                                <Truck className="w-5 h-5 text-gray-700 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm text-gray-900 font-medium">
+                                        Delivered by <span className="font-bold">{product.delivery_timeline.formatted_date}</span>
+                                    </p>
+                                    {product.delivery_timeline.show_to_user && (
+                                        <p className="text-[11px] text-gray-500 mt-0.5">{product.delivery_timeline.show_to_user}</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 7. Fit & Fabric */}
+                        {(product.fit || product.fabric) && (
+                            <div className="order-7 md:order-2 flex flex-wrap gap-2 -mt-2 md:-mt-5">
+                                {product.fit && (
+                                    <div className="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1 text-[11px] font-bold text-gray-700 ring-1 ring-inset ring-gray-200 uppercase tracking-widest">
+                                        Fit: {product.fit}
+                                    </div>
+                                )}
+                                {product.fabric && (
+                                    <div className="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1 text-[11px] font-bold text-gray-700 ring-1 ring-inset ring-gray-200 uppercase tracking-widest">
+                                        Fabric: {product.fabric}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 8. Short Description */}
+                        {product.short_description && (
+                            <div className="order-9 md:order-9 text-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: product.short_description }} />
+                        )}
 
                         {/* 4-5. Pricing Grid */}
-                        <div>
+                        <div className="order-2 md:order-3 pt-2 md:pt-0 border-t border-gray-200 md:border-none">
                             <div className="flex items-end gap-3">
                                 <span className="text-3xl font-heading font-extrabold text-gray-900 leading-none">
                                     {formatPrice(currentVariant ? currentVariant.price : product.price)}
@@ -427,18 +526,29 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             </div>
                             <p className="text-xs text-gray-500 mt-3 font-semibold tracking-wide uppercase">Inclusive of all taxes and shipping</p>
                             
-                            {/* Inline Coupon Badge for Product Detail */}
-                            {product.coupon_price && (
-                                <div className="inline-block mt-3 text-xs text-gray-500 font-medium bg-green-50/50 px-3 py-2 rounded-lg border border-green-100/50">
-                                    Best Price <span className="text-green-700 font-bold">{formatPrice(product.coupon_price)}</span> with coupon
-                                </div>
-                            )}
+                            <div className="flex flex-wrap items-center gap-3 mt-3">
+                                {product.delivery_timeline && (
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-gray-50 border border-gray-100">
+                                        <Truck className="w-3.5 h-3.5 text-gray-600" />
+                                        <span className="text-[11px] font-bold text-gray-800 tracking-wide uppercase">
+                                            Delivered by {product.delivery_timeline.formatted_date}
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                {/* Inline Coupon Badge for Product Detail */}
+                                {product.coupon_price && (
+                                    <div className="inline-block text-[11px] text-gray-500 font-medium bg-green-50/50 px-2.5 py-1.5 rounded-md border border-green-100/50">
+                                        Best Price <span className="text-green-700 font-bold">{formatPrice(product.coupon_price)}</span> with coupon
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* MEGA DEAL CARD */}
                         {coupons.length > 0 && (
                             <div 
-                                className="rounded-2xl p-4 flex flex-col gap-4 shadow-xl border border-gray-700/50"
+                                className="order-3 md:order-4 rounded-2xl p-4 flex flex-col gap-4 shadow-xl border border-gray-700/50"
                                 style={{ background: `linear-gradient(to right, ${megaDealBgFrom}, ${megaDealBgTo})` }}
                             >
                                 {[...coupons].sort((a, b) => {
@@ -478,47 +588,53 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                     }
 
                                     return (
-                                        <div key={coupon.id} className="flex items-center justify-between group">
-                                            <div className="flex items-start gap-3">
-                                                <Zap className="w-5 h-5 text-yellow-500 fill-yellow-500 shrink-0 mt-0.5" />
-                                                <div>
-                                                    <div className="flex items-baseline gap-2">
+                                        <div key={coupon.id} className="flex flex-col gap-3 group">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <span className="text-xl leading-none shrink-0 flex items-center justify-center">
+                                                        {megaDealIcon.startsWith('http') ? (
+                                                            <img src={megaDealIcon} alt="deal" className="h-6 w-auto object-contain" />
+                                                        ) : (
+                                                            megaDealIcon
+                                                        )}
+                                                    </span>
+                                                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0 relative group-hover:scale-105 transition-transform duration-300">
                                                         <span 
-                                                            className="text-[10px] font-black uppercase tracking-widest"
-                                                            style={{ color: megaDealSubtextColor }}
+                                                            className="text-lg font-bold"
+                                                            style={{ color: megaDealTextColor }}
                                                         >
                                                             {megaDealBadge}
                                                         </span>
                                                         {discountedPrice !== null && (
                                                             <span 
-                                                                className="text-base font-bold"
+                                                                className="text-[22px] font-black tracking-tight truncate relative"
                                                                 style={{ color: megaDealTextColor }}
                                                             >
-                                                                {megaDealLabel} {formatPrice(discountedPrice)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        <span className="text-xs font-semibold text-indigo-300">
-                                                            {savingsLabel}
-                                                        </span>
-                                                        {coupon.is_default_magic && (
-                                                            <span className="text-[10px] text-gray-300 flex items-center gap-1 before:content-['·'] before:mr-1">
-                                                                ✨ Pre-Applied
+                                                                <span className="relative z-10">{formatPrice(discountedPrice)}</span>
+                                                                <svg className="absolute -bottom-1 left-0 w-full h-1.5 text-yellow-400" preserveAspectRatio="none" viewBox="0 0 100 100"><path d="M0,80 Q50,90 100,70" stroke="currentColor" strokeWidth="15" fill="none" strokeLinecap="round"/></svg>
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
+                                                {/* Right: Extra xxx Off Pill */}
+                                                <div className="shrink-0">
+                                                    <span className="inline-block px-3 py-1.5 rounded-lg text-white text-xs font-bold whitespace-nowrap bg-[#2ecc71] shadow-sm">
+                                                        Extra {formatPrice(savingsValue)} Off
+                                                    </span>
+                                                </div>
                                             </div>
-
-                                            {/* Right: code chip */}
-                                            <CouponChip code={coupon.code} parentTextColor="#e5e7eb" parentSubtextColor="#9ca3af" />
+                                            <div className="flex items-center justify-center w-full pt-1">
+                                                <span className="text-xs font-medium tracking-wide uppercase" style={{ color: megaDealTextColor, opacity: 0.8 }}>
+                                                    With Pre-Applied Coupon
+                                                </span>
+                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         )}
 
+                        <div className="order-4 md:order-5 flex flex-col gap-y-6 pt-4 md:pt-0 border-t border-gray-200 md:border-none">
                         {/* 6. Color Selection Swatches */}
                         {colors.length > 0 && (
                             <div>
@@ -541,7 +657,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                 {matchingImg.url.match(/\.(mp4|webm|mov|qt)$/i) ? (
                                                     <video src={matchingImg.url} className="w-full h-full object-cover absolute inset-0" autoPlay loop muted playsInline />
                                                 ) : (
-                                                    <img src={matchingImg.url} alt={color.value} fill className="object-cover" />
+                                                    <img src={matchingImg.url} alt={color.value} className="w-full h-full absolute inset-0 object-cover" />
                                                 )}
                                                 {/* Hover Tooltip Overlay mapped over visually */}
                                                 <span className="absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider opacity-0 group-hover:opacity-100 transition-opacity uppercase z-10 text-center leading-none">
@@ -559,7 +675,9 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             <div className="pt-2">
                                 <div className="flex justify-between items-center mb-3">
                                     <h3 className="text-sm font-semibold text-gray-900">Select Size</h3>
-                                    <button onClick={() => setShowSizeChart(true)} className="text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1"><Ruler className="w-3 h-3" /> Size Chart</button>
+                                    {product.size_chart && (
+                                        <button onClick={() => setShowSizeChart(true)} className="text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1"><Ruler className="w-3 h-3" /> Size Chart</button>
+                                    )}
                                 </div>
                                 <div className="flex flex-wrap gap-2.5">
                                     {sizes.map(size => {
@@ -593,8 +711,10 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             </div>
                         )}
 
+                        </div> {/* End Options Wrapper */}
+
                         {/* 9. Commerce Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-6">
+                        <div className="order-5 md:order-6 flex flex-col sm:flex-row gap-3 -mt-2 md:-mt-4" id="actions-container">
                             <button
                                 onClick={buyNow}
                                 className="flex-1 bg-black text-white py-4 px-2 rounded-xl font-bold uppercase tracking-widest text-sm hover:bg-gray-900 transition-colors shadow-xl shadow-black/20 active:scale-[0.98] outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
@@ -604,10 +724,10 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             <div className="flex gap-3 flex-1">
                                 <button
                                     onClick={addToCart}
-                                    disabled={!currentVariant || currentVariant.stock <= 0}
+                                    disabled={currentVariant && currentVariant.stock <= 0}
                                     className="flex-1 bg-white border-2 border-black text-black py-4 px-2 rounded-xl font-bold uppercase tracking-widest text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed active:scale-[0.98] outline-none"
                                 >
-                                    {currentVariant ? (currentVariant.stock > 0 ? "Add to Cart" : "Out of Stock") : "Add to Cart"}
+                                    {currentVariant && currentVariant.stock <= 0 ? "Out of Stock" : "Add to Cart"}
                                 </button>
                                 <button 
                                     onClick={handleWishlistToggle} 
@@ -619,7 +739,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                         </div>
 
                         {/* 10. Delivery Pincode */}
-                        <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 space-y-3 mt-8">
+                        <div className="order-8 md:order-8 bg-gray-50 p-5 rounded-xl border border-gray-100 space-y-3 mt-4 md:mt-8">
                             <div className="flex items-center gap-2 text-sm font-bold text-gray-900 uppercase tracking-widest">
                                 <Truck className="w-4 h-4" />
                                 <span>Check Delivery Pincode</span>
@@ -642,16 +762,23 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                 </button>
                             </div>
                             {pincodeResult ? (
-                                <p className={`text-[12px] font-bold ${pincodeResult.available ? 'text-green-600' : 'text-red-600'}`}>
-                                    {pincodeResult.message}
-                                </p>
+                                <div className="space-y-1">
+                                    <p className={`text-[12px] font-bold ${pincodeResult.available ? 'text-green-600' : 'text-red-600'}`}>
+                                        {pincodeResult.message}
+                                    </p>
+                                    {pincodeResult.available && product.delivery_timeline && (
+                                        <p className="text-[11.5px] text-gray-700 font-medium">
+                                            Expected Delivery: <span className="font-bold text-black">{product.delivery_timeline.formatted_date}</span>
+                                        </p>
+                                    )}
+                                </div>
                             ) : (
                                 <p className="text-[11px] text-gray-500 font-medium">Please enter PIN code to check delivery time & availability.</p>
                             )}
                         </div>
 
                         {/* 11-14. Accordions */}
-                        <div className="border-t border-gray-200 mt-10 divide-y divide-gray-100">
+                        <div className="order-10 md:order-10 border-t border-gray-200 mt-4 md:mt-10 divide-y divide-gray-100">
                             {/* Description */}
                             <div className="py-2">
                                 <button onClick={() => setOpenAccordion(openAccordion === 'description' ? null : 'description')} className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none">
@@ -677,25 +804,45 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                 <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", openAccordion === 'shipping' ? "max-h-[1200px] opacity-100 pb-4" : "max-h-0 opacity-0")}>
                                     <div className="text-sm text-gray-600 space-y-4 leading-relaxed">
                                         {/* Shipping charges */}
-                                        <div className="bg-gray-50/60 p-4 rounded-xl border border-gray-100 space-y-2">
-                                            {(policies.cod_charges || policies.prepaid_charges || policies.delivery_timeline) ? (
-                                                <>
-                                                    {policies.cod_charges && <div className="flex items-center gap-3"><Truck className="w-4 h-4 text-black shrink-0" /><span><strong>COD:</strong> {policies.cod_charges}</span></div>}
-                                                    {policies.prepaid_charges && <div className="flex items-center gap-3"><ShoppingBag className="w-4 h-4 text-black shrink-0" /><span><strong>Prepaid:</strong> {policies.prepaid_charges}</span></div>}
-                                                    {policies.delivery_timeline && <div className="flex items-center gap-3"><ShieldCheck className="w-4 h-4 text-black shrink-0" /><span><strong>Delivery:</strong> {policies.delivery_timeline}</span></div>}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="flex gap-3"><Truck className="w-5 h-5 text-black shrink-0" /><p>Free shipping on all prepaid orders across the nation.</p></div>
-                                                    <div className="flex gap-3"><ShoppingBag className="w-5 h-5 text-black shrink-0" /><p>Dispatch within 24–48 business hours.</p></div>
-                                                    <div className="flex gap-3"><ShieldCheck className="w-5 h-5 text-black shrink-0" /><p>Hassle-free returns & exchanges supported.</p></div>
-                                                </>
+                                        <div className="bg-gray-50/60 p-4 rounded-xl border border-gray-100 space-y-3">
+                                            {product.delivery_timeline && (
+                                                <div className="flex gap-3 pb-3 border-b border-gray-200/60">
+                                                    <Truck className="w-5 h-5 mt-0.5 text-black shrink-0" />
+                                                    <div>
+                                                        <p className="text-black font-medium">Delivered by: <span className="font-bold">{product.delivery_timeline.formatted_date}</span></p>
+                                                        {product.delivery_timeline.show_to_user && (
+                                                            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">{product.delivery_timeline.show_to_user}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             )}
+
+                                            <div className="space-y-2">
+                                                {(policies.cod_charges || policies.prepaid_charges) ? (
+                                                    <>
+                                                        {policies.cod_charges && <div className="flex items-center gap-3"><Truck className="w-4 h-4 text-black shrink-0" /><span><strong>COD:</strong> {policies.cod_charges}</span></div>}
+                                                        {policies.prepaid_charges && <div className="flex items-center gap-3"><ShoppingBag className="w-4 h-4 text-black shrink-0" /><span><strong>Prepaid:</strong> {policies.prepaid_charges}</span></div>}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex gap-3"><Truck className="w-5 h-5 text-black shrink-0" /><p>Free shipping on all prepaid orders across the nation.</p></div>
+                                                        <div className="flex gap-3"><ShoppingBag className="w-5 h-5 text-black shrink-0" /><p>Dispatch within 24–48 business hours.</p></div>
+                                                        <div className="flex gap-3"><ShieldCheck className="w-5 h-5 text-black shrink-0" /><p>Hassle-free returns & exchanges supported.</p></div>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                         {/* Returns */}
                                         {policies.return_policy && (
                                             <div>
-                                                <h3 className="text-base font-bold uppercase tracking-widest text-black mb-2">Returns</h3>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-base font-bold uppercase tracking-widest text-black">Returns</h3>
+                                                    {product.is_returnable ? (
+                                                        <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Returnable</span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold bg-red-100 text-red-800 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Non-Returnable (Exchange Only)</span>
+                                                    )}
+                                                </div>
                                                 <div dangerouslySetInnerHTML={{ __html: policies.return_policy }} />
                                             </div>
                                         )}
@@ -735,7 +882,21 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                         : <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />}
                                                 </button>
                                                 <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", openAccordion === `extra-${i}` ? "max-h-[1200px] opacity-100 pb-4" : "max-h-0 opacity-0")}>
-                                                    <div className="text-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: sec.content }} />
+                                                    <div className="text-sm text-gray-600 leading-relaxed">
+                                                        {sec.heading.toUpperCase() === 'DELIVERY TIMELINE' && product.delivery_timeline ? (
+                                                            <div className="flex gap-3">
+                                                                <Truck className="w-5 h-5 mt-0.5 text-black shrink-0" />
+                                                                <div>
+                                                                    <p className="text-black font-medium">Delivered by: <span className="font-bold">{product.delivery_timeline.formatted_date}</span></p>
+                                                                    {product.delivery_timeline.show_to_user && (
+                                                                        <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">{product.delivery_timeline.show_to_user}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div dangerouslySetInnerHTML={{ __html: sec.content }} />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : null
@@ -745,7 +906,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                         </div>
 
                         {/* 17. Security Footer */}
-                        <div className="flex flex-wrap items-center justify-between pt-8 pb-12 border-t border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-widest gap-4">
+                        <div className="order-11 md:order-11 flex flex-wrap items-center justify-between pt-8 pb-12 border-t border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-widest gap-4">
                             <div className="flex items-center gap-1.5 p-2 bg-gray-50 rounded text-black"><ShieldCheck className="w-4 h-4" /> 100% Original</div>
                             <span>SKU: {currentVariant ? currentVariant.code : 'SELECT'}</span>
                             {product.category && <span>Cat: {product.category}</span>}
@@ -855,7 +1016,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             {activeColorImage.url.match(/\.(mp4|webm|mov|qt)$/i) ? (
                                 <video src={activeColorImage.url} className="w-full h-full object-cover absolute inset-0" autoPlay loop muted playsInline />
                             ) : (
-                                <img src={activeColorImage.url} alt={product.name} fill className="object-cover" />
+                                <img src={activeColorImage.url} alt={product.name} className="w-full h-full absolute inset-0 object-cover" />
                             )}
                         </div>
                     )}

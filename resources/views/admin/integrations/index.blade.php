@@ -31,12 +31,18 @@
             </div>
             @endif
 
-            @if($isActive && $isEnabled && in_array($slug, ['razorpay', 'qikink']))
-            <div class="absolute top-4 right-4">
-                <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full {{ $mode === 'live' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
-                    {{ $mode === 'live' ? '● Live' : '● Test' }}
-                </span>
-            </div>
+            @if($isActive && $isEnabled)
+                @if($mode === 'test' && in_array($slug, ['razorpay', 'qikink']))
+                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 bg-yellow-50 rounded-md border border-yellow-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                    <span class="text-[9px] font-black uppercase tracking-widest text-yellow-700">Test Mode</span>
+                </div>
+                @else
+                <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-md border border-green-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="text-[9px] font-black uppercase tracking-widest text-green-700">Live</span>
+                </div>
+                @endif
             @endif
 
             <div class="flex items-center gap-4 mb-4">
@@ -70,6 +76,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
                     </svg>
                 </div>
+                @elseif($slug === 'snapchat-pixel')
+                <div class="w-14 h-14 rounded-xl bg-[#FFFC00] flex items-center justify-center shrink-0">
+                    <img src="https://developers.snap.com/img/logo-full.svg" alt="Snapchat" class="w-7 h-7 object-contain" />
+                </div>
                 @elseif($slug === 'bing-webmaster')
                 <div class="w-14 h-14 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
                     <svg class="w-7 h-7 text-[#008373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +107,7 @@
                 @elseif($slug === 'social-login')
                 <div class="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
                     <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
                     </svg>
                 </div>
                 @elseif($slug === 'twilio')
@@ -117,6 +127,14 @@
                     <svg class="w-7 h-7 text-[#7367F0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                     </svg>
+                </div>
+                @elseif($slug === 'algolia')
+                <div class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0">
+                    <img src="https://media.ffycdn.net/eu/algolia-brand/pGfha1j876LBGBHCHwjj.png?mod=v1/resize=2400" alt="Algolia" class="w-9 h-9 object-contain" />
+                </div>
+                @elseif($slug === 'saasance-push')
+                <div class="w-14 h-14 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
+                    <img src="https://saasance.com/vyora-admin-icon.png" alt="SaaSance Push Relay" class="w-8 h-8 object-contain" />
                 </div>
                 @else
                 <div class="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">

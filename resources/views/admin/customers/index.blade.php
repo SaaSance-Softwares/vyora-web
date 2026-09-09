@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Customer Management')
+@section('title', 'CMS')
+@section('header', 'CMS')
 
 @section('content')
 <div class="space-y-6">
@@ -12,7 +13,15 @@
             <p class="text-sm text-gray-500 mt-0.5">Manage and track your registered customers and their shopping history.</p>
         </div>
         <div class="flex items-center gap-3 text-sm text-gray-500">
-            <span class="bg-gray-100 px-3 py-1.5 rounded-full font-medium">Total: {{ $customers->total() }} customers</span>
+            <span class="px-4 py-2 font-medium text-gray-600 bg-gray-50 rounded-lg border border-gray-200">Total: {{ $customers->total() }}</span>
+            <a href="{{ route('admin.customers.export', ['format' => 'csv']) }}" class="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                Export CSV
+            </a>
+            <a href="{{ route('admin.customers.export', ['format' => 'excel']) }}" class="px-4 py-2 border border-emerald-300 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 text-sm font-medium flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                Export Excel
+            </a>
         </div>
     </div>
 

@@ -3,6 +3,7 @@ import { CheckCircle, Package, ArrowRight, Truck } from "lucide-react";
 import { useEffect, useState } from 'react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
+import { trackPurchase } from '@/lib/tracking';
 
 export default function ThankYouPage({ order }: { order: any }) {
     const { width, height } = useWindowSize();
@@ -13,6 +14,20 @@ export default function ThankYouPage({ order }: { order: any }) {
         const timer = setTimeout(() => setShowConfetti(false), 5000);
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        if (order && order.id) {
+            const firedKey = `purchase_fired_${order.id}`;
+            if (!sessionStorage.getItem(firedKey)) {
+                trackPurchase(
+                    order.order_number || order.uuid,
+                    parseFloat(order.total_amount || "0"),
+                    order.items || []
+                );
+                sessionStorage.setItem(firedKey, 'true');
+            }
+        }
+    }, [order]);
 
     // Helper to format currency
     const formatPrice = (price: number) => {
@@ -130,49 +145,110 @@ export default function ThankYouPage({ order }: { order: any }) {
 
                         {/* Summary Section */}
                         <div className="space-y-4 max-w-sm ml-auto">
-                            <div className="flex justify-between text-sm font-medium text-gray-600">
-                                <span>Subtotal</span>
-                                <span className="text-gray-900">{formatPrice(safeSubtotal)}</span>
-                            </div>
-                            
-                            {discountAmount > 0 && (
-                                <div className="flex justify-between text-sm font-bold text-emerald-600">
-                                    <span>Discount</span>
-                                    <span>-{formatPrice(discountAmount)}</span>
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-6 sm:p-8">
+                            <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Order Summary</h2>
+                            <div className="space-y-2.5 text-sm">
+                                <div className="flex justify-between text-gray-600">
+                                    <span>MRP Total</span>
+                                    <span className="font-medium text-gray-900">
+                                        {formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0))}
+                                    </span>
                                 </div>
-                            )}
+                                
+                                {order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) > safeSubtotal && (
+                                    <div className="flex justify-between text-green-600">
+                                        <span>Discount on MRP</span>
+                                        <span>−{formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal)}</span>
+                                    </div>
+                                )}
 
-                            {shippingAmount > 0 && (
-                                <div className="flex justify-between text-sm font-medium text-gray-600">
+                                <div className="flex justify-between text-gray-600 font-medium">
+                                    <span>Cart Subtotal</span>
+                                    <span>{formatPrice(safeSubtotal)}</span>
+                                </div>
+
+                                {(parseFloat(order.coupon_discount_amount as string || "0") > 0 || parseFloat(order.prepaid_discount_amount as string || "0") > 0 || parseFloat(order.gift_card_discount_amount as string || "0") > 0) ? (
+                                    <>
+                                        {parseFloat(order.coupon_discount_amount as string || "0") > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Coupon Discount {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
+                                                <span>−{formatPrice(parseFloat(order.coupon_discount_amount as string || "0"))}</span>
+                                            </div>
+                                        )}
+                                        {parseFloat(order.prepaid_discount_amount as string || "0") > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Prepaid Discount</span>
+                                                <span>−{formatPrice(parseFloat(order.prepaid_discount_amount as string || "0"))}</span>
+                                            </div>
+                                        )}
+                                        {parseFloat(order.gift_card_discount_amount as string || "0") > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Gift Card Applied</span>
+                                                <span>−{formatPrice(parseFloat(order.gift_card_discount_amount as string || "0"))}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    parseFloat(order.discount_amount as string || "0") > 0 && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Coupon Discount</span>
+                                            <span>−{formatPrice(parseFloat(order.discount_amount as string || "0"))}</span>
+                                        </div>
+                                    )
+                                )}
+
+                                <div className="flex justify-between text-gray-500">
                                     <span>Shipping</span>
-                                    <span className="text-gray-900">{formatPrice(shippingAmount)}</span>
+                                    <span>{parseFloat(order.shipping_amount as string || "0") === 0 ? 'Free' : formatPrice(parseFloat(order.shipping_amount as string || "0"))}</span>
                                 </div>
-                            )}
 
-                            {Object.keys(taxBreakdown).length > 0 ? (
-                                Object.entries(taxBreakdown).map(([rate, amount]: any) => (
-                                    <div key={rate} className="flex justify-between text-sm font-medium text-gray-600">
-                                        <span>Tax @ {rate}% {isTaxIncluded ? '(Included)' : ''}</span>
-                                        <span className="text-gray-900">{formatPrice(amount)}</span>
+                                {Object.keys(taxBreakdown).length > 0 ? (
+                                    Object.entries(taxBreakdown).map(([rate, amount]: any) => (
+                                        <div key={rate} className="flex justify-between text-gray-500 text-xs">
+                                            <span>Tax @ {rate}% {isTaxIncluded ? '(Included)' : '(Excluded)'}</span>
+                                            <span>{formatPrice(amount)}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    taxAmount > 0 && (
+                                        <div className="flex justify-between text-gray-500 text-xs">
+                                            <span>Tax {isTaxIncluded ? '(Included)' : '(Excluded)'}</span>
+                                            <span>{formatPrice(taxAmount)}</span>
+                                        </div>
+                                    )
+                                )}
+
+                                {(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal + parseFloat(order.discount_amount as string || "0")) > 0 && (
+                                    <div className="flex justify-between text-green-600 font-medium pt-1">
+                                        <span>Total Savings</span>
+                                        <span>{formatPrice(order.items.reduce((acc: number, item: any) => acc + (parseFloat(item.sku?.mrp || item.price || "0") * item.quantity), 0) - safeSubtotal + parseFloat(order.discount_amount as string || "0"))}</span>
                                     </div>
-                                ))
-                            ) : (
-                                taxAmount > 0 && (
-                                    <div className="flex justify-between text-sm font-medium text-gray-600">
-                                        <span>Tax {isTaxIncluded ? '(Included)' : ''}</span>
-                                        <span className="text-gray-900">{formatPrice(taxAmount)}</span>
+                                )}
+
+                                <div className="h-px bg-gray-100 my-1" />
+                                <div className="flex justify-between font-bold text-gray-900 text-base">
+                                    <span>Total</span>
+                                    <span>{formatPrice(totalAmount)}</span>
+                                </div>
+
+                                {parseFloat(order.upfront_amount || "0") > 0 && (
+                                    <div className="mt-2 p-3 bg-orange-50 border border-orange-100 rounded-lg space-y-2">
+                                        <div className="flex justify-between text-sm text-orange-800 font-semibold">
+                                            <span>Upfront (Non Refundable)</span>
+                                            <span>{formatPrice(parseFloat(order.upfront_amount))}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-orange-700 font-bold">
+                                            <span>Due on Delivery</span>
+                                            <span>{formatPrice(totalAmount - parseFloat(order.upfront_amount))}</span>
+                                        </div>
                                     </div>
-                                )
-                            )}
-                            
-                            <div className="pt-4 mt-4 border-t border-gray-100 flex justify-between items-center">
-                                <span className="text-base font-bold text-gray-900">Total Paid</span>
-                                <span className="text-xl font-extrabold text-gray-900">{formatPrice(totalAmount)}</span>
+                                )}
                             </div>
                         </div>
                         
                     </div>
                 </div>
+            </div>
 
                 {/* Actions */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

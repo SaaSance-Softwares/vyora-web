@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -45,8 +49,38 @@ class AppServiceProvider extends ServiceProvider
             $view->with('globalUpdateAvailable', version_compare($latestVersion, $currentVersion, '>'));
         });
 
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+            $event->extendSocialite('snapchat', \SocialiteProviders\Snapchat\Provider::class);
+        });
+
         try {
             if (Schema::hasTable('theme_settings')) {
+                $timezone = ThemeSetting::where('group', 'general')->where('key', 'time_zone')->value('value');
+                if ($timezone) {
+                    config(['app.timezone' => $timezone]);
+                    date_default_timezone_set($timezone);
+                }
+
+                $smtpEnabled = ThemeSetting::where('group', 'integration.smtp')->where('key', 'enabled')->value('value');
+                if ($smtpEnabled === '1') {
+                    $smtpSettings = ThemeSetting::where('group', 'integration.smtp')->pluck('value', 'key');
+                    try {
+                        config([
+                            'mail.default' => 'smtp',
+                            'mail.mailers.smtp.host' => Crypt::decryptString($smtpSettings['smtp_host'] ?? ''),
+                            'mail.mailers.smtp.port' => Crypt::decryptString($smtpSettings['smtp_port'] ?? ''),
+                            'mail.mailers.smtp.username' => Crypt::decryptString($smtpSettings['smtp_username'] ?? ''),
+                            'mail.mailers.smtp.password' => Crypt::decryptString($smtpSettings['smtp_password'] ?? ''),
+                            'mail.mailers.smtp.encryption' => Crypt::decryptString($smtpSettings['smtp_encryption'] ?? '') ?: null,
+                            'mail.from.address' => Crypt::decryptString($smtpSettings['smtp_from_address'] ?? ''),
+                            'mail.from.name' => Crypt::decryptString($smtpSettings['smtp_from_name'] ?? ''),
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to decrypt SMTP settings: ' . $e->getMessage());
+                    }
+                }
+
                 $enabled = ThemeSetting::where('group', 'integration.algolia')->where('key', 'enabled')->value('value');
                 if ($enabled === '1') {
                     $appId = ThemeSetting::where('group', 'integration.algolia')->where('key', 'app_id')->value('value');
@@ -77,5 +111,19 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             config(['scout.driver' => 'database']);
         }
+
+        RateLimiter::for('public_api', function (Request $request) {
+            return Limit::perMinutes(
+                config('rate_limiting.public.decay_minutes', 1),
+                config('rate_limiting.public.max_attempts', 60)
+            )->by($request->ip());
+        });
+
+        RateLimiter::for('authenticated_api', function (Request $request) {
+            return Limit::perMinutes(
+                config('rate_limiting.authenticated.decay_minutes', 1),
+                config('rate_limiting.authenticated.max_attempts', 120)
+            )->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

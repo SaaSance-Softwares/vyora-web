@@ -7,7 +7,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-export default function ImageProductCarousel({ data, isFluid, settings }: { data: any; isFluid?: boolean; settings?: any }) {
+export default function ImageProductCarousel({ data, isFluid, settings, sectionTextColor }: { data: any; isFluid?: boolean; settings?: any; sectionTextColor?: string }) {
     const sectionId = useId().replace(/:/g, '');
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -59,19 +59,25 @@ export default function ImageProductCarousel({ data, isFluid, settings }: { data
 
     if (!data.image && products.length === 0) return null;
 
-    const objectFitClass = data.object_fit === 'contain' ? 'object-contain' : 'object-cover';
+    const objectFitClass = data.object_fit === 'contain' ? 'object-contain' : (data.object_fit === 'none' ? 'object-none' : 'object-cover');
 
     return (
         <section className={`px-4 md:px-8${isFluid ? ' w-full' : ' max-w-7xl mx-auto'} overflow-hidden`}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 
                 {/* Column 1: Image */}
-                <div className="w-full h-full min-h-[400px] lg:min-h-[600px] relative rounded-3xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                <div className={`w-full relative rounded-3xl overflow-hidden bg-gray-50 flex items-center justify-center ${
+                    data.object_fit === 'contain' ? 'h-auto lg:h-full lg:min-h-[600px]' : 'h-full min-h-[400px] lg:min-h-[600px]'
+                }`}>
                     {data.image ? (
                         <img 
                             src={data.image} 
                             alt="Featured" 
-                            className={`absolute inset-0 w-full h-full ${objectFitClass}`} 
+                            className={
+                                data.object_fit === 'contain' 
+                                    ? 'w-full h-auto block lg:absolute lg:inset-0 lg:h-full lg:object-contain' 
+                                    : `absolute inset-0 w-full h-full ${objectFitClass}`
+                            } 
                         />
                     ) : (
                         <span className="text-gray-400 font-medium">No Image Provided</span>
@@ -82,12 +88,12 @@ export default function ImageProductCarousel({ data, isFluid, settings }: { data
                 <div className="w-full relative px-2">
                     <div className="flex items-center justify-between mb-8">
                         <h3 
-                            className={`text-2xl font-bold tracking-tight ${data.text_color ? '' : 'text-gray-900'}`}
-                            style={data.text_color ? { color: data.text_color } : undefined}
+                            className={`text-2xl font-bold tracking-tight ${sectionTextColor || data.text_color || settings?.text_color ? '' : 'text-gray-900'}`}
+                            style={sectionTextColor || data.text_color || settings?.text_color ? { color: sectionTextColor || data.text_color || settings?.text_color } : undefined}
                         >
-                            Feature Collection
+                            Featured Style
                         </h3>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mt-2">
                             <button className={`prev-${sectionId} w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-black hover:text-white hover:border-black transition-all`}>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                             </button>
@@ -107,6 +113,7 @@ export default function ImageProductCarousel({ data, isFluid, settings }: { data
                             pagination={{ clickable: true }}
                             spaceBetween={30}
                             slidesPerView={1}
+                            loop={true}
                             className="pb-12"
                         >
                             {products.map((product) => {

@@ -500,7 +500,13 @@
                 </div>
                 <div class="space-y-4">
                     <div class="space-y-2">
-                        <label class="text-sm font-semibold text-gray-700 ml-1">Banner Text
+                    <div class="space-y-2 mb-4">
+                        <label class="text-sm font-semibold text-gray-700 ml-1">Redirect URL (Optional)</label>
+                        <input type="text"
+                            class="banner-link w-full bg-gray-50 border-none rounded px-4 py-3 text-sm font-bold text-gray-900 outline-none"
+                            placeholder="e.g. /collections/summer-sale">
+                    </div>
+                    <label class="text-sm font-semibold text-gray-700 ml-1">Banner Text
                             Overlay</label>
                         <textarea
                             class="banner-text w-full bg-gray-50 border-none rounded px-4 py-3 text-sm font-bold text-gray-900 outline-none h-[120px]"
@@ -514,6 +520,8 @@
                             <option value="center">Center</option>
                             <option value="bottom">Bottom</option>
                             <option value="top">Top</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
                             <option value="below">Below Image</option>
                         </select>
                     </div>
@@ -696,6 +704,19 @@
                                 Upload
                                 <input type="file" class="hidden" accept="image/*" onchange="uploadImage(this)">
                             </label>
+                        </div>
+                    </div>
+                    <div class="space-y-2 mt-4">
+                        <label class="text-sm font-semibold text-gray-700 ml-1">Image Fit</label>
+                        <div class="relative group/select">
+                            <select class="carousel-image-fit w-full h-10 bg-gray-50 border-none rounded px-4 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-violet-500/20 transition-all appearance-none cursor-pointer">
+                                <option value="cover">Fill Container (Cover - May Crop)</option>
+                                <option value="contain">Show Entire Image (Contain - No Cropping)</option>
+                                <option value="none">Original Size (None)</option>
+                            </select>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1717,6 +1738,7 @@
                     lastSection.querySelector('.banner-fit').value = data.object_fit || 'cover';
                     lastSection.querySelector('.banner-text').value = data.text || '';
                     lastSection.querySelector('.banner-text-position').value = data.text_position || 'center';
+                    if(lastSection.querySelector('.banner-link')) lastSection.querySelector('.banner-link').value = data.link_url || '';
                 }
             }
 
@@ -1886,12 +1908,12 @@
                 header.classList.add('cursor-pointer', 'hover:bg-gray-50', 'transition-colors', '-mx-6', 'px-6', '-mt-6', 'pt-6', 'rounded-t-lg');
                 
                 const chevron = document.createElement('div');
-                chevron.className = 'ml-auto text-gray-400 transition-transform duration-300 transform rotate-180';
+                chevron.className = 'ml-auto text-gray-400 transition-transform duration-300 transform'; // Start without rotate-180 (closed)
                 chevron.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
                 header.appendChild(chevron);
 
                 const body = document.createElement('div');
-                body.className = 'section-body transition-all duration-300 pt-2';
+                body.className = 'section-body transition-all duration-300 pt-2 hidden'; // Start hidden
                 
                 let sibling = header.nextElementSibling;
                 while (sibling) {
@@ -1900,6 +1922,10 @@
                     sibling = next;
                 }
                 section.appendChild(body);
+
+                // Initial closed state styles for header
+                header.classList.remove('border-b', 'border-gray-50', 'pb-8', 'mb-6');
+                header.classList.add('pb-6', 'mb-2');
 
                 header.addEventListener('click', (e) => {
                     if(e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
@@ -2239,6 +2265,7 @@
                     data.object_fit = section.querySelector('.banner-fit')?.value || '';
                     data.text = section.querySelector('.banner-text')?.value || '';
                     data.text_position = section.querySelector('.banner-text-position')?.value || '';
+                    data.link_url = section.querySelector('.banner-link')?.value || '';
                 } else if (type === 'horizontal_scroll_cards') {
                     data.title = section.querySelector('.vscroll-title')?.value || '';
                     data.hover_animation = section.querySelector('.hscroll-hover-animation') ? section.querySelector('.hscroll-hover-animation')?.value || '' : 'zoom';

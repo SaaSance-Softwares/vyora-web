@@ -33,6 +33,7 @@ class GiftCardApiController extends Controller
                 'description' => $t->description,
                 'validity_days' => $t->validity_days,
                 'purchased_count' => $t->purchased_count,
+                'background_image' => $t->background_image ? url($t->background_image) : null,
                 'created_at' => $t->created_at,
             ]);
 
@@ -105,8 +106,8 @@ class GiftCardApiController extends Controller
      */
     public function activateAfterPurchase(Request $request)
     {
-        $request->validate([
-            'template_id' => 'required|exists:gift_card_templates,id',
+        $request->strictValidate([
+            'template_id' => 'required|integer|exists:gift_card_templates,id',
             'order_id' => 'nullable|integer',
         ]);
 
@@ -136,7 +137,7 @@ class GiftCardApiController extends Controller
      */
     public function lookupUser(Request $request)
     {
-        $request->validate(['identifier' => 'required|string']);
+        $request->strictValidate(['identifier' => 'required|string|max:255']);
 
         $user = User::where('email', $request->identifier)
             ->orWhere('phone', $request->identifier)
@@ -157,9 +158,9 @@ class GiftCardApiController extends Controller
      */
     public function assignCard(Request $request)
     {
-        $request->validate([
-            'gift_card_id' => 'required|exists:gift_cards,id',
-            'recipient_id' => 'required|exists:users,id',
+        $request->strictValidate([
+            'gift_card_id' => 'required|integer|exists:gift_cards,id',
+            'recipient_id' => 'required|integer|exists:users,id',
         ]);
 
         $card = GiftCard::find($request->gift_card_id);
@@ -183,6 +184,26 @@ class GiftCardApiController extends Controller
      * Resolve a share token – returns card info for the shareable link landing page.
      * No auth required; the token acts as the credential.
      */
+    public function shareEmail(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+        ]);
+
+        $card = GiftCard::where('share_token', $request->token)->first();
+
+        if (! $card) {
+            return response()->json(['success' => false, 'message' => 'Invalid gift card token.'], 404);
+        }
+
+        $shareUrl = url('/gift-cards/share/' . $card->share_token);
+
+        \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\GiftCardShareEmail($card, $shareUrl));
+
+        return response()->json(['success' => true, 'message' => 'Gift card sent via email successfully.']);
+    }
+
     public function resolveShareToken(Request $request, string $token)
     {
         $card = GiftCard::where('share_token', $token)
@@ -214,7 +235,7 @@ class GiftCardApiController extends Controller
      */
     public function validateCode(Request $request)
     {
-        $request->validate(['code' => 'required|string']);
+        $request->strictValidate(['code' => 'required|string|max:255']);
         $plainCode = strtoupper(trim($request->code));
 
         $card = GiftCard::whereIn('status', ['active', 'partially_used'])->get()

@@ -62,6 +62,30 @@
                                     @endforeach
                                 </select>
                             </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fit</label>
+                                <select name="fit_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                    <option value="">No Fit</option>
+                                    @foreach($fits as $fit)
+                                        <option value="{{ $fit->id }}" {{ old('fit_id', $product->fit_id) == $fit->id ? 'selected' : '' }}>
+                                            {{ $fit->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fabric</label>
+                                <select name="fabric_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                    <option value="">No Fabric</option>
+                                    @foreach($fabrics as $fabric)
+                                        <option value="{{ $fabric->id }}" {{ old('fabric_id', $product->fabric_id) == $fabric->id ? 'selected' : '' }}>
+                                            {{ $fabric->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <div>
@@ -88,7 +112,7 @@
 
                 <!-- SEO -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">SEO</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">SEO & AEO</h3>
                     <div class="space-y-4">
                         <div>
                             <div class="flex justify-between items-center mb-1">
@@ -111,6 +135,16 @@
                             <label class="block text-sm font-medium text-gray-700">SEO Keywords</label>
                             <textarea name="seo_keywords" rows="2"
                                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">{{ old('seo_keywords', $product->seo_keywords) }}</textarea>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-gray-700">AEO Use Case <span class="text-gray-400 font-normal">(For AI Generative Engines)</span></label>
+                            </div>
+                            <input type="text" name="use_case" id="use_case"
+                                value="{{ old('use_case', $product->use_case) }}" 
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2"
+                                placeholder="e.g. gym workouts, oversized streetwear">
+                            <p class="text-xs text-gray-500 mt-1">Directly feeds into bots (ChatGPT, Claude) to categorize your product.</p>
                         </div>
                     </div>
                 </div>
@@ -143,6 +177,7 @@
                                 class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded">
                         </div>
 
+                        @if(\App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') == '1')
                         <div class="flex items-center justify-between pt-4 border-t border-gray-100">
                             <div>
                                 <span class="text-gray-700 block font-bold">QikInk Fulfillment</span>
@@ -153,6 +188,7 @@
                                 <span class="slider round"></span>
                             </label>
                         </div>
+                        @endif
                     </div>
 
                     <div class="bg-white rounded-lg shadow p-6">
@@ -167,6 +203,19 @@
                                     @foreach($productTypes as $type)
                                         <option value="{{ $type->id }}" {{ old('product_type_id', $product->product_type_id) == $type->id ? 'selected' : '' }}>
                                             {{ $type->name }} (HSN: {{ $type->hsn_code }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Delivery Timeline</label>
+                                <select name="delivery_timeline_id"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                    <option value="">None</option>
+                                    @foreach($deliveryTimelines as $timeline)
+                                        <option value="{{ $timeline->id }}" {{ old('delivery_timeline_id', $product->delivery_timeline_id ?? ($timeline->is_default ? $timeline->id : null)) == $timeline->id ? 'selected' : '' }}>
+                                            {{ $timeline->min_days }} to {{ $timeline->max_days }} Days
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -367,13 +416,13 @@
                     </div>
                 </div>
 
-                @if($productParentCategories->count() > 0)
+                @if($productCategories->count() > 0)
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mt-6">
                         <h3 class="text-lg font-bold text-gray-900 mb-2">Category Specific Master Images</h3>
-                        <p class="text-xs text-gray-500 mb-6">Optional: Upload a different master image for specific parent categories. If no image is provided, the main master preview image above will be used.</p>
+                        <p class="text-xs text-gray-500 mb-6">Optional: Upload a different master image for specific categories. If no image is provided, the main master preview image above will be used.</p>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            @foreach($productParentCategories as $parentCat)
+                            @foreach($productCategories as $parentCat)
                                 @php
                                     $catImage = $product->categoryMasterImages->where('category_id', $parentCat->id)->first();
                                 @endphp
@@ -448,7 +497,7 @@
                         {{-- Visible Dropzone --}}
                         <div class="mb-8 p-10 border-2 border-dashed border-gray-100 rounded-[2rem] text-center hover:border-black hover:bg-gray-50 transition-all cursor-pointer group relative"
                              data-color-id="{{ $color->id }}"
-                             onclick="this.nextElementSibling.click()"
+                             onclick="this.querySelector('input[type=file]').click()"
                              ondragover="handleDragOver(event)" 
                              ondragleave="handleDragLeave(event)" 
                              ondrop="handleDrop(event)">
@@ -1058,6 +1107,15 @@
                                 parentBox.dispatchEvent(new Event('change')); // Trigger event up the chain
                             }
                         }
+                    } else {
+                        // Uncheck all children if this is unchecked
+                        let myId = this.dataset.id;
+                        document.querySelectorAll(`.cat-checkbox[data-parent-id="${myId}"]`).forEach(childBox => {
+                            if (childBox.checked) {
+                                childBox.checked = false;
+                                childBox.dispatchEvent(new Event('change')); // Trigger down the chain
+                            }
+                        });
                     }
                 });
             });

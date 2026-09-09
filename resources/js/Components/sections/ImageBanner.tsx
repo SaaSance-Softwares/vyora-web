@@ -16,6 +16,8 @@ export default function ImageBanner({ data, sectionSettings }: { data: any, sect
         center: 'absolute inset-0 flex items-center justify-center text-center px-4',
         bottom: 'absolute inset-x-0 bottom-0 p-8 pt-24 text-center bg-gradient-to-t from-black/80 to-transparent',
         top: 'absolute inset-x-0 top-0 p-8 pb-24 text-center bg-gradient-to-b from-black/80 to-transparent',
+        left: 'absolute inset-y-0 left-0 p-8 pr-24 flex items-center justify-start text-left bg-gradient-to-r from-black/80 to-transparent w-full md:w-2/3 lg:w-1/2',
+        right: 'absolute inset-y-0 right-0 p-8 pl-24 flex items-center justify-end text-right bg-gradient-to-l from-black/80 to-transparent w-full md:w-2/3 lg:w-1/2',
         below: 'relative p-8 text-center bg-white'
     };
     
@@ -34,34 +36,64 @@ export default function ImageBanner({ data, sectionSettings }: { data: any, sect
     const isAutoHeight = heightSetting === 'auto';
     const selectedHeight = heightClass[heightSetting] ?? heightClass[defaultHeight];
 
+    const customTextColor = sectionSettings?.text_color ? sectionSettings.text_color : undefined;
+
+    const isExternal = data.link_url && (data.link_url.startsWith('http://') || data.link_url.startsWith('https://'));
+
+    const LinkWrapper = ({ children }: { children: any }) => {
+        if (!data.link_url) return <>{children}</>;
+        
+        if (isExternal) {
+            return (
+                <a href={data.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer group">
+                    {children}
+                </a>
+            );
+        }
+        
+        return (
+            <Link href={data.link_url} className="block w-full h-full cursor-pointer group">
+                {children}
+            </Link>
+        );
+    };
+
     return (
         <section className="w-full relative">
-            <div className={`w-full relative ${selectedHeight}`}>
-                <img 
-                    src={data.image} 
-                    alt="Banner" 
-                    className={`w-full block ${isAutoHeight ? 'h-auto object-cover' : 'h-full ' + selectedFit}`}
-                />
-                
-                {data.text && data.text_position !== 'below' && (
+            <LinkWrapper>
+                <div className={`w-full relative ${selectedHeight}`}>
+                    <img 
+                        src={data.image} 
+                        alt="Banner" 
+                        className={`w-full block ${isAutoHeight ? 'h-auto object-cover' : 'h-full ' + selectedFit}`}
+                    />
+                    
+                    {data.text && data.text_position !== 'below' && (
+                        <div className={selectedPosition}>
+                            <div className="max-w-3xl mx-auto w-full">
+                                <p 
+                                    className="text-3xl md:text-5xl font-bold leading-tight drop-shadow-lg"
+                                    style={{ color: customTextColor || 'white' }}
+                                >
+                                    {data.text}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {data.text && data.text_position === 'below' && (
                     <div className={selectedPosition}>
-                        <div className="max-w-3xl mx-auto">
-                            <p className="text-white text-3xl md:text-5xl font-bold leading-tight drop-shadow-lg">
+                        <div className="max-w-4xl mx-auto">
+                            <p 
+                                className="text-2xl md:text-3xl font-medium leading-relaxed"
+                                style={{ color: customTextColor || '#111827' }}
+                            >
                                 {data.text}
                             </p>
                         </div>
                     </div>
                 )}
-            </div>
-            {data.text && data.text_position === 'below' && (
-                <div className={selectedPosition}>
-                    <div className="max-w-4xl mx-auto">
-                        <p className="text-gray-900 text-2xl md:text-3xl font-medium leading-relaxed">
-                            {data.text}
-                        </p>
-                    </div>
-                </div>
-            )}
+            </LinkWrapper>
         </section>
     );
 }

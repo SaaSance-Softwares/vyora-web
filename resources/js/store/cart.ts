@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import api from '@/lib/api';
 
+let syncTimeout: any;
+
 export interface CartItem {
     skuId: number;
     productId: number;
@@ -17,6 +19,7 @@ export interface CartItem {
     colorHex?: string;
     sizeName?: string;
     size?: string;
+    deliveryDate?: string;
 }
 
 interface CartState {
@@ -31,6 +34,7 @@ interface CartState {
     cartToken: string;
     guestEmail: string | null;
     setGuestEmail: (email: string | null) => void;
+    fetchFromServer: (merge?: boolean) => Promise<void>;
 }
 
 export const useCartStore = create<CartState>()(
@@ -43,6 +47,39 @@ export const useCartStore = create<CartState>()(
 
             setGuestEmail: (email) => set({ guestEmail: email }),
             setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
+
+            fetchFromServer: async (merge = false) => {
+                try {
+                    clearTimeout(syncTimeout);
+                    const res = await api.get('/api/cart');
+                    if (res.data.cart_token) {
+                        set((state) => {
+                            if (!merge) {
+                                return { items: res.data.items, cartToken: res.data.cart_token };
+                            }
+                            const merged = [...state.items];
+                            res.data.items.forEach((sItem: any) => {
+                                const existingIndex = merged.findIndex(i => i.skuId === sItem.skuId);
+                                if (existingIndex > -1) {
+                                    merged[existingIndex].quantity = Math.max(merged[existingIndex].quantity, sItem.quantity);
+                                } else {
+                                    merged.push(sItem);
+                                }
+                            });
+                            return { items: merged, cartToken: res.data.cart_token };
+                        });
+                    }
+                    // Force push to server to ensure user_id and merged items are saved
+                    const state = get();
+                    api.post('/api/cart/sync', {
+                        cart_token: state.cartToken,
+                        guest_email: state.guestEmail,
+                        items: state.items
+                    }).catch(e => console.error("Cart sync failed:", e));
+                } catch (e) {
+                    console.error("Cart fetch failed", e);
+                }
+            },
 
             addItem: (newItem) => set((state) => {
                 const existing = state.items.find(i => i.skuId === newItem.skuId);
@@ -82,10 +119,9 @@ export const useCartStore = create<CartState>()(
 );
 
 // Subscribe to store changes and sync with backend
-let syncTimeout: any;
 useCartStore.subscribe((state, prevState) => {
     // Only sync if items or guestEmail changed
-    if (state.items !== prevState.items || state.guestEmail !== prevState.guestEmail) {
+    if (JSON.stringify(state.items) !== JSON.stringify(prevState.items) || state.guestEmail !== prevState.guestEmail) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(() => {
             api.post('/api/cart/sync', {

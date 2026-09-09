@@ -22,9 +22,9 @@ class CouponController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'code' => 'required|string|unique:coupons,code',
-            'name' => 'nullable|string',
+            'name' => 'nullable|string|max:255',
             'type' => 'required|in:percentage,fixed,free_shipping,bogo',
             'bogo_buy_qty' => 'nullable|integer|min:1',
             'bogo_get_qty' => 'nullable|integer|min:1',
@@ -44,9 +44,9 @@ class CouponController extends Controller
             'exclude_sale_items' => 'boolean',
             'first_time_users_only' => 'boolean',
             'can_combine' => 'boolean',
-            'applicable_product_ids' => 'nullable|string',
-            'applicable_category_ids' => 'nullable|string',
-            'excluded_product_ids' => 'nullable|string',
+            'applicable_product_ids' => 'nullable|string|max:5000',
+            'applicable_category_ids' => 'nullable|string|max:5000',
+            'excluded_product_ids' => 'nullable|string|max:5000',
         ]);
 
         // Fix boolean values for checkboxes
@@ -79,9 +79,9 @@ class CouponController extends Controller
 
     public function update(Request $request, Coupon $coupon)
     {
-        $validated = $request->validate([
+        $validated = $request->strictValidate([
             'code' => 'required|string|unique:coupons,code,'.$coupon->id,
-            'name' => 'nullable|string',
+            'name' => 'nullable|string|max:255',
             'type' => 'required|in:percentage,fixed,free_shipping,bogo',
             'bogo_buy_qty' => 'nullable|integer|min:1',
             'bogo_get_qty' => 'nullable|integer|min:1',
@@ -101,9 +101,9 @@ class CouponController extends Controller
             'exclude_sale_items' => 'boolean',
             'first_time_users_only' => 'boolean',
             'can_combine' => 'boolean',
-            'applicable_product_ids' => 'nullable|string',
-            'applicable_category_ids' => 'nullable|string',
-            'excluded_product_ids' => 'nullable|string',
+            'applicable_product_ids' => 'nullable|string|max:5000',
+            'applicable_category_ids' => 'nullable|string|max:5000',
+            'excluded_product_ids' => 'nullable|string|max:5000',
         ]);
 
         $validated['is_active'] = $request->has('is_active');

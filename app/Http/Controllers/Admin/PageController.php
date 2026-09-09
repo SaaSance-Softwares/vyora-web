@@ -26,21 +26,26 @@ class PageController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $request->strictValidate([
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:cms_pages,slug',
-            'layout' => 'nullable|string|in:default,contained,fluid',
-            'content' => 'nullable|json',
+            'layout' => 'nullable|string|max:255|in:default,contained,fluid',
+            'content' => 'nullable|string|json|max:2000000',
             'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
-            'meta_image' => 'nullable|image',
-            'is_active' => 'boolean',
-            'is_home' => 'boolean',
+            'meta_description' => 'nullable|string|max:5000',
+            'meta_image' => 'nullable|file|image|max:5120',
+            'is_active' => 'nullable|boolean',
+            'is_home' => 'nullable|boolean',
+            'is_about_page' => 'nullable|boolean',
         ]);
 
-        if ($request->is_home) {
+        if ($request->boolean('is_home')) {
             // Unset other home pages
             CmsPage::where('is_home', true)->update(['is_home' => false]);
+        }
+
+        if ($request->boolean('is_about_page')) {
+            CmsPage::where('is_about_page', true)->update(['is_about_page' => false]);
         }
 
         $data = [
@@ -51,7 +56,8 @@ class PageController extends Controller
             'meta_title' => $request->meta_title,
             'meta_description' => $request->meta_description,
             'is_active' => $request->has('is_active'),
-            'is_home' => $request->has('is_home'),
+            'is_home' => $request->boolean('is_home'),
+            'is_about_page' => $request->boolean('is_about_page'),
         ];
 
         if ($request->hasFile('meta_image')) {
@@ -89,21 +95,26 @@ class PageController extends Controller
 
     public function update(Request $request, CmsPage $mnpage)
     {
-        $request->validate([
+        $request->strictValidate([
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:cms_pages,slug,'.$mnpage->id,
-            'layout' => 'nullable|string|in:default,contained,fluid',
-            'content' => 'nullable|json',
+            'layout' => 'nullable|string|max:255|in:default,contained,fluid',
+            'content' => 'nullable|string|json|max:2000000',
             'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
-            'meta_image' => 'nullable|image',
-            'is_active' => 'boolean',
-            'is_home' => 'boolean',
+            'meta_description' => 'nullable|string|max:5000',
+            'meta_image' => 'nullable|file|image|max:5120',
+            'is_active' => 'nullable|boolean',
+            'is_home' => 'nullable|boolean',
+            'is_about_page' => 'nullable|boolean',
         ]);
 
-        if ($request->has('is_home') && $request->is_home) {
+        if ($request->boolean('is_home')) {
             // Unset other home pages
             CmsPage::where('is_home', true)->where('id', '!=', $mnpage->id)->update(['is_home' => false]);
+        }
+
+        if ($request->boolean('is_about_page')) {
+            CmsPage::where('is_about_page', true)->where('id', '!=', $mnpage->id)->update(['is_about_page' => false]);
         }
 
         $data = [
@@ -114,7 +125,8 @@ class PageController extends Controller
             'meta_title' => $request->meta_title,
             'meta_description' => $request->meta_description,
             'is_active' => $request->has('is_active'),
-            'is_home' => $request->has('is_home'),
+            'is_home' => $request->boolean('is_home'),
+            'is_about_page' => $request->boolean('is_about_page'),
         ];
 
         if ($request->hasFile('meta_image')) {

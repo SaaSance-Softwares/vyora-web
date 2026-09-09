@@ -60,12 +60,13 @@
                             <input type="checkbox" name="is_active" value="1" checked class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
                             <span class="text-sm font-bold text-gray-900">Active Stage</span>
                         </label>
-                        <label class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 {{ $hasOtherHomePage ? 'opacity-60' : 'cursor-pointer' }}">
-                            <input type="checkbox" name="is_home" value="1" {{ $hasOtherHomePage ? 'disabled' : '' }} class="mt-0.5 h-4 w-4 border-gray-300 rounded text-black focus:ring-black disabled:opacity-50">
+                        <label class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                            <input type="hidden" name="is_home" value="0">
+                            <input type="checkbox" name="is_home" value="1" {{ old('is_home') ? 'checked' : '' }} class="mt-0.5 h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
                             <div>
-                                <span class="text-sm font-bold text-gray-900 block">Set as Homepage</span>
+                                <span class="text-sm font-bold text-gray-900 block">Primary Home Page</span>
                                 @if($hasOtherHomePage)
-                                    <span class="text-xs text-red-500 block mt-0.5 font-medium">Another page is currently set as the Primary Home Page.</span>
+                                    <span class="text-xs text-orange-500 block mt-0.5 font-medium">Checking this will replace the current home page.</span>
                                 @endif
                             </div>
                         </label>
@@ -79,6 +80,14 @@
                         </select>
                     </div>
                 </div>
+                        <div class="flex items-start gap-3">
+                            <input type="hidden" name="is_about_page" value="0">
+                            <input type="checkbox" name="is_about_page" value="1" {{ old('is_about_page') ? 'checked' : '' }} class="mt-0.5 h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
+                            <div class="flex-1">
+                                <span class="block text-sm font-medium text-gray-700">Set as Official About Page</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">Used for AI SEO (Generative Engine Optimization). Marks this page as the canonical brand story.</span>
+                            </div>
+                        </div>
             </div>
 
             <div class="pt-6 border-t border-gray-100 flex justify-end">

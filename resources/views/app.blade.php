@@ -9,6 +9,8 @@
             $gaId = '';
             $pixelEnabled = false;
             $pixelId = '';
+            $snapchatPixelEnabled = false;
+            $snapchatPixelId = '';
             $gscEnabled = false;
             $gscVerificationCode = '';
             $storeName = config('app.name', 'Vyora');
@@ -36,6 +38,11 @@
                         $pixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.meta-pixel')->where('key', 'pixel_id')->value('value'));
                     }
 
+                    $snapchatPixelEnabled = \App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'enabled')->value('value') === '1';
+                    if ($snapchatPixelEnabled) {
+                        $snapchatPixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'pixel_id')->value('value'));
+                    }
+
                     $gscEnabled = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'enabled')->value('value') === '1';
                     if ($gscEnabled) {
                         $gscVerificationCode = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'site_verification_code')->value('value');
@@ -43,6 +50,37 @@
                             $gscVerificationCode = \Illuminate\Support\Facades\Crypt::decryptString($gscVerificationCode);
                         }
                     }
+
+                    $customCodeHeader = \App\Models\ThemeSetting::where('key', 'custom_code_header')->value('value');
+                    $customCodeBody = \App\Models\ThemeSetting::where('key', 'custom_code_body')->value('value');
+                    $customCodeFooter = \App\Models\ThemeSetting::where('key', 'custom_code_footer')->value('value');
+
+                    // AEO Organization Schema variables
+                    $orgEmail = \App\Models\ThemeSetting::where('key', 'support_email')->value('value');
+                    $orgPhone = \App\Models\ThemeSetting::where('key', 'support_phone')->value('value');
+                    $socialInsta = \App\Models\ThemeSetting::where('key', 'social_instagram')->value('value');
+                    $socialFb = \App\Models\ThemeSetting::where('key', 'social_facebook')->value('value');
+                    $socialYt = \App\Models\ThemeSetting::where('key', 'social_youtube')->value('value');
+                    
+                    $orgSameAs = array_filter([$socialInsta, $socialFb, $socialYt]);
+                    
+                    $globalOrgSchema = [
+                        "@context" => "https://schema.org",
+                        "@type" => "Organization",
+                        "name" => $storeName,
+                        "url" => url('/'),
+                        "logo" => $faviconUrl
+                    ];
+
+                    $websiteSchema = [
+                        "@context" => "https://schema.org",
+                        "@type" => "WebSite",
+                        "name" => $storeName,
+                        "url" => url('/')
+                    ];
+                    if ($orgEmail) $globalOrgSchema['email'] = $orgEmail;
+                    if ($orgPhone) $globalOrgSchema['telephone'] = $orgPhone;
+                    if (!empty($orgSameAs)) $globalOrgSchema['sameAs'] = array_values($orgSameAs);
                 }
             } catch (\Exception $e) {
                 // Ignore errors during migration or missing DB
@@ -50,6 +88,31 @@
         @endphp
 
         <title inertia>{{ $storeName }}</title>
+        
+        <link rel="canonical" href="{{ url()->current() }}" />
+        
+        <meta name="description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        
+        <meta property="og:title" content="{{ $og_title ?? $storeName }}" />
+        <meta property="og:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        <meta name="twitter:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        
+        @if(isset($og_image) && $og_image)
+            <meta property="og:image" content="{{ $og_image }}" />
+            <meta name="twitter:image" content="{{ $og_image }}" />
+            <meta name="twitter:card" content="summary_large_image" />
+        @else
+            <meta property="og:image" content="{{ $faviconUrl }}" />
+            <meta name="twitter:image" content="{{ $faviconUrl }}" />
+            <meta name="twitter:card" content="summary" />
+        @endif
+        
+        <meta property="og:url" content="{{ $og_url ?? url()->current() }}" />
+        
+                <!-- Google Search Console optimized static favicons (generated automatically on upload) -->
+        <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
+        <link rel="shortcut icon" href="/favicon.ico">
+        <!-- Fallback for dynamic hashing if needed -->
         <link rel="icon" href="{{ $faviconUrl }}">
 
         <!-- Fonts -->
@@ -91,12 +154,57 @@
             <!-- End Meta Pixel Code -->
         @endif
 
+        @if($snapchatPixelEnabled && $snapchatPixelId)
+            <!-- Snap Pixel Code -->
+            <script type='text/javascript'>
+            (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function()
+            {a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};
+            a.queue=[];var s='script';r=t.createElement(s);r.async=!0;
+            r.src=n;var u=t.getElementsByTagName(s)[0];
+            u.parentNode.insertBefore(r,u);})(window,document,
+            'https://sc-static.net/scevent.min.js');
+            snaptr('init', '{{ $snapchatPixelId }}');
+            snaptr('track', 'PAGE_VIEW');
+            </script>
+            <!-- End Snap Pixel Code -->
+        @endif
+
         <!-- Scripts -->
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.jsx'])
         @inertiaHead
+
+        @if(isset($globalOrgSchema))
+            <script type="application/ld+json">
+                {!! json_encode($globalOrgSchema) !!}
+            </script>
+            <script type="application/ld+json">
+                {!! json_encode($websiteSchema) !!}
+            </script>
+        @endif
+        
+        @if(isset($json_ld) && $json_ld)
+            <script type="application/ld+json">
+                {!! is_array($json_ld) ? json_encode($json_ld) : $json_ld !!}
+            </script>
+        @endif
+
+        {!! $customCodeHeader ?? '' !!}
     </head>
     <body class="font-sans antialiased">
+        {!! $customCodeBody ?? '' !!}
+        
+        @if(isset($bot_html) && $bot_html)
+            <noscript>
+                {!! $bot_html !!}
+            </noscript>
+            <div id="seo-bot-content" style="display: none !important; opacity: 0; position: absolute; left: -9999px;">
+                {!! $bot_html !!}
+            </div>
+        @endif
+
         @inertia
+        
+        {!! $customCodeFooter ?? '' !!}
     </body>
 </html>

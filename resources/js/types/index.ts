@@ -13,6 +13,13 @@ export interface ProductList {
     is_new: boolean;
     hover_image?: string | null;
     coupon_price?: number;
+    colors?: { name: string; hex: string }[];
+    delivery_timeline?: {
+        min_days: number;
+        max_days: number;
+        formatted_date: string;
+        show_to_user: string | null;
+    };
 }
 
 export interface ProductDetail extends ProductList {

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useCartStore, CartItem } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { useUIStore } from '@/store/ui';
 import { formatPrice } from '@/lib/utils';
+import { trackInitiateCheckout } from '@/lib/tracking';
 
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
@@ -77,9 +79,14 @@ function CartRow({ item, update, remove }: {
                             {item.colorName}
                         </span>
                     )}
-                    {item.size && (
+                    {item.sizeName && (
                         <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Size {item.size}
+                            Size {item.sizeName}
+                        </span>
+                    )}
+                    {item.deliveryDate && (
+                        <span className="text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                            Delivered by: {item.deliveryDate}
                         </span>
                     )}
                 </div>
@@ -107,15 +114,15 @@ function CartRow({ item, update, remove }: {
 }
 
 /* ── Labelled input ───────────────────────────────────────────────────────── */
-function Field({ label, value, onChange, placeholder, type = 'text', span = false }: {
+function Field({ label, value, onChange, placeholder, type = 'text', span = false, readOnly = false }: {
     label: string; value: string; onChange: (v: string) => void;
-    placeholder?: string; type?: string; span?: boolean;
+    placeholder?: string; type?: string; span?: boolean; readOnly?: boolean;
 }) {
     return (
-        <div className={span ? 'col-span-2' : ''}>
+        <div className={span ? '' : ''}>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</label>
-            <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-200 transition-all" />
+            <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-200 transition-all read-only:bg-gray-50 read-only:text-gray-500 read-only:cursor-not-allowed read-only:focus:ring-0 read-only:focus:border-gray-200" />
         </div>
     );
 }
@@ -169,10 +176,12 @@ export default function CheckoutPage() {
             };
             revalidate();
         }
-    }, [mounted, cart.items.length]);
+    }, [mounted, cart.items.length, cart.items.reduce((acc, i) => acc + i.quantity, 0)]);
 
     const [selectedAddr, setSelectedAddr] = useState<any>(null);
-    const [guest, setGuest] = useState({ name: '', email: '', phone: '', line1: '', line2: '', city: '', state: '', zip: '' });
+    const [guest, setGuest] = useState({ name: '', email: '', phone: '', line1: '', line2: '', city: '', district: '', state: '', zip: '', country: 'India' });
+    const [locked, setLocked] = useState({ city: false, district: false, state: false, country: true });
+    const [activeCountryId, setActiveCountryId] = useState<number | null>(null);
     const [guestCountryCode, setGuestCountryCode] = useState('+91');
     const g = (k: string, v: string) => setGuest(p => ({ ...p, [k]: v }));
 
@@ -191,7 +200,17 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         setMounted(true);
+        if (cart.items && cart.items.length > 0) {
+            trackInitiateCheckout(cart.totalPrice, cart.items);
+        }
         api.get('/api/settings').then(r => setSettings(r.data)).catch(() => { });
+
+        api.get('/api/localization/countries').then(res => {
+            if (res.data && res.data.length > 0) {
+                setActiveCountryId(res.data[0].id);
+                setGuest(p => ({ ...p, country: res.data[0].name }));
+            }
+        }).catch(() => {});
 
         api.get('/api/coupons/public').then(async r => {
             setPublicCoupons(r.data.checkout_coupons || []);
@@ -223,6 +242,37 @@ export default function CheckoutPage() {
             cart.setGuestEmail(guest.email);
         }
     }, [guest.email]);
+
+    useEffect(() => {
+        const fetchPincode = async () => {
+            if (guest.zip.length === 6 && activeCountryId) {
+                try {
+                    const res = await api.get(`/api/localization/postal-code/${activeCountryId}/${guest.zip}`);
+                    if (res.data.found) {
+                        setGuest(p => ({
+                            ...p,
+                            city: res.data.city || p.city,
+                            district: res.data.district || p.district,
+                            state: res.data.state || p.state,
+                        }));
+                        setLocked(p => ({
+                            ...p,
+                            city: !!res.data.city,
+                            district: !!res.data.district,
+                            state: !!res.data.state,
+                        }));
+                    } else {
+                        setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                    }
+                } catch (e) {
+                    setLocked(p => ({ ...p, city: false, district: false, state: false }));
+                }
+            } else if (guest.zip.length < 6) {
+                setLocked(p => ({ ...p, city: false, district: false, state: false }));
+            }
+        };
+        fetchPincode();
+    }, [guest.zip, activeCountryId]);
 
     const handleApplyCoupon = async (code: string) => {
         const c = (code || couponInput).trim().toUpperCase();
@@ -276,7 +326,7 @@ export default function CheckoutPage() {
             }
             finalPhone = `${guestCountryCode}${finalPhone}`;
 
-            addrPayload = { line1, line2: guest.line2, city, state, zip };
+            addrPayload = { line1, line2: guest.line2, city, district: guest.district, state, zip, country: guest.country };
             custPayload = { name, email, phone: finalPhone };
         }
         setPlacing(true);
@@ -291,9 +341,10 @@ export default function CheckoutPage() {
 
             if (r.data.success) {
                 const orderUUID = r.data.order_uuid;
+                const upfrontAmount = r.data.upfront_amount || 0;
 
-                // If COD or Total is 0, we are done
-                if (paymentMethod === 'cod' || total <= 0) {
+                // If COD (without upfront payment) or Total is 0, we are done
+                if ((paymentMethod === 'cod' && upfrontAmount <= 0) || total <= 0) {
                     setOrderUUID(orderUUID);
                     cart.clearCart();
                     window.location.href = `/checkout/thank-you/${orderUUID}`;
@@ -322,17 +373,20 @@ export default function CheckoutPage() {
                                     window.location.href = `/checkout/thank-you/${orderUUID}`;
                                 } else {
                                     setOrderErr('Payment verification failed. Please contact support.');
+                                    try { await api.post('/api/payment/failed', { order_uuid: orderUUID }); } catch (e) {}
                                 }
                             } catch (err: any) {
                                 setOrderErr(err.response?.data?.message || 'Verification failed.');
+                                try { await api.post('/api/payment/failed', { order_uuid: orderUUID }); } catch (e) {}
                             }
                         },
                         prefill: initRes.data.prefill,
                         theme: { color: '#000000' },
                         modal: {
-                            ondismiss: () => {
-                                setOrderErr('Payment cancelled. You can try again from your orders page.');
+                            ondismiss: async () => {
+                                setOrderErr('Payment cancelled.');
                                 setPlacing(false);
+                                try { await api.post('/api/payment/failed', { order_uuid: orderUUID }); } catch (e) {}
                             }
                         }
                     };
@@ -341,6 +395,7 @@ export default function CheckoutPage() {
                 } catch (err: any) {
                     setOrderErr(err.response?.data?.message || 'Could not initiate payment.');
                     setPlacing(false);
+                    try { await api.post('/api/payment/failed', { order_uuid: orderUUID }); } catch (e) {}
                 }
             } else {
                 setOrderErr(r.data.message);
@@ -530,9 +585,47 @@ export default function CheckoutPage() {
 
     const totalSavings = mrpDiscount + discount + prepaidDiscount + gcDiscount;
 
+    const codRule = settings?.shipping_rules?.cod;
+    const codMinOrderAmount = parseFloat(codRule?.min_order_amount) || 0;
+    const isCodAvailable = codMinOrderAmount === 0 || subtotalAfterDiscount >= codMinOrderAmount;
+
+    let codUpfrontAmount = 0;
+    if (codRule && codRule.upfront_type !== 'none') {
+        if (codRule.upfront_type === 'fee_only') {
+            codUpfrontAmount = codApplicableCharge;
+        } else if (codRule.upfront_type === 'tiered') {
+            const upfrontTiers = codRule.upfront_tiers || [];
+            for (const t of upfrontTiers) {
+                if (total <= (parseFloat(t.up_to) || 0)) {
+                    codUpfrontAmount = parseFloat(t.fee) || 0;
+                    break;
+                }
+            }
+        }
+        codUpfrontAmount = Math.min(codUpfrontAmount, total);
+    }
+
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
             <Head title="Checkout" />
+            
+            {/* Processing Modal */}
+            {placing && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm"></div>
+                    <div className="relative bg-white border border-gray-100 p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-auto text-center z-10 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="relative w-16 h-16 mb-6">
+                            <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-black rounded-full border-t-transparent animate-spin"></div>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Processing Order</h3>
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                            Please wait while we secure your items and send your order confirmations... Do not close this window.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="mb-10">
                 <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
@@ -553,6 +646,22 @@ export default function CheckoutPage() {
                         </div>
                     </section>
 
+                    {/* Auth Prompt for Guests */}
+                    {!user && (
+                        <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm -mx-4 sm:mx-0">
+                            <h3 className="text-base font-bold text-gray-900 mb-2">Already have an account?</h3>
+                            <button 
+                                onClick={() => openAuthModal('login')}
+                                className="inline-flex items-center justify-center px-8 py-3 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors w-full sm:w-auto"
+                            >
+                                Sign In to Checkout
+                            </button>
+                            <p className="text-xs text-gray-500 mt-3 max-w-xs mx-auto leading-relaxed">
+                                To manage your order properly and get your saved address here, login now.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Delivery */}
                     <section>
                         <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -564,7 +673,7 @@ export default function CheckoutPage() {
                             </div>
                         ) : (
                             <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     <Field label="Full Name" value={guest.name} onChange={v => g('name', v)} placeholder="Your name" />
                                     
                                     <div className="">
@@ -583,13 +692,12 @@ export default function CheckoutPage() {
                                     <Field label="Email" value={guest.email} onChange={v => g('email', v)} placeholder="you@email.com" type="email" span />
                                     <Field label="Address Line 1" value={guest.line1} onChange={v => g('line1', v)} placeholder="House, Street" span />
                                     <Field label="Address Line 2" value={guest.line2} onChange={v => g('line2', v)} placeholder="Area, Landmark (optional)" span />
-                                    <Field label="City" value={guest.city} onChange={v => g('city', v)} />
-                                    <Field label="State" value={guest.state} onChange={v => g('state', v)} />
-                                    <Field label="Pincode" value={guest.zip} onChange={v => g('zip', v)} />
+                                    <Field label="Pincode" value={guest.zip} onChange={v => g('zip', v)} span={true} />
+                                    <Field label="State" value={guest.state} onChange={v => g('state', v)} readOnly={locked.state} />
+                                    <Field label="City" value={guest.city} onChange={v => g('city', v)} readOnly={locked.city} />
+                                    <Field label="District" value={guest.district} onChange={v => g('district', v)} readOnly={locked.district} placeholder="District (optional)" />
+                                    <Field label="Country" value={guest.country} onChange={v => g('country', v)} readOnly={locked.country} />
                                 </div>
-                                <Link href="/login" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors font-medium">
-                                    <Lock size={11} /> Sign in to use saved addresses
-                                </Link>
                             </div>
                         )}
                     </section>
@@ -737,6 +845,19 @@ export default function CheckoutPage() {
                                 <span>Total</span>
                                 <span>{formatPrice(total)}</span>
                             </div>
+                            
+                            {paymentMethod === 'cod' && codUpfrontAmount > 0 && (
+                                <div className="mt-2 p-3 bg-orange-50 border border-orange-100 rounded-lg space-y-2">
+                                    <div className="flex justify-between text-sm text-orange-800 font-semibold">
+                                        <span>To Pay Now (Upfront)</span>
+                                        <span>{formatPrice(codUpfrontAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-orange-700">
+                                        <span>To Pay on Delivery</span>
+                                        <span>{formatPrice(Math.max(0, total - codUpfrontAmount))}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {orderErr && (
@@ -791,12 +912,21 @@ export default function CheckoutPage() {
                             </label>
 
                             {settings?.shipping_rules?.cod && (
-                                <label className={`block border rounded-xl p-4 cursor-pointer transition-all ${paymentMethod === 'cod' ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-300"}`}>
+                                <label className={`block border rounded-xl p-4 transition-all ${!isCodAvailable ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-100" : (paymentMethod === 'cod' ? "border-black bg-gray-50 cursor-pointer" : "border-gray-200 hover:border-gray-300 cursor-pointer")}`}>
                                     <div className="flex items-center gap-3">
-                                        <input type="radio" name="payment_method" value="cod" checked={paymentMethod === 'cod'} onChange={() => { setPaymentMethod('cod'); setPaymentModal(false); }} className="w-4 h-4 text-black focus:ring-black" />
+                                        <input type="radio" name="payment_method" value="cod" disabled={!isCodAvailable} checked={paymentMethod === 'cod'} onChange={() => { if(isCodAvailable) { setPaymentMethod('cod'); setPaymentModal(false); } }} className="w-4 h-4 text-black focus:ring-black disabled:opacity-50" />
                                         <div className="flex-1">
                                             <p className="text-sm font-bold text-gray-900">Cash on Delivery (COD)</p>
-                                            {codApplicableCharge > 0 ? (
+                                            {!isCodAvailable ? (
+                                                <p className="text-xs text-red-500 font-medium mt-0.5">Available for orders above {formatPrice(codMinOrderAmount)}</p>
+                                            ) : codUpfrontAmount > 0 ? (
+                                                <>
+                                                    <p className="text-xs text-orange-500 font-medium mt-0.5">Partial upfront payment of {formatPrice(codUpfrontAmount)} required online to place COD order</p>
+                                                    {(!codRule || codRule.upfront_refundable != '1') && (
+                                                        <p className="text-[11px] text-red-500 mt-1 italic font-semibold">Note: Upfront shipping charges are non-refundable in the event of order cancellation or return.</p>
+                                                    )}
+                                                </>
+                                            ) : codApplicableCharge > 0 ? (
                                                 <p className="text-xs text-red-500 font-medium mt-0.5">Extra {formatPrice(codApplicableCharge)} charge applicable</p>
                                             ) : (
                                                 <p className="text-xs text-gray-500 font-medium mt-0.5">Pay at your doorstep</p>

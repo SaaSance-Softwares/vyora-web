@@ -57,7 +57,7 @@ class GiftCardService
      * Create a gift card template (admin sets a denomination, it shows on the storefront).
      * Unlimited users can purchase from a single template.
      */
-    public function createTemplate(float $amount, int $createdBy, ?string $name = null, ?string $description = null, ?int $validityDays = null): GiftCardTemplate
+    public function createTemplate(float $amount, int $createdBy, ?string $name = null, ?string $description = null, ?int $validityDays = null, ?string $backgroundImage = null): GiftCardTemplate
     {
         return GiftCardTemplate::create([
             'name' => $name,
@@ -65,6 +65,7 @@ class GiftCardService
             'description' => $description,
             'is_active' => true,
             'validity_days' => $validityDays,
+            'background_image' => $backgroundImage,
             'created_by' => $createdBy,
         ]);
     }

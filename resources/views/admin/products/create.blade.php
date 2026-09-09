@@ -9,31 +9,17 @@
             @csrf
             <input type="hidden" name="redirect_tab" id="redirect-tab" value="info">
 
-            <!-- Tab Navigation -->
-            <div class="bg-white rounded-lg shadow mb-6">
-                <div class="border-b border-gray-200">
-                    <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-                        <button type="button"
-                            class="tab-button border-b-2 border-black text-black py-4 px-1 text-sm font-medium"
-                            data-tab="info">
-                            Product Info
-                        </button>
-                        <button type="button"
-                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium"
-                            data-tab="organization">
-                            Organization
-                        </button>
-                        <button type="button"
-                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium"
-                            data-tab="skus">
-                            SKUs & Variants
-                        </button>
-                        <button type="button"
-                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium"
-                            data-tab="media">
-                            Media Gallery
-                        </button>
-                    </nav>
+            <!-- Sticky Header for Tabs & Actions -->
+            <div class="sticky top-0 z-30 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 -mx-4 px-4 py-2 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <nav class="flex space-x-6" aria-label="Tabs">
+                    <button type="button" class="tab-button border-b-2 border-black text-black py-3 px-1 text-sm font-bold transition-all" data-tab="info">Product Info</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="organization">Organization</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="skus">SKUs & Variants</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="media">Media Gallery</button>
+                </nav>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('admin.products.index') }}" class="text-xs font-bold text-gray-500 hover:text-black">Cancel</a>
+                    <button type="submit" form="create-product-form" class="bg-black text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-gray-800 transition-all shadow-lg active:scale-95">Create Product</button>
                 </div>
             </div>
 
@@ -70,6 +56,30 @@
                                     @foreach($sizeCharts as $chart)
                                         <option value="{{ $chart->id }}" {{ old('size_chart_id') == $chart->id ? 'selected' : '' }}>
                                             {{ $chart->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fit</label>
+                                <select name="fit_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                    <option value="">No Fit</option>
+                                    @foreach($fits as $fit)
+                                        <option value="{{ $fit->id }}" {{ old('fit_id') == $fit->id ? 'selected' : '' }}>
+                                            {{ $fit->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fabric</label>
+                                <select name="fabric_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                    <option value="">No Fabric</option>
+                                    @foreach($fabrics as $fabric)
+                                        <option value="{{ $fabric->id }}" {{ old('fabric_id') == $fabric->id ? 'selected' : '' }}>
+                                            {{ $fabric->name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -124,6 +134,7 @@
                     class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded">
             </div>
 
+            @if(\App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') == '1')
             <div class="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div>
                     <span class="text-gray-700 block font-bold">QikInk Fulfillment</span>
@@ -134,13 +145,14 @@
                     <span class="slider round"></span>
                 </label>
             </div>
+            @endif
         </div>
 
 
 
         <!-- SEO -->
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">SEO</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">SEO & AEO</h3>
             <div class="space-y-4">
                 <div>
                     <div class="flex justify-between items-center mb-1">
@@ -170,6 +182,17 @@
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">{{ old('seo_keywords') }}</textarea>
                     <p class="text-xs text-gray-500 mt-1">Separate keywords with commas. Recommended: 5-10 keywords</p>
                 </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-sm font-medium text-gray-700">AEO Use Case <span class="text-gray-400 font-normal">(For AI Generative Engines)</span></label>
+                    </div>
+                    <input type="text" name="use_case" id="use_case"
+                        value="{{ old('use_case') }}" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2"
+                        placeholder="e.g. gym workouts, oversized streetwear">
+                    <p class="text-xs text-gray-500 mt-1">Directly feeds into bots (ChatGPT, Claude) to categorize your product.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -190,6 +213,19 @@
                         @foreach($productTypes as $type)
                             <option value="{{ $type->id }}" {{ old('product_type_id') == $type->id ? 'selected' : '' }}>
                                 {{ $type->name }} (HSN: {{ $type->hsn_code }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Delivery Timeline</label>
+                    <select name="delivery_timeline_id"
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                        <option value="">None</option>
+                        @foreach($deliveryTimelines as $timeline)
+                            <option value="{{ $timeline->id }}" {{ old('delivery_timeline_id', $timeline->is_default ? $timeline->id : null) == $timeline->id ? 'selected' : '' }}>
+                                {{ $timeline->min_days }} to {{ $timeline->max_days }} Days
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -372,19 +408,19 @@
         <div class="bg-white rounded-lg shadow p-6">
             <p class="text-gray-500 text-sm">Media gallery will be available after creating the product and adding SKUs with colors.</p>
         </div>
+        
     </div>
     <!-- End Tab Content: Media Gallery -->
+
+    <!-- Compact Save Area (Mobile Floating) -->
+    <div class="md:hidden fixed bottom-6 right-6 z-50">
+        <button type="submit" form="create-product-form" class="bg-black text-white p-4 rounded-full shadow-2xl active:scale-95 transition-all">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+        </button>
+    </div>
     </form>
     </div>
 
-    <!-- Fixed Bottom Footer Actions -->
-    <div
-        class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:pl-64 flex justify-between items-center shadow-lg">
-        <button type="submit" form="create-product-form"
-            class="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 text-sm font-medium transition-colors">
-            Create Product
-        </button>
-    </div>
 @endsection
 
 
@@ -519,6 +555,15 @@
                                 parentBox.dispatchEvent(new Event('change')); // Trigger event up the chain
                             }
                         }
+                    } else {
+                        // Uncheck all children if this is unchecked
+                        let myId = this.dataset.id;
+                        document.querySelectorAll(`.cat-checkbox[data-parent-id="${myId}"]`).forEach(childBox => {
+                            if (childBox.checked) {
+                                childBox.checked = false;
+                                childBox.dispatchEvent(new Event('change')); // Trigger down the chain
+                            }
+                        });
                     }
                 });
             });

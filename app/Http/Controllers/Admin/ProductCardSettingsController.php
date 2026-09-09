@@ -29,6 +29,8 @@ class ProductCardSettingsController extends Controller
             'pc_wishlist_style',
             'pc_wishlist_bg_color',
             'pc_wishlist_text_color',
+            'pc_show_colors',
+            'pc_color_style',
         ];
 
         // Fetch all existing product card settings
@@ -52,6 +54,8 @@ class ProductCardSettingsController extends Controller
             'pc_wishlist_style' => 'icon_only',
             'pc_wishlist_bg_color' => '#ffffff',
             'pc_wishlist_text_color' => '#9ca3af',
+            'pc_show_colors' => '0',
+            'pc_color_style' => 'overlap',
         ];
 
         $settings = array_merge($defaults, $settings);
@@ -64,22 +68,24 @@ class ProductCardSettingsController extends Controller
      */
     public function update(Request $request)
     {
-        $validated = $request->validate([
-            'pc_style' => 'nullable|string',
-            'pc_bg_color' => 'nullable|string',
-            'pc_text_color' => 'nullable|string',
-            'pc_border_radius' => 'nullable|string',
-            'pc_shadow' => 'nullable|string',
-            'pc_image_aspect' => 'nullable|string',
-            'pc_buynow_style' => 'nullable|string',
-            'pc_buynow_bg_color' => 'nullable|string',
-            'pc_buynow_text_color' => 'nullable|string',
-            'pc_cart_style' => 'nullable|string',
-            'pc_cart_bg_color' => 'nullable|string',
-            'pc_cart_text_color' => 'nullable|string',
-            'pc_wishlist_style' => 'nullable|string',
-            'pc_wishlist_bg_color' => 'nullable|string',
-            'pc_wishlist_text_color' => 'nullable|string',
+        $validated = $request->strictValidate([
+            'pc_style' => 'nullable|string|max:255',
+            'pc_bg_color' => 'nullable|string|max:255',
+            'pc_text_color' => 'nullable|string|max:255',
+            'pc_border_radius' => 'nullable|string|max:255',
+            'pc_shadow' => 'nullable|string|max:255',
+            'pc_image_aspect' => 'nullable|string|max:255',
+            'pc_buynow_style' => 'nullable|string|max:255',
+            'pc_buynow_bg_color' => 'nullable|string|max:255',
+            'pc_buynow_text_color' => 'nullable|string|max:255',
+            'pc_cart_style' => 'nullable|string|max:255',
+            'pc_cart_bg_color' => 'nullable|string|max:255',
+            'pc_cart_text_color' => 'nullable|string|max:255',
+            'pc_wishlist_style' => 'nullable|string|max:255',
+            'pc_wishlist_bg_color' => 'nullable|string|max:255',
+            'pc_wishlist_text_color' => 'nullable|string|max:255',
+            'pc_show_colors' => 'nullable|string|in:0,1',
+            'pc_color_style' => 'nullable|string|in:overlap,individual',
         ]);
 
         foreach ($validated as $key => $value) {

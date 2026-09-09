@@ -17,6 +17,7 @@ use App\Services\TwilioSmsService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -31,7 +32,8 @@ class OrderController extends Controller
                 });
         })
             ->with(['items' => function ($query) {
-                $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price']);
+                $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price', 'product_id'])
+                    ->with('product.deliveryTimeline');
             }])
             ->latest()
             ->paginate(10);
@@ -42,6 +44,15 @@ class OrderController extends Controller
             $order->has_tracking = $order->has_tracking;
             $order->courier_partner = $order->courier_partner;
 
+            $order->items->transform(function ($item) use ($order) {
+                $maxDays = 5;
+                if ($item->product && $item->product->deliveryTimeline) {
+                    $maxDays = $item->product->deliveryTimeline->max_days;
+                }
+                $item->delivery_date = $order->created_at->addDays($maxDays)->format('jS F Y');
+                return $item;
+            });
+
             return $order;
         });
 
@@ -50,19 +61,27 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'customer.name' => 'required',
-            'customer.email' => 'required|email',
-            'customer.phone' => 'required',
+        $request->strictValidate([
+            'customer.name' => 'required|string|max:255',
+            'customer.email' => 'required|string|email|max:255',
+            'customer.phone' => 'required|string|max:255',
 
-            'address.line1' => 'required',
-            'address.city' => 'required',
-            'address.state' => 'required',
-            'address.zip' => 'required',
+            'address.line1' => 'required|string|max:255',
+            'address.line2' => 'nullable|string|max:255',
+            'address.city' => 'required|string|max:255',
+            'address.district' => 'nullable|string|max:255',
+            'address.state' => 'required|string|max:255',
+            'address.zip' => 'required|string|max:255',
+            'address.country' => 'nullable|string|max:255',
 
             'items' => 'required|array',
-            'items.*.sku_id' => 'required|exists:skus,id',
+            'items.*.sku_id' => 'required|integer|exists:skus,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.image' => 'nullable|string',
+
+            'payment_method' => 'nullable|string|in:online,cod,prepaid',
+            'coupon_code' => 'nullable|string|max:255',
+            'gift_card_code' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -79,8 +98,10 @@ class OrderController extends Controller
                     'address_line1' => $addressData['line1'],
                     'address_line2' => $addressData['line2'] ?? null,
                     'city' => $addressData['city'],
+                    'district' => $addressData['district'] ?? null,
                     'state' => $addressData['state'],
                     'zip_code' => $addressData['zip'],
+                    'country' => $addressData['country'] ?? 'India',
                     'type' => 'shipping',
                 ]);
                 \Log::info('Created address after firstOrCreate:', ['address' => $address->toArray(), 'id' => $address->id]);
@@ -278,19 +299,54 @@ class OrderController extends Controller
                 $totalAmount = $trueSubtotalAfterDiscount + $trueShippingAmount + $totalTaxAmount - $prepaidDiscount - $giftCardDiscount;
                 $totalAmount = max(0, $totalAmount);
 
+                // Calculate Upfront Payment for COD
+                $upfrontAmount = 0;
+                if ($isCod && $totalAmount > 0) {
+                    $minOrderAmount = floatval($activeRule['min_order_amount'] ?? 0);
+                    if ($minOrderAmount > 0 && $subtotalAfterDiscount < $minOrderAmount) {
+                        throw new \Exception('COD is only available for orders above ₹' . $minOrderAmount);
+                    }
+
+                    $upfrontType = $activeRule['upfront_type'] ?? 'none';
+                    if ($upfrontType === 'fee_only') {
+                        $upfrontAmount = $shippingAmount;
+                    } elseif ($upfrontType === 'tiered') {
+                        $upfrontTiers = $activeRule['upfront_tiers'] ?? [];
+                        foreach ($upfrontTiers as $t) {
+                            if ($totalAmount <= floatval($t['up_to'] ?? 0)) {
+                                $upfrontAmount = floatval($t['fee'] ?? 0);
+                                break;
+                            }
+                        }
+                    }
+                    $upfrontAmount = min($upfrontAmount, $totalAmount);
+                }
+
+                $geo = \App\Services\GeoLocationService::getLocation($request->ip());
+
                 $order = Order::create([
                     'user_id' => $request->user()?->id,
-                    'status' => ($totalAmount <= 0 || $isCod) ? 'processing' : 'pending',
+                    'status' => ($totalAmount <= 0 || ($isCod && $upfrontAmount <= 0)) ? 'processing' : 'pending',
                     'payment_status' => $totalAmount <= 0 ? 'paid' : 'pending',
                     'payment_method' => $totalAmount <= 0 ? 'Gift Card/Coupon' : ($isCod ? 'COD' : 'Prepaid'),
                     'total_amount' => $totalAmount,
+                    'amount_paid' => 0,
+                    'balance_due' => $totalAmount,
+                    'upfront_amount' => $upfrontAmount,
                     'shipping_amount' => $shippingAmount,
                     'tax_amount' => $totalTaxAmount,
                     'tax_breakdown' => json_encode($taxBreakdown),
                     'discount_amount' => $discountAmount + $prepaidDiscount + $giftCardDiscount,
+                    'coupon_discount_amount' => $discountAmount,
+                    'prepaid_discount_amount' => $prepaidDiscount,
+                    'gift_card_discount_amount' => $giftCardDiscount,
                     'coupon_code' => $couponCode,
                     'shipping_address_id' => $address->id,
                     'billing_address_id' => $address->id,
+                    'ip_address' => $geo['ip'],
+                    'placed_from_city' => $geo['city'],
+                    'placed_from_state' => $geo['state'],
+                    'placed_from_country' => $geo['country'],
                 ]);
 
                 // Redeem gift card if valid
@@ -317,23 +373,80 @@ class OrderController extends Controller
                         'total' => $data['total'],
                     ]);
                 }
+                
+                // Store upfrontAmount temporarily to return it
+                $order->upfront_amount = $upfrontAmount;
 
                 return $order;
             });
 
-            // Dispatch Qikink order processing asynchronously if possible, or inline
-            $qikinkService = app(QikinkOrderService::class);
-            $qikinkService->processOrder($order);
+            // Qikink order processing is now handled by scheduled cron job (qikink:push-orders)
 
             // Dispatch Twilio SMS for COD/Free orders (already confirmed)
             if ($order->status === 'processing') {
-                app(TwilioSmsService::class)->sendEventSms('confirmed', $order);
-                app(WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
+                try {
+                    $smsTemplate = \App\Models\SmsTemplate::where('name', 'Order Placed')->first();
+                    if ($smsTemplate) {
+                        app(\App\Services\TwilioSmsService::class)->sendDynamicSms($order, $smsTemplate);
+                    } else {
+                        app(\App\Services\TwilioSmsService::class)->sendEventSms('confirmed', $order);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send Twilio SMS confirmed event: '.$e->getMessage());
+                }
+            }
+
+            if ($order->status === 'processing') {
+                try {
+                    app(WhatsAppService::class)->sendEventWhatsApp('confirmed', $order);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send WhatsApp confirmed event: '.$e->getMessage());
+                }
+
+                try {
+                    if ($order->user) {
+                        app(\App\Services\PushNotificationService::class)->sendToUser(
+                            $order->user,
+                            'Order Confirmed 🎉',
+                            "Your order #{$order->order_number} has been placed successfully.",
+                            ['type' => 'order', 'id' => strval($order->id)]
+                        );
+                    }
+                    
+                    // Notify all admins about the new order
+                    $admins = \App\Models\User::where('role', 'administrator')->get();
+                    Log::info('PushNotification: Admin lookup', ['admin_count' => $admins->count(), 'order' => $order->order_number]);
+                    foreach ($admins as $admin) {
+                        app(\App\Services\PushNotificationService::class)->sendToUser(
+                            $admin,
+                            'New Order Received! 💰',
+                            "A new order #{$order->order_number} has been placed.",
+                            ['type' => 'admin_order', 'id' => strval($order->id)]
+                        );
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send push notification: '.$e->getMessage());
+                }
+
+                try {
+                    $email = $order->user?->email ?? $order->shippingAddress?->email;
+                    if ($email) {
+                        $emailTemplate = \App\Models\EmailTemplate::where('name', 'Order Placed')->first();
+                        if ($emailTemplate) {
+                            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\DynamicOrderStatusEmail($order, $emailTemplate));
+                        } else {
+                            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderStatusEmail($order, 'confirmed'));
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send Order Confirmed Email: '.$e->getMessage());
+                }
             }
 
             return response()->json([
                 'success' => true,
                 'order_uuid' => $order->uuid,
+                'upfront_amount' => $order->upfront_amount ?? 0,
                 'message' => 'Order placed successfully!',
             ], 201);
 
@@ -353,8 +466,19 @@ class OrderController extends Controller
                         $q->where('email', $user->email);
                     });
             })
-            ->with(['items.sku.product', 'shippingAddress'])
+            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'shippingAddress'])
             ->firstOrFail();
+
+        $order->items->transform(function ($item) use ($order) {
+            $maxDays = 5;
+            if ($item->product && $item->product->deliveryTimeline) {
+                $maxDays = $item->product->deliveryTimeline->max_days;
+            } elseif ($item->sku && $item->sku->product && $item->sku->product->deliveryTimeline) {
+                $maxDays = $item->sku->product->deliveryTimeline->max_days;
+            }
+            $item->delivery_date = $order->created_at->addDays($maxDays)->format('jS F Y');
+            return $item;
+        });
 
         $data = $order->toArray();
         $data['tracking_url'] = $order->tracking_url;

@@ -35,9 +35,14 @@ function CartRow({ item, update, remove }: {
                             {item.colorName}
                         </span>
                     )}
-                    {item.size && (
+                    {item.sizeName && (
                         <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Size {item.size}
+                            Size {item.sizeName}
+                        </span>
+                    )}
+                    {item.deliveryDate && (
+                        <span className="text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                            Delivered by: {item.deliveryDate}
                         </span>
                     )}
                 </div>
@@ -88,7 +93,8 @@ function WishlistRow({ item, remove }: { item: WishlistItem; remove: (id: number
             colorName: item.colorName,
             colorHex: item.colorHex,
             sizeName: item.sizeName,
-            size: item.size
+            size: item.size,
+            deliveryDate: item.deliveryDate
         });
         
         remove(item.productId);
@@ -117,9 +123,9 @@ function WishlistRow({ item, remove }: { item: WishlistItem; remove: (id: number
                             {item.colorName}
                         </span>
                     )}
-                    {item.size && (
+                    {item.sizeName && (
                         <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Size {item.size}
+                            Size {item.sizeName}
                         </span>
                     )}
                 </div>
@@ -158,6 +164,25 @@ export default function CartPage() {
     useEffect(() => {
         setMounted(true);
         api.get('/api/settings').then(r => setSettings(r.data)).catch(() => { });
+
+        // Magic Pre-applied Discount Logic
+        api.get('/api/coupons/public').then(async r => {
+            const magicCoupons = r.data.magic_coupons || [];
+            const state = useCartStore.getState();
+            if (!state.appliedCoupon && magicCoupons.length > 0 && state.items.length > 0) {
+                for (const mc of magicCoupons) {
+                    try {
+                        const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
+                        const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+                        const applyRes = await api.post('/api/coupons/apply', { code: mc.code, cart: { subtotal: sub, items } });
+                        if (applyRes.data.success) {
+                            state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }).catch(() => { });
     }, []);
 
     if (!mounted) return <div className="min-h-[60vh]" />;
@@ -175,7 +200,8 @@ export default function CartPage() {
 
     const mrpTotal = cart.items.reduce((s, i) => s + Math.max(Number(i.mrp) || 0, Number(i.price)) * i.quantity, 0);
     const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-    const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
+        const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
+    const discount = cart.appliedCoupon?.discountAmount || 0;
     
     let taxAmount = 0;
     const isTaxEnabled = settings?.is_tax_enabled == '1';
@@ -212,7 +238,7 @@ export default function CartPage() {
         trueSubtotal += trueItemTotal;
     });
 
-    const total = taxInclusive ? subtotal : trueSubtotal + taxAmount;
+    const total = Math.max(0, (taxInclusive ? subtotal : trueSubtotal + taxAmount) - discount);
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
@@ -275,6 +301,12 @@ export default function CartPage() {
                                     <span>Cart Subtotal</span>
                                     <span>{formatPrice(subtotal)}</span>
                                 </div>
+                                {cart.appliedCoupon && (
+                                    <div className="flex justify-between text-green-600 font-medium">
+                                        <span>Coupon ({cart.appliedCoupon.code})</span>
+                                        <span>−{formatPrice(discount)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-gray-500">
                                     <span>Shipping</span>
                                     <span>Calculated at checkout</span>

@@ -15,12 +15,12 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email', 'max:255'],
+        $credentials = $request->strictValidate([
+            'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:128'],
         ]);
 
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt($credentials, true)) {
             $user = Auth::user();
             $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
 

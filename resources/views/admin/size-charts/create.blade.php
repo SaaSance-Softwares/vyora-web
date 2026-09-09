@@ -134,11 +134,13 @@
         });
 
         document.querySelectorAll('.size-row').forEach(row => {
+            const existingVals = Array.from(row.querySelectorAll('.sc-val')).map(i => i.value);
             row.querySelectorAll('.dyn-td').forEach(td => td.remove());
             const lastTd = row.lastElementChild;
-            cols.forEach(() => {
+            cols.forEach((c, idx) => {
                 const td = document.createElement('td'); td.className = 'dyn-td px-4 py-3';
-                td.innerHTML = `<input type="number" step="0.1" class="sc-val w-full text-xs text-center border-gray-300 rounded p-1.5" placeholder="0">`;
+                const val = existingVals[idx] !== undefined ? existingVals[idx] : '';
+                td.innerHTML = `<input type="number" step="0.1" class="sc-val w-full text-xs text-center border-gray-300 rounded p-1.5" placeholder="0" value="${val}">`;
                 row.insertBefore(td, lastTd);
             });
         });

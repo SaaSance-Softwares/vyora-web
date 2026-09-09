@@ -30,6 +30,17 @@ class WhatsAppTemplateController extends Controller
 
             foreach ($response['data'] as $template) {
                 $metaNames[] = $template['name'];
+                
+                $existing = WhatsappTemplate::where('name', $template['name'])->where('language', $template['language'])->first();
+                $mapping = $existing ? $existing->variables_mapping : null;
+                
+                // Auto-repair abandoned_cart if mapping got erased previously
+                if ($template['name'] === 'abandoned_cart' && empty($mapping)) {
+                    $mapping = [
+                        'body' => ['customer_name', 'product_name'],
+                        'buttons' => [ '0' => ['cart_token'] ]
+                    ];
+                }
 
                 WhatsappTemplate::updateOrCreate(
                     [
@@ -41,6 +52,7 @@ class WhatsAppTemplateController extends Controller
                         'category' => $template['category'],
                         'status' => $template['status'],
                         'components' => $template['components'] ?? [],
+                        'variables_mapping' => $mapping,
                     ]
                 );
                 $syncedCount++;
@@ -67,7 +79,7 @@ class WhatsAppTemplateController extends Controller
             'category' => 'required|string|in:MARKETING,UTILITY,AUTHENTICATION',
             'language' => 'required|string',
             'body_text' => 'required|string|max:1024',
-            'header_type' => 'nullable|string|in:NONE,TEXT',
+            'header_type' => 'nullable|string|in:NONE,TEXT,IMAGE',
             'header_text' => 'nullable|string|max:60|required_if:header_type,TEXT',
             'footer_text' => 'nullable|string|max:60',
             'body_examples' => 'nullable|array',
@@ -97,6 +109,21 @@ class WhatsAppTemplateController extends Controller
                 }
             }
             $components[] = $header;
+        } elseif ($request->header_type === 'IMAGE') {
+            // Find existing IMAGE header from template components and preserve it
+            if (isset($template) && is_array($template->components)) {
+                foreach ($template->components as $c) {
+                    if (isset($c['type']) && $c['type'] === 'HEADER' && isset($c['format']) && $c['format'] === 'IMAGE') {
+                        $components[] = $c;
+                        break;
+                    }
+                }
+            } else {
+                $components[] = [
+                    'type' => 'HEADER',
+                    'format' => 'IMAGE'
+                ];
+            }
         }
 
         // Body Component
@@ -227,7 +254,7 @@ class WhatsAppTemplateController extends Controller
         $request->validate([
             'category' => 'required|string|in:MARKETING,UTILITY,AUTHENTICATION',
             'body_text' => 'required|string|max:1024',
-            'header_type' => 'nullable|string|in:NONE,TEXT',
+            'header_type' => 'nullable|string|in:NONE,TEXT,IMAGE',
             'header_text' => 'nullable|string|max:60|required_if:header_type,TEXT',
             'footer_text' => 'nullable|string|max:60',
             'body_examples' => 'nullable|array',
@@ -260,6 +287,21 @@ class WhatsAppTemplateController extends Controller
                 }
             }
             $components[] = $header;
+        } elseif ($request->header_type === 'IMAGE') {
+            // Find existing IMAGE header from template components and preserve it
+            if (isset($template) && is_array($template->components)) {
+                foreach ($template->components as $c) {
+                    if (isset($c['type']) && $c['type'] === 'HEADER' && isset($c['format']) && $c['format'] === 'IMAGE') {
+                        $components[] = $c;
+                        break;
+                    }
+                }
+            } else {
+                $components[] = [
+                    'type' => 'HEADER',
+                    'format' => 'IMAGE'
+                ];
+            }
         }
 
         // Body Component

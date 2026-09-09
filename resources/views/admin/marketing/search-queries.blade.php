@@ -1,4 +1,5 @@
 @extends('layouts.admin')
+@section('header', 'SQM')
 
 @section('content')
 <div class="space-y-6">

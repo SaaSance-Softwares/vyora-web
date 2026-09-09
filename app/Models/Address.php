@@ -9,7 +9,7 @@ class Address extends Model
     protected $fillable = [
         'user_id', 'name', 'email', 'phone',
         'address_line1', 'address_line2',
-        'city', 'state', 'zip_code', 'country',
+        'city', 'district', 'state', 'zip_code', 'country',
         'type', 'is_default',
     ];
 

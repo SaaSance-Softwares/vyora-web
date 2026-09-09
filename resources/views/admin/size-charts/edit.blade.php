@@ -150,7 +150,7 @@
             const lastTd = row.lastElementChild;
             cols.forEach((c, idx) => {
                 const td = document.createElement('td'); td.className = 'dyn-td px-4 py-3';
-                const v = currentVals[idx] || 0;
+                const v = currentVals[idx] !== undefined ? currentVals[idx] : '';
                 td.innerHTML = `<input type="number" step="0.1" class="sc-val w-full text-xs text-center border-gray-300 rounded p-1.5" value="${v}" placeholder="0">`;
                 row.insertBefore(td, lastTd);
             });
