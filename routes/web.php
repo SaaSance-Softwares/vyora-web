@@ -189,6 +189,9 @@ Route::get('/checkout/thank-you/{uuid}', [PageController::class, 'thankYou'])->n
 Route::get('/wishlist', [PageController::class, 'wishlist'])->name('frontend.wishlist');
 Route::get('/google-merchant-feed.xml', [GoogleMerchantController::class, 'feed'])->name('frontend.google-merchant-feed');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('frontend.sitemap');
+// Store Locator
+Route::get('/stores', [\App\Http\Controllers\Frontend\StoreLocatorController::class, 'index'])->name('frontend.stores');
+
 Route::get('/gift-cards', function () {
     $favicon = \App\Models\ThemeSetting::where('key', 'favicon')->value('value');
     $logo = \App\Models\ThemeSetting::where('key', 'main_logo')->value('value');
@@ -264,6 +267,13 @@ Route::get('/login', function () {
     return Inertia::render('Auth/Login');
 })->name('login');
 
+Route::get('/reset-password', function (\Illuminate\Http\Request $request) {
+    return Inertia::render('Auth/ResetPassword', [
+        'token' => $request->token,
+        'email' => $request->email,
+    ]);
+})->name('password.reset.user');
+
 Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 })->name('register');
@@ -280,7 +290,7 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     Route::get('/forgot-password', [\App\Http\Controllers\Admin\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-    Route::post('/forgot-password', [\App\Http\Controllers\Admin\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::post('/forgot-password', [\App\Http\Controllers\Admin\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email')->middleware('throttle.otp.backoff');
     Route::get('/reset-password/{token}', [\App\Http\Controllers\Admin\ForgotPasswordController::class, 'showResetForm'])->name('password.reset');
     Route::post('/reset-password', [\App\Http\Controllers\Admin\ForgotPasswordController::class, 'reset'])->name('password.update');
 
@@ -389,6 +399,29 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
         // Communication Templates
         Route::resource('sms-templates', \App\Http\Controllers\Admin\SmsTemplateController::class)->except(['show']);
         Route::resource('email-templates', \App\Http\Controllers\Admin\EmailTemplateController::class)->except(['show']);
+
+        // POS Settings
+        Route::get('/pos-settings', [\App\Http\Controllers\Admin\PosSettingController::class, 'index'])->name('pos-settings.index');
+        Route::post('/pos-settings', [\App\Http\Controllers\Admin\PosSettingController::class, 'update'])->name('pos-settings.update');
+
+        // POS Analysis
+        Route::get('/pos-analysis', [\App\Http\Controllers\Admin\PosAnalysisController::class, 'index'])->name('pos-analysis.index');
+
+        // POS Markets (Stores)
+        Route::prefix('pos-markets')->name('pos-markets.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PosMarketController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\PosMarketController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\PosMarketController::class, 'store'])->name('store');
+            Route::get('/{slug}/edit', [\App\Http\Controllers\Admin\PosMarketController::class, 'edit'])->name('edit');
+            Route::put('/{slug}', [\App\Http\Controllers\Admin\PosMarketController::class, 'update'])->name('update');
+
+            Route::get('/{slug}', [\App\Http\Controllers\Admin\PosMarketController::class, 'show'])->name('show');
+            Route::get('/{slug}/search-products', [\App\Http\Controllers\Admin\PosMarketController::class, 'searchProducts'])->name('searchProducts');
+            Route::post('/{slug}/products', [\App\Http\Controllers\Admin\PosMarketController::class, 'addProduct'])->name('addProduct');
+            Route::put('/{slug}/products/{skuId}', [\App\Http\Controllers\Admin\PosMarketController::class, 'updateProduct'])->name('updateProduct');
+
+            Route::delete('/{slug}/products/{skuId}', [\App\Http\Controllers\Admin\PosMarketController::class, 'removeProduct'])->name('removeProduct');
+        });
 
         // Online Store
         Route::prefix('online-store')->name('online-store.')->group(function () {

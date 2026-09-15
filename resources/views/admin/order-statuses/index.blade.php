@@ -47,6 +47,9 @@
                                 @if($status->is_system)
                                     <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-md font-bold uppercase tracking-wider">System</span>
                                 @endif
+                                @if($status->fulfillment_type === 'POS' || stripos($status->name, 'POS') !== false)
+                                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] rounded-md font-bold uppercase tracking-wider">POS</span>
+                                @endif
                                 @if($status->fulfillment_type === 'QikInk')
                                     <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-md font-bold uppercase tracking-wider">QikInk</span>
                                 @endif

@@ -15,75 +15,91 @@
             $gscVerificationCode = '';
             $storeName = config('app.name', 'Vyora');
             $faviconUrl = asset('favicon.ico');
+            $customCodeHeader = '';
+            $customCodeBody = '';
+            $customCodeFooter = '';
 
+            // Detect POS route — skip all tracking/chat/custom scripts on POS
+            $posUrl = 'pos';
             try {
-                if (\Illuminate\Support\Facades\Schema::hasTable('theme_settings')) {
-                    $dbStoreName = \App\Models\ThemeSetting::where('key', 'store_name')->value('value');
-                    if ($dbStoreName) {
-                        $storeName = $dbStoreName;
-                    }
-                    
-                    $dbFavicon = \App\Models\ThemeSetting::where('group', 'logos')->where('key', 'favicon')->value('value');
-                    if ($dbFavicon) {
-                        $faviconUrl = asset($dbFavicon);
-                    }
-
-                    $gaEnabled = \App\Models\ThemeSetting::where('group', 'integration.google-analytics')->where('key', 'enabled')->value('value') === '1';
-                    if ($gaEnabled) {
-                        $gaId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.google-analytics')->where('key', 'measurement_id')->value('value'));
-                    }
-
-                    $pixelEnabled = \App\Models\ThemeSetting::where('group', 'integration.meta-pixel')->where('key', 'enabled')->value('value') === '1';
-                    if ($pixelEnabled) {
-                        $pixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.meta-pixel')->where('key', 'pixel_id')->value('value'));
-                    }
-
-                    $snapchatPixelEnabled = \App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'enabled')->value('value') === '1';
-                    if ($snapchatPixelEnabled) {
-                        $snapchatPixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'pixel_id')->value('value'));
-                    }
-
-                    $gscEnabled = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'enabled')->value('value') === '1';
-                    if ($gscEnabled) {
-                        $gscVerificationCode = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'site_verification_code')->value('value');
-                        if ($gscVerificationCode) {
-                            $gscVerificationCode = \Illuminate\Support\Facades\Crypt::decryptString($gscVerificationCode);
-                        }
-                    }
-
-                    $customCodeHeader = \App\Models\ThemeSetting::where('key', 'custom_code_header')->value('value');
-                    $customCodeBody = \App\Models\ThemeSetting::where('key', 'custom_code_body')->value('value');
-                    $customCodeFooter = \App\Models\ThemeSetting::where('key', 'custom_code_footer')->value('value');
-
-                    // AEO Organization Schema variables
-                    $orgEmail = \App\Models\ThemeSetting::where('key', 'support_email')->value('value');
-                    $orgPhone = \App\Models\ThemeSetting::where('key', 'support_phone')->value('value');
-                    $socialInsta = \App\Models\ThemeSetting::where('key', 'social_instagram')->value('value');
-                    $socialFb = \App\Models\ThemeSetting::where('key', 'social_facebook')->value('value');
-                    $socialYt = \App\Models\ThemeSetting::where('key', 'social_youtube')->value('value');
-                    
-                    $orgSameAs = array_filter([$socialInsta, $socialFb, $socialYt]);
-                    
-                    $globalOrgSchema = [
-                        "@context" => "https://schema.org",
-                        "@type" => "Organization",
-                        "name" => $storeName,
-                        "url" => url('/'),
-                        "logo" => $faviconUrl
-                    ];
-
-                    $websiteSchema = [
-                        "@context" => "https://schema.org",
-                        "@type" => "WebSite",
-                        "name" => $storeName,
-                        "url" => url('/')
-                    ];
-                    if ($orgEmail) $globalOrgSchema['email'] = $orgEmail;
-                    if ($orgPhone) $globalOrgSchema['telephone'] = $orgPhone;
-                    if (!empty($orgSameAs)) $globalOrgSchema['sameAs'] = array_values($orgSameAs);
+                $posSetting = \Illuminate\Support\Facades\DB::table('theme_settings')
+                    ->where('group', 'pos_settings')->where('key', 'pos_url')->first();
+                if ($posSetting && !empty($posSetting->value)) {
+                    $posUrl = ltrim($posSetting->value, '/');
                 }
-            } catch (\Exception $e) {
-                // Ignore errors during migration or missing DB
+            } catch (\Exception $e) {}
+            $isPosRoute = request()->is($posUrl) || request()->is($posUrl . '/*') || request()->routeIs('pos.*');
+
+            if (!$isPosRoute) {
+                try {
+                    if (\Illuminate\Support\Facades\Schema::hasTable('theme_settings')) {
+                        $dbStoreName = \App\Models\ThemeSetting::where('key', 'store_name')->value('value');
+                        if ($dbStoreName) {
+                            $storeName = $dbStoreName;
+                        }
+                        
+                        $dbFavicon = \App\Models\ThemeSetting::where('group', 'logos')->where('key', 'favicon')->value('value');
+                        if ($dbFavicon) {
+                            $faviconUrl = asset($dbFavicon);
+                        }
+
+                        $gaEnabled = \App\Models\ThemeSetting::where('group', 'integration.google-analytics')->where('key', 'enabled')->value('value') === '1';
+                        if ($gaEnabled) {
+                            $gaId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.google-analytics')->where('key', 'measurement_id')->value('value'));
+                        }
+
+                        $pixelEnabled = \App\Models\ThemeSetting::where('group', 'integration.meta-pixel')->where('key', 'enabled')->value('value') === '1';
+                        if ($pixelEnabled) {
+                            $pixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.meta-pixel')->where('key', 'pixel_id')->value('value'));
+                        }
+
+                        $snapchatPixelEnabled = \App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'enabled')->value('value') === '1';
+                        if ($snapchatPixelEnabled) {
+                            $snapchatPixelId = \Illuminate\Support\Facades\Crypt::decryptString(\App\Models\ThemeSetting::where('group', 'integration.snapchat-pixel')->where('key', 'pixel_id')->value('value'));
+                        }
+
+                        $gscEnabled = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'enabled')->value('value') === '1';
+                        if ($gscEnabled) {
+                            $gscVerificationCode = \App\Models\ThemeSetting::where('group', 'integration.google-search-console')->where('key', 'site_verification_code')->value('value');
+                            if ($gscVerificationCode) {
+                                $gscVerificationCode = \Illuminate\Support\Facades\Crypt::decryptString($gscVerificationCode);
+                            }
+                        }
+
+                        $customCodeHeader = \App\Models\ThemeSetting::where('key', 'custom_code_header')->value('value') ?? '';
+                        $customCodeBody   = \App\Models\ThemeSetting::where('key', 'custom_code_body')->value('value') ?? '';
+                        $customCodeFooter = \App\Models\ThemeSetting::where('key', 'custom_code_footer')->value('value') ?? '';
+
+                        // AEO Organization Schema variables
+                        $orgEmail   = \App\Models\ThemeSetting::where('key', 'support_email')->value('value');
+                        $orgPhone   = \App\Models\ThemeSetting::where('key', 'support_phone')->value('value');
+                        $socialInsta = \App\Models\ThemeSetting::where('key', 'social_instagram')->value('value');
+                        $socialFb   = \App\Models\ThemeSetting::where('key', 'social_facebook')->value('value');
+                        $socialYt   = \App\Models\ThemeSetting::where('key', 'social_youtube')->value('value');
+                        
+                        $orgSameAs = array_filter([$socialInsta, $socialFb, $socialYt]);
+                        
+                        $globalOrgSchema = [
+                            "@context" => "https://schema.org",
+                            "@type" => "Organization",
+                            "name" => $storeName,
+                            "url" => url('/'),
+                            "logo" => $faviconUrl
+                        ];
+
+                        $websiteSchema = [
+                            "@context" => "https://schema.org",
+                            "@type" => "WebSite",
+                            "name" => $storeName,
+                            "url" => url('/')
+                        ];
+                        if ($orgEmail) $globalOrgSchema['email'] = $orgEmail;
+                        if ($orgPhone) $globalOrgSchema['telephone'] = $orgPhone;
+                        if (!empty($orgSameAs)) $globalOrgSchema['sameAs'] = array_values($orgSameAs);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore errors during migration or missing DB
+                }
             }
         @endphp
 

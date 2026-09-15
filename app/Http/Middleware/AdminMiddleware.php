@@ -26,7 +26,7 @@ class AdminMiddleware
                 $request->session()->regenerateToken();
             }
 
-            return redirect()->route('login')->withErrors([
+            return redirect()->route('admin.login')->withErrors([
                 'email' => 'You do not have administrative privileges to access this area.',
             ]);
         }

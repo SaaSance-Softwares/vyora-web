@@ -133,10 +133,13 @@
                                     <div class="flex -space-x-2">
                                         @foreach($order->items->take(3) as $item)
                                             @php
-                                                $img = $item->image_url;
-                                                if (!$img && $item->product) {
+                                                $img = null;
+                                                if ($item->product) {
                                                     $primary = $item->product->images->where('is_primary', true)->first() ?? $item->product->images->first();
-                                                    $img = $primary ? asset('storage/' . $primary->path) : null;
+                                                    $img = $primary ? $primary->url : ($item->product->image_url ?? null);
+                                                }
+                                                if (!$img) {
+                                                    $img = $item->image_url;
                                                 }
                                                 // Fallback for product name if not saved in order_items
                                                 $pName = $item->product_name ?: ($item->product ? $item->product->name : 'Unknown Product');
@@ -187,6 +190,30 @@
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide {{ $statusClass }}">
                                     {{ $order->status_label }}
                                 </span>
+                                @php
+                                    $exchangeOrder = null;
+                                    if (in_array(strtolower($order->status), ['exchanged', 'partially returned', 'returned'])) {
+                                        $exchangeOrder = \App\Models\Order::where('notes', 'LIKE', '%Exchange against Order #' . $order->order_number . '%')->first();
+                                    }
+                                @endphp
+                                @if($exchangeOrder)
+                                    <div class="mt-2 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                                        Exchanged For:<br>
+                                        <a href="{{ route('admin.orders.show', $exchangeOrder->id) }}" class="text-blue-600 hover:underline font-bold">{{ $exchangeOrder->order_number }}</a>
+                                    </div>
+                                @endif
+                                @if(str_contains($order->notes, 'Exchange against Order #'))
+                                    @php
+                                        preg_match('/Order #([A-Z0-9-]+)/', $order->notes, $matches);
+                                        $parentOrderNumber = $matches[1] ?? null;
+                                    @endphp
+                                    @if($parentOrderNumber)
+                                        <div class="mt-2 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                                            Parent Order:<br>
+                                            <a href="{{ route('admin.orders.index', ['search' => $parentOrderNumber]) }}" class="text-blue-600 hover:underline font-bold">{{ $parentOrderNumber }}</a>
+                                        </div>
+                                    @endif
+                                @endif
                                 @if($order->coupon_code)
                                     <div class="mt-1.5">
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px] font-bold">

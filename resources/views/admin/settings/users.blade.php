@@ -214,6 +214,10 @@
                 checkboxes.forEach(cb => {
                     cb.checked = (cb.value === 'Marketing & Sales');
                 });
+            } else if (role === 'pos_cashier') {
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                });
             }
         }
     }

@@ -26,20 +26,19 @@ class ForgotPasswordController extends Controller
 
         // Security: Ensure only admins can request reset here
         $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
-        if (!$user || !in_array($user->role, $adminRoles)) {
-            return back()->withErrors(['email' => 'We cannot find an admin user with that email address.']);
+        
+        if ($user && in_array($user->role, $adminRoles)) {
+            $token = Str::random(64);
+
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $request->email],
+                ['token' => Hash::make($token), 'created_at' => Carbon::now()]
+            );
+
+            Mail::to($request->email)->send(new \App\Mail\AdminPasswordReset($token, $request->email));
         }
 
-        $token = Str::random(64);
-
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $request->email],
-            ['token' => Hash::make($token), 'created_at' => Carbon::now()]
-        );
-
-        Mail::to($request->email)->send(new \App\Mail\AdminPasswordReset($token, $request->email));
-
-        return back()->with('status', 'We have emailed your password reset link!');
+        return back()->with('status', 'If this email exists we will send you the password reset link. If you do not receive the password reset link check the email ID or the email is not registered.');
     }
 
     public function showResetForm(Request $request, $token = null)

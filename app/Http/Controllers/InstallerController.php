@@ -111,12 +111,21 @@ class InstallerController extends Controller
             'role' => 'administrator',
         ]);
 
-        // Write Admin path and App Name to env
+        // Automatically secure the environment for production
         $this->updateEnv([
             'APP_NAME' => $request->store_name,
             'ADMIN_PATH' => $request->admin_path,
+            'APP_ENV' => 'production',
+            'APP_DEBUG' => 'false',
         ]);
-        Artisan::call('config:clear');
+        
+        // Generate a new secure application key
+        Artisan::call('key:generate', ['--force' => true]);
+        
+        // Cache config and routes for production performance
+        Artisan::call('config:cache');
+        Artisan::call('route:cache');
+        Artisan::call('view:cache');
 
         // Create storage symlink
         try {

@@ -21,6 +21,8 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
     const [countryCode, setCountryCode] = useState('+91');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
+    const [forgotMessage, setForgotMessage] = useState('');
     
     // Auth fields parsing
     const parse = (val: any) => {
@@ -106,7 +108,10 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
         try {
             const finalIdentifier = loginMethod === 'phone' ? formatPhone() : identifier.trim();
 
-            if (loginMethod === 'phone' && phoneLoginType === 'otp') {
+            if (isForgotPassword) {
+                const res = await api.post('/api/forgot-password', { email: identifier.trim() });
+                setForgotMessage(res.data.message);
+            } else if (loginMethod === 'phone' && phoneLoginType === 'otp') {
                 // Send OTP logic
                 await api.post('/api/login/send-otp', { phone: finalIdentifier });
                 setIsOtpSent(true);
@@ -304,6 +309,65 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                     </form>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {forgotMessage ? (
+                            <div className="text-center py-4 space-y-4">
+                                <div className="mx-auto w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                                    <Mail className="w-6 h-6 text-green-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900">Check your email</h3>
+                                <p className="text-sm text-gray-500 leading-relaxed px-4">{forgotMessage}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setForgotMessage('');
+                                        setIsForgotPassword(false);
+                                        setPassword('');
+                                    }}
+                                    className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black mt-6 block w-full"
+                                >
+                                    ← Back to Login
+                                </button>
+                            </div>
+                        ) : isForgotPassword ? (
+                            <div className="space-y-4">
+                                <div className="text-center mb-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">Reset Password</h3>
+                                    <p className="text-sm text-gray-500">Enter your email and we will send you a reset link.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Email Address</label>
+                                    <div className="relative group">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
+                                        <input
+                                            type="email" required
+                                            name="email"
+                                            autoComplete="email"
+                                            placeholder="name@example.com"
+                                            className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none"
+                                            value={identifier}
+                                            onChange={(e) => setIdentifier(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-black text-white py-4 rounded-xl font-bold text-xs uppercase tracking-[0.2em] hover:shadow-lg hover:shadow-black/10 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+                                >
+                                    {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <span>Send Reset Link</span>}
+                                </button>
+                                <div className="text-center pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsForgotPassword(false)}
+                                        className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors underline decoration-2 underline-offset-4"
+                                    >
+                                        Back to Login
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
                         {isEmailVisible && isPhoneVisible && (
                             <div className="flex p-1 bg-gray-100/80 rounded-xl mb-4 relative z-0">
                                 <button
@@ -365,7 +429,7 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between ml-1">
                                     <label className="text-xs font-bold uppercase tracking-widest text-gray-400">Password</label>
-                                    <button type="button" className="text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-black transition-colors">Forgot?</button>
+                                    <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-black transition-colors">Forgot?</button>
                                 </div>
                                 <div className="relative group">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" />
@@ -401,11 +465,13 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                                 </button>
                             </div>
                         )}
+                        </>
+                        )}
                     </form>
                 )}
 
                 {/* Social Login Buttons */}
-                {!isOtpSent && socialProviders.length > 0 && (
+                {!isOtpSent && !isForgotPassword && !forgotMessage && socialProviders.length > 0 && (
                     <div className="mt-8 space-y-4">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
@@ -450,7 +516,7 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                     </div>
                 )}
 
-                {!isOtpSent && (
+                {!isOtpSent && !isForgotPassword && !forgotMessage && (
                     <div className="mt-8 pt-6 border-t border-gray-50 text-center">
                         <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
                             New here? 

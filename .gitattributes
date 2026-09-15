@@ -9,3 +9,9 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+public/.htaccess export-ignore
+.env export-ignore
+.env.example export-ignore
+storage/app/public/ export-ignore
+public/uploads/ export-ignore
+public/storage export-ignore
