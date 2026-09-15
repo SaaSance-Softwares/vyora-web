@@ -46,7 +46,31 @@ $shipping = $order->shippingAddress;
     </div>
   </div>
   <div class="flex items-center gap-3">
-    <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $sc }}">{{ $order->status_label }}</span>
+    <div class="flex flex-col items-end">
+        <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $sc }}">{{ $order->status_label }}</span>
+        @php
+            $exchangeOrder = null;
+            if (in_array(strtolower($order->status), ['exchanged', 'partially returned', 'returned'])) {
+                $exchangeOrder = \App\Models\Order::where('notes', 'LIKE', '%Exchange against Order #' . $order->order_number . '%')->first();
+            }
+        @endphp
+        @if($exchangeOrder)
+            <span class="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
+                Exchanged For: <a href="{{ route('admin.orders.show', $exchangeOrder->id) }}" class="text-blue-600 hover:underline font-bold">{{ $exchangeOrder->order_number }}</a>
+            </span>
+        @endif
+        @if(str_contains($order->notes, 'Exchange against Order #'))
+            @php
+                preg_match('/Order #([A-Z0-9-]+)/', $order->notes, $matches);
+                $parentOrderNumber = $matches[1] ?? null;
+            @endphp
+            @if($parentOrderNumber)
+                <span class="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
+                    Parent Order: <a href="{{ route('admin.orders.index', ['search' => $parentOrderNumber]) }}" class="text-blue-600 hover:underline font-bold">{{ $parentOrderNumber }}</a>
+                </span>
+            @endif
+        @endif
+    </div>
     <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $payClass }} bg-gray-50 border">{{ $displayPaymentStatus }}</span>
   </div>
 </div>
@@ -101,10 +125,13 @@ $shipping = $order->shippingAddress;
       <div class="divide-y divide-gray-50">
         @foreach($order->items as $item)
         @php
-          $img = $item->image_url;
-          if(!$img && $item->product) {
+          $img = null;
+          if($item->product) {
             $primary = $item->product->images->where('is_primary',true)->first() ?? $item->product->images->first();
-            $img = $primary ? asset('storage/'.$primary->path) : null;
+            $img = $primary ? $primary->url : ($item->product->image_url ?? null);
+          }
+          if(!$img) {
+              $img = $item->image_url;
           }
           $attrs = $item->sku?->attributeValues ?? collect();
         @endphp
@@ -137,6 +164,21 @@ $shipping = $order->shippingAddress;
             @endif
             @if($item->sku)
               <p class="text-[10px] text-gray-400 mt-1 font-mono">SKU: {{ $item->sku->code }}</p>
+            @endif
+            @if($item->returned_quantity > 0)
+              <div class="mt-2">
+                <span class="px-2 py-1 bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold rounded-md">
+                  @php
+                      $actionType = 'Returned';
+                      if(in_array(strtolower($order->status), ['exchanged', 'partially returned']) && !empty($exchangeOrder)) {
+                          $actionType = 'Exchanged';
+                      } else if(strtolower($order->status) === 'exchanged') {
+                          $actionType = 'Exchanged';
+                      }
+                  @endphp
+                  {{ $item->returned_quantity == $item->quantity ? 'Fully' : $item->returned_quantity . ' of ' . $item->quantity }} {{ $actionType }}
+                </span>
+              </div>
             @endif
           </div>
           {{-- Price --}}

@@ -13,6 +13,7 @@ class Coupon extends Model
         'code',
         'name',
         'type',
+        'channel',
         'bogo_buy_qty',
         'bogo_get_qty',
         'bogo_max_discount',

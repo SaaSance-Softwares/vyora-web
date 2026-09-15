@@ -32,8 +32,8 @@ class OrderController extends Controller
                 });
         })
             ->with(['items' => function ($query) {
-                $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price', 'product_id'])
-                    ->with('product.deliveryTimeline');
+                $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price', 'product_id', 'sku_id'])
+                    ->with(['product.deliveryTimeline', 'product.images', 'sku.product.images', 'sku.product.deliveryTimeline']);
             }])
             ->latest()
             ->paginate(10);
@@ -45,9 +45,34 @@ class OrderController extends Controller
             $order->courier_partner = $order->courier_partner;
 
             $order->items->transform(function ($item) use ($order) {
+                // Prefer live product image if available (resolves broken old URLs)
+                $liveImageUrl = null;
+                $product = $item->product ?? ($item->sku ? $item->sku->product : null);
+                if ($product) {
+                    $primary = $product->images->where('is_primary', true)->first() ?? $product->images->first();
+                    $liveImageUrl = $primary ? $primary->url : null;
+                }
+
+                if ($liveImageUrl) {
+                    $item->image_url = $liveImageUrl;
+                } else {
+                    if (empty($item->image_url) || $item->image_url === 'null') {
+                        $item->image_url = null;
+                    } elseif (!empty($item->image_url) && !str_starts_with($item->image_url, 'http')) {
+                        $cleanPath = ltrim($item->image_url, '/');
+                        if (str_starts_with($cleanPath, 'storage/') || str_starts_with($cleanPath, 'uploads/')) {
+                            $item->image_url = asset($cleanPath);
+                        } else {
+                            $item->image_url = asset('storage/' . $cleanPath);
+                        }
+                    }
+                }
+
                 $maxDays = 5;
                 if ($item->product && $item->product->deliveryTimeline) {
                     $maxDays = $item->product->deliveryTimeline->max_days;
+                } elseif ($item->sku && $item->sku->product && $item->sku->product->deliveryTimeline) {
+                    $maxDays = $item->sku->product->deliveryTimeline->max_days;
                 }
                 $item->delivery_date = $order->created_at->addDays($maxDays)->format('jS F Y');
                 return $item;
@@ -466,10 +491,33 @@ class OrderController extends Controller
                         $q->where('email', $user->email);
                     });
             })
-            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'shippingAddress'])
+            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress'])
             ->firstOrFail();
 
         $order->items->transform(function ($item) use ($order) {
+            // Prefer live product image if available (resolves broken old URLs)
+            $liveImageUrl = null;
+            $product = $item->product ?? ($item->sku ? $item->sku->product : null);
+            if ($product) {
+                $primary = $product->images->where('is_primary', true)->first() ?? $product->images->first();
+                $liveImageUrl = $primary ? $primary->url : null;
+            }
+
+            if ($liveImageUrl) {
+                $item->image_url = $liveImageUrl;
+            } else {
+                if (empty($item->image_url) || $item->image_url === 'null') {
+                    $item->image_url = null;
+                } elseif (!empty($item->image_url) && !str_starts_with($item->image_url, 'http')) {
+                    $cleanPath = ltrim($item->image_url, '/');
+                    if (str_starts_with($cleanPath, 'storage/') || str_starts_with($cleanPath, 'uploads/')) {
+                        $item->image_url = asset($cleanPath);
+                    } else {
+                        $item->image_url = asset('storage/' . $cleanPath);
+                    }
+                }
+            }
+
             $maxDays = 5;
             if ($item->product && $item->product->deliveryTimeline) {
                 $maxDays = $item->product->deliveryTimeline->max_days;

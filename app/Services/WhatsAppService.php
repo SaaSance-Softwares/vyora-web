@@ -271,7 +271,7 @@ class WhatsAppService
 
         // Determine target phone
         if (in_array($event, ['confirmed', 'shipped', 'cancelled', 'abandoned_cart']) && $target instanceof Order) {
-            $phone = ($target->user && !empty($target->user->phone)) ? $target->user->phone : ($target->shipping_phone ?? $target->billing_phone);
+            $phone = $target->customer_phone ?? (($target->user && !empty($target->user->phone)) ? $target->user->phone : ($target->shipping_phone ?? $target->billing_phone));
         } elseif (in_array($event, ['account_created', 'password_updated']) && $target instanceof User) {
             $phone = $target->phone;
         }

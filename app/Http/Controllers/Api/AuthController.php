@@ -90,7 +90,7 @@ class AuthController extends Controller
         }
 
         // Generate 6-digit OTP
-        $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         // Cache pending user data + OTP for 10 minutes
         $cacheKey = 'register_otp_' . preg_replace('/[^0-9]/', '', $phone);
@@ -131,7 +131,16 @@ class AuthController extends Controller
         
         $cached = Cache::get($cacheKey);
 
-        if (!$cached || $cached['otp'] !== $request->otp) {
+        if (!$cached || (string)$cached['otp'] !== (string)$request->otp) {
+            if ($cached) {
+                $attempts = ($cached['attempts'] ?? 0) + 1;
+                if ($attempts >= 3) {
+                    Cache::forget($cacheKey);
+                    throw ValidationException::withMessages(['otp' => ['Maximum attempts reached. Please request a new OTP.']]);
+                }
+                $cached['attempts'] = $attempts;
+                Cache::put($cacheKey, $cached, now()->addMinutes(10));
+            }
             throw ValidationException::withMessages([
                 'otp' => ['Invalid or expired OTP.'],
             ]);
@@ -235,7 +244,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $cacheKey = 'login_otp_' . preg_replace('/[^0-9]/', '', $phone);
         Cache::put($cacheKey, [
@@ -274,6 +283,18 @@ class AuthController extends Controller
             $cached = Cache::get($cacheKey);
 
             if (!$cached || (string)$cached['otp'] !== (string)$request->otp) {
+                if ($cached) {
+                    $attempts = ($cached['attempts'] ?? 0) + 1;
+                    if ($attempts >= 3) {
+                        Cache::forget($cacheKey);
+                        return response()->json([
+                            'message' => 'The given data was invalid.',
+                            'errors' => ['otp' => ['Maximum attempts reached. Please request a new OTP.']]
+                        ], 422);
+                    }
+                    $cached['attempts'] = $attempts;
+                    Cache::put($cacheKey, $cached, now()->addMinutes(10));
+                }
                 return response()->json([
                     'message' => 'The given data was invalid.',
                     'errors' => ['otp' => ['Invalid or expired OTP.']]
@@ -313,6 +334,57 @@ class AuthController extends Controller
                 'error' => 'Server Error: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->strictValidate([
+            'email' => 'required|email'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        
+        if ($user) {
+            $token = \Illuminate\Support\Str::random(64);
+            \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $request->email],
+                ['token' => Hash::make($token), 'created_at' => \Carbon\Carbon::now()]
+            );
+            
+            \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\UserPasswordReset($token, $request->email));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'If this email exists we will send you the password reset link. If you do not receive the password reset link check the email ID or the email is not registered.'
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->strictValidate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $request->email)->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            throw ValidationException::withMessages(['email' => ['This password reset token is invalid.']]);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            throw ValidationException::withMessages(['email' => ['We cannot find a user with that email address.']]);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json(['success' => true, 'message' => 'Your password has been reset successfully!']);
     }
 
     public function user(Request $request)

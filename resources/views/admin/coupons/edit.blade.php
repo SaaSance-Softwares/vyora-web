@@ -24,7 +24,7 @@
                 <!-- Basic Info -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h3 class="font-bold border-b pb-4 mb-6">Coupon Identification</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Coupon Code</label>
                             <input type="text" name="code" value="{{ old('code', $coupon->code) }}" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono uppercase focus:ring-black">
@@ -33,6 +33,15 @@
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Campaign Name</label>
                             <input type="text" name="name" value="{{ old('name', $coupon->name) }}" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Winter Sale 2026">
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Applicable Channel</label>
+                        <select name="channel" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-black">
+                            <option value="both" {{ old('channel', $coupon->channel) == 'both' ? 'selected' : '' }}>Both (Online Store & POS Offline)</option>
+                            <option value="online" {{ old('channel', $coupon->channel) == 'online' ? 'selected' : '' }}>Online Only (Storefront checkout)</option>
+                            <option value="offline" {{ old('channel', $coupon->channel) == 'offline' ? 'selected' : '' }}>Offline Only (POS Terminal)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Restrict where this coupon can be applied.</p>
                     </div>
                 </div>
 

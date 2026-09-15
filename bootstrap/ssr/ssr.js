@@ -4,13 +4,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
 import { Link, usePage, router, Head, createInertiaApp } from "@inertiajs/react";
-import { ChevronDown, Search, User, ArrowRight, LogOut, Shield, MapPin, Package, Gift, ChevronRight, Wallet, AlertCircle, Check, Lock, EyeOff, Eye, Plus, Pencil, Trash2, Mail, Phone, ShoppingBag, Heart, Minus, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, Share2, Star, Ruler, ChevronUp, ShieldCheck, TrendingUp, Home as Home$1, Menu, Landmark } from "lucide-react";
+import { ChevronDown, Search, User, ArrowRight, LogOut, Shield, MapPin, Package, Gift, ChevronRight, Wallet, AlertCircle, Check, Lock, EyeOff, Eye, Plus, Pencil, Trash2, Mail, Phone, ShoppingBag, Heart, Minus, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, Share2, Star, Ruler, ChevronUp, ShieldCheck, TrendingUp, Calendar, PhoneCall, Home as Home$1, Menu, Landmark } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import createServer from "@inertiajs/react/server";
 import { renderToString } from "react-dom/server";
 const api = axios.create({
@@ -1735,6 +1736,8 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
   const [countryCode, setCountryCode] = useState("+91");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
   const parse = (val) => {
     if (typeof val === "string") {
       try {
@@ -1808,7 +1811,10 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
     setLoading(true);
     try {
       const finalIdentifier = loginMethod === "phone" ? formatPhone() : identifier.trim();
-      if (loginMethod === "phone" && phoneLoginType === "otp") {
+      if (isForgotPassword) {
+        const res = await api.post("/api/forgot-password", { email: identifier.trim() });
+        setForgotMessage(res.data.message);
+      } else if (loginMethod === "phone" && phoneLoginType === "otp") {
         await api.post("/api/login/send-otp", { phone: finalIdentifier });
         setIsOtpSent(true);
       } else {
@@ -1982,7 +1988,66 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
                 children: "← Change Phone Number"
               }
             ) })
-          ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
+          ] }) : /* @__PURE__ */ jsx("form", { onSubmit: handleSubmit, className: "space-y-4", children: forgotMessage ? /* @__PURE__ */ jsxs("div", { className: "text-center py-4 space-y-4", children: [
+            /* @__PURE__ */ jsx("div", { className: "mx-auto w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4", children: /* @__PURE__ */ jsx(Mail, { className: "w-6 h-6 text-green-600" }) }),
+            /* @__PURE__ */ jsx("h3", { className: "text-lg font-bold text-gray-900", children: "Check your email" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 leading-relaxed px-4", children: forgotMessage }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setForgotMessage("");
+                  setIsForgotPassword(false);
+                  setPassword("");
+                },
+                className: "text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black mt-6 block w-full",
+                children: "← Back to Login"
+              }
+            )
+          ] }) : isForgotPassword ? /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxs("div", { className: "text-center mb-6", children: [
+              /* @__PURE__ */ jsx("h3", { className: "text-lg font-bold text-gray-900 mb-2", children: "Reset Password" }),
+              /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500", children: "Enter your email and we will send you a reset link." })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsx("label", { className: "text-xs font-bold uppercase tracking-widest text-gray-400 ml-1", children: "Email Address" }),
+              /* @__PURE__ */ jsxs("div", { className: "relative group", children: [
+                /* @__PURE__ */ jsx(Mail, { className: "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "email",
+                    required: true,
+                    name: "email",
+                    autoComplete: "email",
+                    placeholder: "name@example.com",
+                    className: "w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none",
+                    value: identifier,
+                    onChange: (e) => setIdentifier(e.target.value)
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "submit",
+                disabled: loading,
+                className: "w-full bg-black text-white py-4 rounded-xl font-bold text-xs uppercase tracking-[0.2em] hover:shadow-lg hover:shadow-black/10 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2",
+                children: loading ? /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx("span", { children: "Send Reset Link" })
+              }
+            ),
+            /* @__PURE__ */ jsx("div", { className: "text-center pt-2", children: /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsForgotPassword(false),
+                className: "text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors underline decoration-2 underline-offset-4",
+                children: "Back to Login"
+              }
+            ) })
+          ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
             isEmailVisible && isPhoneVisible && /* @__PURE__ */ jsxs("div", { className: "flex p-1 bg-gray-100/80 rounded-xl mb-4 relative z-0", children: [
               /* @__PURE__ */ jsx(
                 "button",
@@ -2053,7 +2118,7 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
             (loginMethod === "email" || loginMethod === "phone" && phoneLoginType === "password") && /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between ml-1", children: [
                 /* @__PURE__ */ jsx("label", { className: "text-xs font-bold uppercase tracking-widest text-gray-400", children: "Password" }),
-                /* @__PURE__ */ jsx("button", { type: "button", className: "text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-black transition-colors", children: "Forgot?" })
+                /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setIsForgotPassword(true), className: "text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-black transition-colors", children: "Forgot?" })
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "relative group", children: [
                 /* @__PURE__ */ jsx(Lock, { className: "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" }),
@@ -2090,8 +2155,8 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
                 children: phoneLoginType === "otp" ? "Login with Password instead" : "Login with OTP instead"
               }
             ) })
-          ] }),
-          !isOtpSent && socialProviders.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-8 space-y-4", children: [
+          ] }) }),
+          !isOtpSent && !isForgotPassword && !forgotMessage && socialProviders.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-8 space-y-4", children: [
             /* @__PURE__ */ jsxs("div", { className: "relative", children: [
               /* @__PURE__ */ jsx("div", { className: "absolute inset-0 flex items-center", children: /* @__PURE__ */ jsx("div", { className: "w-full border-t border-gray-100" }) }),
               /* @__PURE__ */ jsx("div", { className: "relative flex justify-center text-[10px] uppercase", children: /* @__PURE__ */ jsx("span", { className: "bg-white px-3 text-gray-300 font-black tracking-[0.2em] italic", children: "Social Auth" }) })
@@ -2119,7 +2184,7 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
               ] })
             ] })
           ] }),
-          !isOtpSent && /* @__PURE__ */ jsx("div", { className: "mt-8 pt-6 border-t border-gray-50 text-center", children: /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-400 font-bold uppercase tracking-widest", children: [
+          !isOtpSent && !isForgotPassword && !forgotMessage && /* @__PURE__ */ jsx("div", { className: "mt-8 pt-6 border-t border-gray-50 text-center", children: /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-400 font-bold uppercase tracking-widest", children: [
             "New here?",
             /* @__PURE__ */ jsx(
               "button",
@@ -2653,6 +2718,113 @@ const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.def
   __proto__: null,
   default: RegisterPage
 }, Symbol.toStringTag, { value: "Module" }));
+function ResetPassword({ token, email }) {
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await api.post("/api/reset-password", {
+        token,
+        email,
+        password,
+        password_confirmation: passwordConfirmation
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        router.visit("/login");
+      }, 3e3);
+    } catch (err) {
+      setError(err.response?.data?.message || err.response?.data?.errors?.email?.[0] || err.response?.data?.errors?.password?.[0] || "Failed to reset password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-gray-50 flex items-center justify-center p-4", children: [
+    /* @__PURE__ */ jsx(Head, { title: "Reset Password" }),
+    /* @__PURE__ */ jsxs("div", { className: "max-w-md w-full bg-white p-8 rounded-2xl shadow-sm border border-gray-200", children: [
+      /* @__PURE__ */ jsx("div", { className: "text-center mb-8", children: /* @__PURE__ */ jsx("h1", { className: "text-3xl font-bold tracking-tight text-gray-900", style: { fontFamily: "var(--font-heading)" }, children: "Reset Password" }) }),
+      success ? /* @__PURE__ */ jsxs("div", { className: "text-center space-y-4", children: [
+        /* @__PURE__ */ jsx("div", { className: "mx-auto w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4", children: /* @__PURE__ */ jsx(Lock, { className: "w-6 h-6 text-green-600" }) }),
+        /* @__PURE__ */ jsx("h3", { className: "text-lg font-bold text-gray-900", children: "Password Reset Successful" }),
+        /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500", children: "Your password has been successfully reset. Redirecting to login..." })
+      ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
+        error && /* @__PURE__ */ jsxs("div", { className: "p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3", children: [
+          /* @__PURE__ */ jsx("div", { className: "w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-medium text-red-800 leading-tight", children: error })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-xs font-bold uppercase tracking-widest text-gray-400 ml-1", children: "Email Address" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "email",
+              value: email,
+              disabled: true,
+              className: "w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-500 cursor-not-allowed"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-xs font-bold uppercase tracking-widest text-gray-400 ml-1", children: "New Password" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative group", children: [
+            /* @__PURE__ */ jsx(Lock, { className: "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" }),
+            /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "password",
+                required: true,
+                name: "password",
+                placeholder: "••••••••",
+                className: "w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none",
+                value: password,
+                onChange: (e) => setPassword(e.target.value),
+                minLength: 8
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-xs font-bold uppercase tracking-widest text-gray-400 ml-1", children: "Confirm New Password" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative group", children: [
+            /* @__PURE__ */ jsx(Lock, { className: "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" }),
+            /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "password",
+                required: true,
+                name: "password_confirmation",
+                placeholder: "••••••••",
+                className: "w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-gray-900 focus:border-black focus:bg-white transition-all outline-none",
+                value: passwordConfirmation,
+                onChange: (e) => setPasswordConfirmation(e.target.value),
+                minLength: 8
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "submit",
+            disabled: loading || password.length < 8 || password !== passwordConfirmation,
+            className: "w-full bg-black text-white py-4 rounded-xl font-bold text-xs uppercase tracking-[0.2em] hover:shadow-lg hover:shadow-black/10 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4",
+            children: loading ? /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }) : /* @__PURE__ */ jsx("span", { children: "Reset Password" })
+          }
+        )
+      ] })
+    ] })
+  ] });
+}
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: ResetPassword
+}, Symbol.toStringTag, { value: "Module" }));
 function CartRow$1({ item, update, remove }) {
   return /* @__PURE__ */ jsxs("div", { className: "flex gap-4 py-5 border-b border-gray-100 last:border-0", children: [
     /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, className: "relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 block", children: item.image && /* @__PURE__ */ jsx("img", { src: item.image, alt: item.name, className: "w-full h-full object-cover" }) }),
@@ -2901,7 +3073,7 @@ function CartPage() {
     ] })
   ] });
 }
-const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CartPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -3666,7 +3838,7 @@ function CategoryPage({ category }) {
     )
   ] });
 }
-const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CategoryPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -4729,7 +4901,7 @@ function CheckoutPage() {
     ] })
   ] });
 }
-const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CheckoutPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -4950,7 +5122,7 @@ function ThankYouPage({ order }) {
     ] })
   ] });
 }
-const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ThankYouPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6064,7 +6236,7 @@ function CmsPage({ page, content, layout }) {
     /* @__PURE__ */ jsx(PageRenderer, { content, layout, settings })
   ] });
 }
-const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CmsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6096,7 +6268,7 @@ function CollectionPage({ collection }) {
     )
   ] });
 }
-const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CollectionPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6420,7 +6592,7 @@ function GiftCardsPage() {
     ] })
   ] });
 }
-const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: GiftCardsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6899,7 +7071,7 @@ function MyGiftCardsPage() {
     useCard && /* @__PURE__ */ jsx(UseModal, { card: useCard, onClose: () => setUseCard(null) })
   ] });
 }
-const __vite_glob_0_12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: MyGiftCardsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7069,7 +7241,7 @@ function GiftCardSharePage() {
     ] })
   ] });
 }
-const __vite_glob_0_13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: GiftCardSharePage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7117,7 +7289,7 @@ function Home({ page, content, layout }) {
     /* @__PURE__ */ jsx(PageRenderer, { content, layout, settings })
   ] });
 }
-const __vite_glob_0_14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Home
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7169,9 +7341,1773 @@ function LegalPage({ page }) {
     ] })
   ] });
 }
-const __vite_glob_0_15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: LegalPage
+}, Symbol.toStringTag, { value: "Module" }));
+function PosLayout({
+  children,
+  title,
+  syncCount = 0,
+  onSync = void 0
+}) {
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showIosPrompt, setShowIosPrompt] = useState(false);
+  const [posBaseUrl, setPosBaseUrl] = useState("");
+  const { url } = usePage();
+  const isReturnsPage = url.includes("/returns");
+  useEffect(() => {
+    if (typeof window !== "undefined") setPosBaseUrl("/" + window.location.pathname.split("/")[1]);
+    const isIos = () => {
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(userAgent);
+    };
+    const isInStandaloneMode = () => {
+      return "standalone" in window.navigator && !!window.navigator.standalone;
+    };
+    if (isIos() && !isInStandaloneMode()) {
+      const hasSeenPrompt = localStorage.getItem("has_seen_ios_pwa_prompt");
+      if (!hasSeenPrompt) {
+        setTimeout(() => setShowIosPrompt(true), 2e3);
+      }
+    }
+  }, []);
+  const dismissIosPrompt = () => {
+    localStorage.setItem("has_seen_ios_pwa_prompt", "true");
+    setShowIosPrompt(false);
+  };
+  const handleEndShift = () => {
+    if (syncCount > 0) {
+      alert("You have pending offline orders! Please connect to the internet and sync before ending your shift.");
+      return;
+    }
+    if (confirm("Are you sure you want to end this shift? This will clear your current POS session.")) {
+      localStorage.removeItem("pos_catalog");
+      localStorage.removeItem("pos_location_id");
+      localStorage.removeItem("pos_location");
+      localStorage.removeItem("pos_sync_queue");
+      window.location.reload();
+    }
+  };
+  const handleHardRefresh = async () => {
+    if (confirm("This will refresh the POS app and update to the latest version. Proceed?")) {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        for (let key of keys) {
+          await caches.delete(key);
+        }
+      }
+      window.location.reload();
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-[100dvh] h-[100dvh] bg-gray-50 flex flex-col font-sans overflow-hidden", children: [
+    title && /* @__PURE__ */ jsx(Head, { title }),
+    /* @__PURE__ */ jsx("header", { className: "bg-black text-white shadow-md z-10 relative border-b border-gray-800", children: /* @__PURE__ */ jsxs("div", { className: "w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center", children: [
+        /* @__PURE__ */ jsx(Link, { href: posBaseUrl || "#", className: "font-bold text-xl tracking-tight uppercase hover:text-gray-300", children: "Vyora POS" }),
+        /* @__PURE__ */ jsx("span", { className: "ml-4 px-3 py-1 bg-gray-800 text-xs rounded-full uppercase tracking-widest hidden sm:inline-block font-semibold", children: "Offline Ready" })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-6", children: [
+        posBaseUrl && /* @__PURE__ */ jsx(Link, { href: isReturnsPage ? posBaseUrl : `${posBaseUrl}/returns`, className: "text-gray-300 hover:text-white font-bold text-sm uppercase tracking-wider hidden sm:block bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 transition active:scale-95", children: isReturnsPage ? "Sales" : "Returns & Exchanges" }),
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: `flex items-center space-x-2 text-sm font-medium ${syncCount > 0 ? "cursor-pointer hover:opacity-80" : ""}`,
+            onClick: syncCount > 0 && onSync ? onSync : void 0,
+            children: syncCount === 0 ? /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("span", { className: "h-3 w-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" }),
+              /* @__PURE__ */ jsx("span", { className: "hidden sm:inline text-gray-300", children: "Online & Synced" })
+            ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("span", { className: "h-3 w-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" }),
+              /* @__PURE__ */ jsxs("span", { className: "hidden sm:inline text-white font-bold", children: [
+                syncCount,
+                " Pending Sync"
+              ] })
+            ] })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setShowOptionsModal(true),
+            className: "bg-gray-900 hover:bg-gray-800 px-4 py-1.5 rounded-md text-sm transition font-medium shadow-sm border border-gray-700 flex items-center gap-2",
+            children: "Options ⚙️"
+          }
+        )
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxs("main", { className: "flex-1 flex overflow-hidden relative", children: [
+      children,
+      showOptionsModal && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-fade-in-up", children: [
+        /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 mb-6 text-center uppercase tracking-wide", children: "POS Options" }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+          posBaseUrl && /* @__PURE__ */ jsx(
+            Link,
+            {
+              href: isReturnsPage ? posBaseUrl : `${posBaseUrl}/returns`,
+              className: "w-full bg-gray-900 hover:bg-black text-white px-4 py-4 rounded-lg font-bold text-lg shadow-sm transition flex items-center justify-center gap-2 mb-4",
+              children: isReturnsPage ? "Sales 🛒" : "Returns & Exchanges 🔄"
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              onClick: handleHardRefresh,
+              className: "w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-4 rounded-lg font-bold text-lg shadow-sm transition flex items-center justify-center gap-2",
+              children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }) }),
+                "Hard Refresh App"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: handleEndShift,
+              className: "w-full bg-gray-100 hover:bg-gray-200 text-black px-4 py-4 rounded-lg font-bold text-lg border border-gray-300 shadow-sm transition",
+              children: "End Shift"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            Link,
+            {
+              href: "/logout",
+              method: "post",
+              as: "button",
+              className: "w-full bg-red-600 hover:bg-red-700 text-white px-4 py-4 rounded-lg font-bold text-lg shadow-sm transition block text-center",
+              children: "Exit POS (Log Out)"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => setShowOptionsModal(false),
+              className: "w-full mt-4 text-gray-500 hover:text-black font-semibold py-2",
+              children: "Cancel"
+            }
+          )
+        ] })
+      ] }) }),
+      showIosPrompt && /* @__PURE__ */ jsxs("div", { className: "absolute bottom-4 left-4 right-4 z-50 bg-white shadow-2xl border border-gray-200 rounded-xl p-4 flex flex-col gap-3 animate-fade-in-up md:max-w-md md:left-auto", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start", children: [
+          /* @__PURE__ */ jsx("h3", { className: "font-bold text-black text-lg", children: "Install Vyora POS" }),
+          /* @__PURE__ */ jsx("button", { onClick: dismissIosPrompt, className: "text-gray-400 hover:text-black p-1", children: "✕" })
+        ] }),
+        /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600", children: "Install this web app on your iPhone for a full-screen, native experience." }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 rounded-lg p-3 text-sm text-gray-800 flex flex-col gap-2 font-medium", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx("span", { className: "bg-white w-6 h-6 rounded flex items-center justify-center shadow-sm border border-gray-200 text-blue-500 text-lg", children: "↑" }),
+            /* @__PURE__ */ jsxs("span", { children: [
+              "1. Tap the ",
+              /* @__PURE__ */ jsx("b", { children: "Share" }),
+              " button in Safari"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx("span", { className: "bg-white w-6 h-6 rounded flex items-center justify-center shadow-sm border border-gray-200 text-lg", children: "⊞" }),
+            /* @__PURE__ */ jsxs("span", { children: [
+              "2. Tap ",
+              /* @__PURE__ */ jsx("b", { children: "Add to Home Screen" })
+            ] })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] });
+}
+const __vite_glob_0_18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: PosLayout
+}, Symbol.toStringTag, { value: "Module" }));
+function CameraScanner({ onScan, onClose }) {
+  const [error, setError] = useState("");
+  const html5QrCodeRef = useRef(null);
+  useEffect(() => {
+    const html5QrCode = new Html5Qrcode("reader", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E
+      ]
+    });
+    html5QrCodeRef.current = html5QrCode;
+    let scanned = false;
+    const handleSuccess = (decodedText) => {
+      if (scanned) return;
+      scanned = true;
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
+      }
+      html5QrCode.stop().then(() => {
+        html5QrCode.clear();
+        onScan(decodedText);
+      }).catch(() => {
+        onScan(decodedText);
+      });
+    };
+    const handleError = (err) => {
+    };
+    const startCamera = async () => {
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          let selectedCameraId = cameras[0].id;
+          for (const cam of cameras) {
+            const label = (cam.label || "").toLowerCase();
+            if (label.includes("back") || label.includes("rear") || label.includes("environment")) {
+              selectedCameraId = cam.id;
+              break;
+            }
+          }
+          await html5QrCode.start(
+            selectedCameraId,
+            {
+              fps: 15,
+              disableFlip: false,
+              // Setting qrbox focuses the scanner on the center, dramatically improving mobile 2D/QR detection speed
+              qrbox: (videoWidth, videoHeight) => {
+                const minEdge = Math.min(videoWidth, videoHeight);
+                const size = Math.floor(minEdge * 0.75);
+                return { width: size, height: size };
+              }
+            },
+            handleSuccess,
+            handleError
+          );
+        } else {
+          setError("No cameras found on this device.");
+        }
+      } catch (err) {
+        console.error("Camera permission error:", err);
+        setError("Camera error: " + (err?.name || err?.message || String(err)));
+      }
+    };
+    startCamera();
+    return () => {
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().then(() => {
+          html5QrCodeRef.current?.clear();
+        }).catch(console.error);
+      }
+    };
+  }, []);
+  return /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-[300] bg-black flex flex-col", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm z-20", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-2 h-2 bg-green-400 rounded-full animate-pulse" }),
+        /* @__PURE__ */ jsx("span", { className: "text-white font-bold text-sm uppercase tracking-wider", children: "Scanning..." })
+      ] }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: onClose,
+          className: "text-white bg-white/10 hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center text-lg transition",
+          children: "✕"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex-1 relative overflow-hidden flex flex-col items-center justify-center bg-black", children: [
+      error ? /* @__PURE__ */ jsxs("div", { className: "text-center px-8 z-20", children: [
+        /* @__PURE__ */ jsx("div", { className: "text-4xl mb-4", children: "📵" }),
+        /* @__PURE__ */ jsx("p", { className: "text-white font-semibold mb-2", children: error }),
+        /* @__PURE__ */ jsx("button", { onClick: onClose, className: "mt-4 bg-white text-black px-6 py-2 rounded-full font-bold text-sm", children: "Go Back" })
+      ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx("div", { className: "w-full h-full absolute inset-0", children: /* @__PURE__ */ jsx("div", { id: "reader", className: "w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none z-10", children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 right-0 h-[25%] bg-black/60" }),
+          /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 left-0 right-0 h-[25%] bg-black/60" }),
+          /* @__PURE__ */ jsx("div", { className: "absolute top-[25%] bottom-[25%] left-0 w-[15%] bg-black/60" }),
+          /* @__PURE__ */ jsx("div", { className: "absolute top-[25%] bottom-[25%] right-0 w-[15%] bg-black/60" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative w-[70%] h-[50%]", children: [
+            /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" }),
+            /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" }),
+            /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" }),
+            /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" }),
+            /* @__PURE__ */ jsx(
+              "div",
+              {
+                className: "absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-green-400 to-transparent opacity-90",
+                style: { animation: "scanline 2s ease-in-out infinite" }
+              }
+            )
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none z-20", children: /* @__PURE__ */ jsx("span", { className: "bg-black/60 text-white text-xs font-medium px-4 py-2 rounded-full backdrop-blur-sm shadow-lg", children: "Point camera at a barcode or QR code" }) })
+    ] }),
+    /* @__PURE__ */ jsx("style", { children: `
+                @keyframes scanline {
+                    0%   { top: 4px; opacity: 1; }
+                    50%  { top: calc(100% - 4px); opacity: 1; }
+                    100% { top: 4px; opacity: 1; }
+                }
+                /* Hide the default html5-qrcode overlay elements since we made our own */
+                #qr-shaded-region { display: none !important; }
+            ` })
+  ] });
+}
+function Dashboard() {
+  const { appName, user } = usePage().props;
+  const posBaseUrl = "/" + window.location.pathname.split("/")[1];
+  const [cartVisible, setCartVisible] = useState(false);
+  const [shiftStarted, setShiftStarted] = useState(false);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [catalog, setCatalog] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncQueue, setSyncQueue] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [scanInput, setScanInput] = useState("");
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerCountryCode, setCustomerCountryCode] = useState("+91");
+  const [cashReceived, setCashReceived] = useState("");
+  const [coupons, setCoupons] = useState([]);
+  const [selectedCouponCode, setSelectedCouponCode] = useState("");
+  const [variantProduct, setVariantProduct] = useState(null);
+  const [selectedColor, setSelectedColor] = useState("");
+  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerNameDraft, setCustomerNameDraft] = useState("");
+  const [customerPhoneDraft, setCustomerPhoneDraft] = useState("");
+  const [customerCountryCodeDraft, setCustomerCountryCodeDraft] = useState("+91");
+  const [showCamera, setShowCamera] = useState(false);
+  useRef(null);
+  const printIframeRef = useRef(null);
+  useEffect(() => {
+    const savedCatalog = localStorage.getItem("pos_catalog");
+    const savedLocation = localStorage.getItem("pos_location_id") || localStorage.getItem("pos_location");
+    const savedQueue = localStorage.getItem("pos_sync_queue");
+    if (savedQueue) {
+      setSyncQueue(JSON.parse(savedQueue));
+    }
+    fetch(`${posBaseUrl}/api/locations`).then((res) => res.json()).then((data) => setLocations(data)).catch((err) => console.error("Offline or Error fetching locations:", err));
+    fetch(`${posBaseUrl}/api/coupons`).then((res) => res.json()).then((data) => {
+      setCoupons(data);
+      localStorage.setItem("pos_coupons", JSON.stringify(data));
+    }).catch((err) => {
+      console.error("Offline or Error fetching coupons:", err);
+      const savedCoupons = localStorage.getItem("pos_coupons");
+      if (savedCoupons) setCoupons(JSON.parse(savedCoupons));
+    });
+    if (savedCatalog && savedLocation) {
+      setCatalog(JSON.parse(savedCatalog));
+      setSelectedLocation(savedLocation);
+      setShiftStarted(true);
+      if (savedQueue && JSON.parse(savedQueue).length > 0) {
+        syncOrders(JSON.parse(savedQueue));
+      }
+    }
+  }, []);
+  const handleStartShift = async () => {
+    if (!selectedLocation) return alert("Please select a location.");
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`${posBaseUrl}/api/catalog?location_id=${selectedLocation}`);
+      const data = await response.json();
+      if (data.catalog && data.catalog.length > 0) {
+        setCatalog(data.catalog);
+        localStorage.setItem("pos_catalog", JSON.stringify(data.catalog));
+        localStorage.setItem("pos_location_id", selectedLocation);
+        localStorage.setItem("pos_location", selectedLocation);
+        setShiftStarted(true);
+      } else {
+        alert("No products assigned to this location.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Could not reach server to download catalog. Try again when online.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  const addToCart = (product, sku) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.sku_id === sku.id);
+      if (existing) {
+        return prev.map((item) => item.sku_id === sku.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, {
+        sku_id: sku.id,
+        product_id: product.id,
+        name: product.name,
+        barcode: sku.barcode,
+        price: sku.selling_price,
+        qty: 1,
+        image: sku.image,
+        color_name: sku.color_name,
+        size_name: sku.size_name
+      }];
+    });
+  };
+  const updateQty = (sku_id, newQty) => {
+    if (newQty <= 0) {
+      setCart((prev) => prev.filter((i) => i.sku_id !== sku_id));
+    } else {
+      setCart((prev) => prev.map((i) => i.sku_id === sku_id ? { ...i, qty: newQty } : i));
+    }
+  };
+  const handleScan = (e) => {
+    if (e.key === "Enter" && scanInput.trim() !== "") {
+      let found = false;
+      for (const product of catalog) {
+        const sku = product.skus?.find((s) => s.barcode === scanInput.trim() || s.short_code === scanInput.trim());
+        if (sku) {
+          addToCart(product, sku);
+          found = true;
+          break;
+        }
+      }
+      if (!found) alert("Barcode not found in this location's catalog!");
+      setScanInput("");
+    }
+  };
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart]);
+  const processedCart = useMemo(() => {
+    let flatDiscountToDistribute = 0;
+    const activeCoupon = selectedCouponCode ? coupons.find((c) => c.code === selectedCouponCode) : null;
+    if (activeCoupon) {
+      if (!activeCoupon.min_cart_value || subtotal >= activeCoupon.min_cart_value) {
+        if (activeCoupon.type === "percentage") {
+          flatDiscountToDistribute = subtotal * (activeCoupon.discount_amount / 100);
+          if (activeCoupon.max_discount_amount && flatDiscountToDistribute > activeCoupon.max_discount_amount) {
+            flatDiscountToDistribute = activeCoupon.max_discount_amount;
+          }
+        } else if (activeCoupon.type === "fixed") {
+          flatDiscountToDistribute = activeCoupon.discount_amount;
+        }
+      }
+    }
+    if (flatDiscountToDistribute > subtotal) {
+      flatDiscountToDistribute = subtotal;
+    }
+    return cart.map((item) => {
+      const itemTotal = item.price * item.qty;
+      const itemWeight = subtotal > 0 ? itemTotal / subtotal : 0;
+      const itemDiscount = flatDiscountToDistribute * itemWeight;
+      let discountedPricePerUnit = item.price - itemDiscount / item.qty;
+      if (discountedPricePerUnit < 0) discountedPricePerUnit = 0;
+      discountedPricePerUnit = Math.max(0, discountedPricePerUnit);
+      return {
+        ...item,
+        original_price: item.price,
+        price: discountedPricePerUnit
+      };
+    });
+  }, [cart, selectedCouponCode, coupons, subtotal]);
+  const finalTotal = useMemo(() => processedCart.reduce((sum, item) => sum + item.price * item.qty, 0), [processedCart]);
+  const total = Math.round(finalTotal);
+  const globalDiscountAmount = subtotal - finalTotal;
+  const changeDue = typeof cashReceived === "number" && cashReceived >= total ? cashReceived - total : 0;
+  const initiateCheckout = () => {
+    if (cart.length === 0) return;
+    setCustomerName("");
+    setCustomerPhone("");
+    setCashReceived("");
+    setShowCheckoutModal(true);
+  };
+  const processSale = (shouldPrint = true) => {
+    const uuid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString();
+    const orderNumber = "POS-" + uuid.substring(0, 6).toUpperCase();
+    const newOrder = {
+      uuid,
+      order_number: orderNumber,
+      location_id: selectedLocation,
+      total_amount: total,
+      discount_amount: globalDiscountAmount,
+      coupon_code: selectedCouponCode,
+      customer_name: customerName,
+      customer_phone: customerPhone ? `${customerCountryCode}${customerPhone}` : "",
+      items: processedCart,
+      created_at: (/* @__PURE__ */ new Date()).toISOString(),
+      send_digital_receipt: !shouldPrint
+      // if shouldPrint is false, we definitely want digital receipt. If true, we still send it as per our earlier logic (default true in backend). Let's just pass true or rely on backend.
+    };
+    const updatedQueue = [...syncQueue, newOrder];
+    setSyncQueue(updatedQueue);
+    localStorage.setItem("pos_sync_queue", JSON.stringify(updatedQueue));
+    if (shouldPrint) {
+      printReceipt(newOrder);
+    }
+    setCart([]);
+    setSelectedCouponCode("");
+    setShowCheckoutModal(false);
+    syncOrders(updatedQueue);
+  };
+  const syncOrders = async (queueToSync = syncQueue) => {
+    if (queueToSync.length === 0) return;
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+      const response = await fetch(`${posBaseUrl}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": csrfToken
+        },
+        body: JSON.stringify({ orders: queueToSync })
+      });
+      if (response.ok) {
+        setSyncQueue([]);
+        localStorage.setItem("pos_sync_queue", JSON.stringify([]));
+      } else {
+        try {
+          const errorData = await response.json();
+          alert("Sync Error: " + (errorData.message || errorData.error || "Unknown server error"));
+        } catch (e) {
+          alert("Sync Error: Server returned " + response.status);
+        }
+      }
+    } catch (error) {
+      console.log("Offline or Server Unreachable. Order remains in queue.", error);
+    }
+  };
+  const printReceipt = (order) => {
+    if (!printIframeRef.current) return;
+    const iframe = printIframeRef.current;
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+    const html = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: monospace; width: 300px; margin: 0 auto; color: #000; font-size: 12px; }
+                    .center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .border-b { border-bottom: 1px dashed #000; margin-bottom: 10px; padding-bottom: 10px; }
+                    .border-t { border-top: 1px dashed #000; margin-top: 10px; padding-top: 10px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { text-align: left; font-weight: bold; padding-bottom: 5px; }
+                    td { padding: 2px 0; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                </style>
+            </head>
+            <body>
+                <div class="center border-b">
+                    <h2 style="margin:0; font-size:18px;">VYORA POS</h2>
+                    <p style="margin:2px 0;">Receipt #: ${order.order_number}</p>
+                    <p style="margin:2px 0;">Date: ${new Date(order.created_at).toLocaleString()}</p>
+                </div>
+                
+                ${order.customer_name || order.customer_phone ? `
+                <div class="border-b">
+                    ${order.customer_name ? `<p style="margin:2px 0;">Customer: ${order.customer_name}</p>` : ""}
+                    ${order.customer_phone ? `<p style="margin:2px 0;">Phone: ${order.customer_phone}</p>` : ""}
+                </div>
+                ` : ""}
+
+                <table>
+                    <thead>
+                        <tr style="border-bottom: 1px dashed #000;">
+                            <th>Item</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${order.items.map((item) => `
+                        <tr>
+                            <td>
+                                ${item.name}
+                                ${item.price < item.original_price ? `<br><small style="color: #666;">(₹${item.price.toFixed(2)} ea)</small>` : ""}
+                            </td>
+                            <td class="text-center">${item.qty}</td>
+                            <td class="text-right">${(item.price * item.qty).toFixed(2)}</td>
+                        </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+
+                <div class="border-t border-b">
+                    ${order.discount_amount && order.discount_amount > 0 ? `
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                        <span>Subtotal</span>
+                        <span>${(order.total_amount + order.discount_amount).toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                        <span>Discount Applied</span>
+                        <span>-${order.discount_amount.toFixed(2)}</span>
+                    </div>
+                    ` : ""}
+                    <div style="display:flex; justify-content:space-between; font-size:14px;" class="bold">
+                        <span>TOTAL</span>
+                        <span>${order.total_amount.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div class="center" style="margin-top:20px;">
+                    <p>Thank you for shopping!</p>
+                    <!-- Simulated 1D Barcode using CSS for Returns -->
+                    <div style="margin-top:10px; height: 40px; background: repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 5px, transparent 5px, transparent 8px);"></div>
+                    <p style="margin-top:2px;">${order.order_number}</p>
+                </div>
+            </body>
+            </html>
+        `;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 200);
+  };
+  return /* @__PURE__ */ jsxs(
+    PosLayout,
+    {
+      title: "POS Terminal",
+      syncCount: syncQueue.length,
+      onSync: () => syncOrders(syncQueue),
+      children: [
+        showCamera && /* @__PURE__ */ jsx(
+          CameraScanner,
+          {
+            onClose: () => setShowCamera(false),
+            onScan: (code) => {
+              setShowCamera(false);
+              let found = false;
+              for (const product of catalog) {
+                const sku = product.skus?.find(
+                  (s) => s.barcode === code || s.short_code === code
+                );
+                if (sku) {
+                  addToCart(product, sku);
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                alert(`No product found for barcode: ${code}`);
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ jsx("iframe", { ref: printIframeRef, style: { display: "none" }, title: "Receipt Printer" }),
+        showCheckoutModal && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white p-8 rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-6 border-b border-gray-100 pb-4", children: [
+            /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-black uppercase tracking-wider", children: "Complete Sale" }),
+            /* @__PURE__ */ jsx("button", { onClick: () => setShowCheckoutModal(false), className: "text-gray-400 hover:text-black", children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "space-y-5", children: [
+            /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-6", children: [
+              /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 uppercase tracking-widest font-bold mb-1", children: "Total Amount Due" }),
+              /* @__PURE__ */ jsxs("p", { className: "text-4xl font-bold text-black", children: [
+                "₹",
+                total
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Phone (Optional)" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "tel",
+                    placeholder: "Send WhatsApp Receipt",
+                    value: customerPhone,
+                    onChange: (e) => setCustomerPhone(e.target.value),
+                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Name (Optional)" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "text",
+                    placeholder: "For receipt",
+                    value: customerName,
+                    onChange: (e) => setCustomerName(e.target.value),
+                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Cash Received" }),
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-col space-y-3", children: [
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "number",
+                    placeholder: "Amount given by customer",
+                    value: cashReceived,
+                    onChange: (e) => setCashReceived(e.target.value ? Number(e.target.value) : ""),
+                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
+                  }
+                ),
+                typeof cashReceived === "number" && cashReceived >= total && /* @__PURE__ */ jsxs("div", { className: "bg-green-100 text-green-800 px-4 py-3 rounded-lg font-bold text-center", children: [
+                  "Change to give: ₹",
+                  changeDue
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mt-4", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => processSale(false),
+                  className: "flex-1 bg-white text-black border-2 border-black p-4 rounded-xl font-bold text-[13px] hover:bg-gray-50 transition uppercase tracking-wide",
+                  children: "Proceed & Digital Receipt"
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => processSale(true),
+                  className: "flex-1 bg-black text-white p-4 rounded-xl font-bold text-[13px] hover:bg-gray-900 transition shadow-xl shadow-gray-300 uppercase tracking-wide",
+                  children: "Process & Print Bill"
+                }
+              )
+            ] })
+          ] })
+        ] }) }),
+        !shiftStarted && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-50 bg-gray-100/90 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200", children: [
+          /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
+            /* @__PURE__ */ jsx("h2", { className: "text-3xl font-bold text-black uppercase tracking-wider mb-2", children: "Vyora POS" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-500 font-medium", children: "Select your location to begin." })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Location / Market" }),
+              /* @__PURE__ */ jsxs(
+                "select",
+                {
+                  className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-gray-50 font-medium",
+                  value: selectedLocation,
+                  onChange: (e) => setSelectedLocation(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsx("option", { value: "", children: "-- Select a Location --" }),
+                    locations.map((loc) => /* @__PURE__ */ jsx("option", { value: loc.id, children: loc.name }, loc.id))
+                  ]
+                }
+              ),
+              locations.length === 0 && !isSyncing && /* @__PURE__ */ jsxs("div", { className: "mt-2 flex items-center justify-between text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2", children: [
+                /* @__PURE__ */ jsx("span", { children: "⚠️ No stores loaded." }),
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      fetch(`${posBaseUrl}/api/locations`).then((res) => res.json()).then((data) => setLocations(data)).catch(() => alert("Could not reach server."));
+                    },
+                    className: "font-bold text-black underline ml-2",
+                    children: "Retry"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: handleStartShift,
+                disabled: isSyncing || !selectedLocation,
+                className: "w-full bg-black text-white p-4 rounded-xl font-bold text-lg hover:bg-gray-900 transition shadow-lg shadow-gray-300 uppercase tracking-wide disabled:opacity-50",
+                children: isSyncing ? "Downloading Catalog..." : "Start Shift"
+              }
+            )
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxs("div", { className: `flex w-full h-full relative ${!shiftStarted ? "blur-md pointer-events-none" : ""}`, children: [
+          /* @__PURE__ */ jsxs("div", { className: `w-full lg:w-3/5 bg-white flex flex-col h-full transition-all ${cartVisible ? "hidden lg:flex" : "flex"}`, children: [
+            /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-200 sticky top-0 bg-white z-10 flex space-x-3", children: [
+              /* @__PURE__ */ jsxs("div", { className: "relative flex-1", children: [
+                /* @__PURE__ */ jsx("div", { className: "absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400", children: "🔍" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "text",
+                    placeholder: "Scan Barcode or Search Products...",
+                    value: scanInput,
+                    onChange: (e) => setScanInput(e.target.value),
+                    onKeyDown: handleScan,
+                    className: "w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black outline-none text-lg transition-shadow bg-gray-50 focus:bg-white",
+                    autoFocus: true
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowCamera(true),
+                  className: "px-4 py-3 bg-black hover:bg-gray-800 text-white font-bold rounded-lg transition border border-gray-800 whitespace-nowrap text-sm shadow-sm flex items-center gap-2",
+                  title: "Scan with camera",
+                  children: [
+                    /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2, children: [
+                      /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
+                      /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M15 13a3 3 0 11-6 0 3 3 0 016 0z" })
+                    ] }),
+                    /* @__PURE__ */ jsx("span", { className: "hidden sm:inline", children: "Scan" })
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "flex-1 p-4 overflow-y-auto bg-gray-50/50", children: catalog.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "h-full flex flex-col items-center justify-center text-gray-400 space-y-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-4xl", children: "📦" }),
+              /* @__PURE__ */ jsx("p", { className: "text-lg font-bold uppercase tracking-widest text-gray-400", children: "Catalog is Empty" })
+            ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 pb-28 lg:pb-4", children: catalog.map((product) => {
+              const primarySku = product.skus && product.skus.length > 0 ? product.skus[0] : null;
+              return /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  onClick: () => setVariantProduct(product),
+                  className: "bg-white border border-gray-200 rounded-xl p-3 hover:shadow-lg hover:border-black cursor-pointer transition-all active:scale-95 group",
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "aspect-square bg-gray-50 rounded-lg mb-3 flex items-center justify-center text-gray-400 group-hover:bg-gray-100 transition-colors overflow-hidden border border-gray-100 relative", children: [
+                      product.image ? /* @__PURE__ */ jsx("img", { src: product.image, alt: product.name, className: "object-cover w-full h-full mix-blend-multiply" }) : /* @__PURE__ */ jsx("span", { children: "📷" }),
+                      product.skus && product.skus.length > 1 && /* @__PURE__ */ jsxs("span", { className: "absolute bottom-1 right-1 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full", children: [
+                        product.skus.length,
+                        " variants"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsx("h3", { className: "text-sm font-medium text-gray-800 line-clamp-2 leading-tight", children: product.name }),
+                    /* @__PURE__ */ jsxs("p", { className: "text-black font-bold mt-2 text-lg", children: [
+                      "₹",
+                      primarySku ? primarySku.selling_price : "0"
+                    ] })
+                  ]
+                },
+                product.id
+              );
+            }) }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: `w-full lg:w-2/5 bg-white flex-col h-full border-l border-gray-200 shadow-2xl lg:shadow-none absolute lg:relative z-40 lg:z-auto ${cartVisible ? "flex" : "hidden lg:flex"}`, children: [
+            /* @__PURE__ */ jsxs("div", { className: "lg:hidden p-4 bg-black text-white flex justify-between items-center", children: [
+              /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold tracking-wide uppercase", children: "Current Cart" }),
+              /* @__PURE__ */ jsx("button", { onClick: () => setCartVisible(false), className: "bg-gray-800 p-2 rounded-full hover:bg-gray-700 transition", children: "✕" })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "p-5 bg-white border-b border-gray-200 flex justify-between items-center z-10", children: /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 hidden lg:block uppercase tracking-wide", children: "Current Cart" }),
+              customerName && /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-500 mt-0.5", children: [
+                "👤 ",
+                customerName,
+                " ",
+                customerPhone && `· ${customerCountryCode} ${customerPhone}`
+              ] })
+            ] }) }),
+            /* @__PURE__ */ jsx("div", { className: "flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50/50", children: cart.length === 0 ? /* @__PURE__ */ jsx("div", { className: "h-full flex items-center justify-center text-gray-400 font-medium text-lg", children: "Scan items to add to cart" }) : processedCart.map((item) => /* @__PURE__ */ jsxs("div", { className: "flex flex-col bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 hover:border-black transition-colors gap-3", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
+                /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100", children: /* @__PURE__ */ jsx(
+                  "img",
+                  {
+                    src: item.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=f3f4f6&color=374151`,
+                    alt: item.name,
+                    className: "w-full h-full object-cover",
+                    onError: (e) => {
+                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=f3f4f6&color=374151`;
+                    }
+                  }
+                ) }),
+                /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start mb-1", children: [
+                    /* @__PURE__ */ jsx("h3", { className: "font-bold text-gray-900 truncate pr-2", title: item.name, children: item.name }),
+                    /* @__PURE__ */ jsx("button", { onClick: () => updateQty(item.sku_id, 0), className: "text-gray-400 hover:text-red-500 transition-colors p-1 -mr-1 rounded hover:bg-red-50", children: /* @__PURE__ */ jsx("svg", { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) }) })
+                  ] }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-2 mt-1.5", children: [
+                    item.color_name && item.color_name !== "Default" && /* @__PURE__ */ jsx("span", { className: "px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium border border-gray-200 shadow-sm", children: item.color_name }),
+                    item.size_name && item.size_name !== "Default" && /* @__PURE__ */ jsx("span", { className: "px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium border border-gray-200 shadow-sm", children: item.size_name })
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pt-2 border-t border-gray-50", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-baseline gap-2", children: [
+                  /* @__PURE__ */ jsxs("span", { className: "font-bold text-lg text-gray-900", children: [
+                    "₹",
+                    item.price.toFixed(2)
+                  ] }),
+                  item.price < item.original_price && /* @__PURE__ */ jsxs("span", { className: "text-xs text-gray-400 line-through", children: [
+                    "₹",
+                    item.original_price
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-3 bg-gray-100 rounded-lg p-1", children: [
+                  /* @__PURE__ */ jsx("button", { onClick: () => updateQty(item.sku_id, item.qty - 1), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 hover:text-black hover:bg-gray-50 active:scale-95 transition", children: "-" }),
+                  /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900 w-5 text-center text-sm", children: item.qty }),
+                  /* @__PURE__ */ jsx("button", { onClick: () => updateQty(item.sku_id, item.qty + 1), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 hover:text-black hover:bg-gray-50 active:scale-95 transition", children: "+" })
+                ] })
+              ] })
+            ] }, item.sku_id)) }),
+            /* @__PURE__ */ jsxs("div", { className: "p-5 bg-white border-t border-gray-200 space-y-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]", children: [
+              cart.length > 0 && coupons.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200", children: [
+                /* @__PURE__ */ jsx("label", { className: "text-xs font-bold text-gray-500 uppercase", children: "Apply Offline Offer" }),
+                /* @__PURE__ */ jsxs(
+                  "select",
+                  {
+                    value: selectedCouponCode,
+                    onChange: (e) => setSelectedCouponCode(e.target.value),
+                    className: "bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-black focus:border-black block w-full p-2",
+                    children: [
+                      /* @__PURE__ */ jsx("option", { value: "", children: "No offer applied" }),
+                      coupons.map((c) => {
+                        const disabled = c.min_cart_value && subtotal < c.min_cart_value;
+                        let label = c.code;
+                        if (c.type === "percentage") label += ` (${c.discount_amount}%)`;
+                        if (c.type === "fixed") label += ` (₹${c.discount_amount})`;
+                        if (c.min_cart_value) label += ` - Min ₹${c.min_cart_value}`;
+                        return /* @__PURE__ */ jsxs("option", { value: c.code, disabled, children: [
+                          label,
+                          " ",
+                          disabled ? "(Min value not met)" : ""
+                        ] }, c.code);
+                      })
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 font-medium text-sm px-1", children: [
+                /* @__PURE__ */ jsx("span", { children: "Subtotal" }),
+                /* @__PURE__ */ jsxs("span", { className: globalDiscountAmount > 0 ? "line-through text-gray-400" : "", children: [
+                  "₹",
+                  subtotal.toFixed(2)
+                ] })
+              ] }),
+              globalDiscountAmount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600 font-bold text-sm px-1", children: [
+                /* @__PURE__ */ jsx("span", { children: "Discount Applied" }),
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "-₹",
+                  globalDiscountAmount.toFixed(2)
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-2xl pt-3 border-t border-gray-200 text-black px-1 mt-2", children: [
+                /* @__PURE__ */ jsx("span", { children: "Total" }),
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "₹",
+                  total.toFixed(2)
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  disabled: cart.length === 0,
+                  onClick: initiateCheckout,
+                  className: "w-full bg-black text-white p-4 rounded-xl font-bold text-lg hover:bg-gray-900 transition active:scale-95 shadow-xl shadow-gray-300 mt-4 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed",
+                  children: [
+                    "Checkout (₹",
+                    total,
+                    ")"
+                  ]
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: `lg:hidden fixed bottom-6 right-6 z-30 transition-transform ${cartVisible ? "translate-y-24" : "translate-y-0"}`, children: /* @__PURE__ */ jsxs(
+            "button",
+            {
+              onClick: () => setCartVisible(true),
+              className: "bg-black text-white rounded-full px-6 py-4 shadow-2xl flex items-center justify-center font-bold text-lg hover:bg-gray-900 active:scale-95 transition uppercase tracking-wide border border-gray-800",
+              children: [
+                "🛒 View Cart (₹",
+                total,
+                ")"
+              ]
+            }
+          ) })
+        ] }),
+        variantProduct && (() => {
+          const uniqueColors = Array.from(
+            new Map(variantProduct.skus.map((s) => [s.color_name, s])).values()
+          );
+          const activeColor = selectedColor || uniqueColors[0]?.color_name;
+          const sizesForColor = variantProduct.skus.filter((s) => s.color_name === activeColor);
+          sizesForColor.length === 1 ? sizesForColor[0] : null;
+          return /* @__PURE__ */ jsx(
+            "div",
+            {
+              className: "fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4",
+              onClick: () => {
+                setVariantProduct(null);
+                setSelectedColor("");
+              },
+              children: /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden",
+                  onClick: (e) => e.stopPropagation(),
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between px-5 pt-5 pb-4", children: [
+                      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                        variantProduct.image && /* @__PURE__ */ jsx("img", { src: variantProduct.image, className: "w-12 h-12 object-cover rounded-xl border border-gray-100" }),
+                        /* @__PURE__ */ jsxs("div", { children: [
+                          /* @__PURE__ */ jsx("h3", { className: "font-bold text-gray-900 text-base leading-tight", children: variantProduct.name }),
+                          /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-400 mt-0.5", children: "Select a variant to add" })
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          onClick: () => {
+                            setVariantProduct(null);
+                            setSelectedColor("");
+                          },
+                          className: "text-gray-400 hover:text-black w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-lg transition",
+                          children: "✕"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "px-5 pb-6 space-y-6", children: [
+                      uniqueColors.length > 0 && /* @__PURE__ */ jsxs("div", { children: [
+                        /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-700 mb-3", children: "Color Variant:" }),
+                        /* @__PURE__ */ jsx("div", { className: "flex gap-3 flex-wrap", children: uniqueColors.map((sku) => /* @__PURE__ */ jsxs(
+                          "button",
+                          {
+                            onClick: () => setSelectedColor(sku.color_name),
+                            className: `flex flex-col items-center gap-1.5 group`,
+                            children: [
+                              /* @__PURE__ */ jsx("div", { className: `w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeColor === sku.color_name ? "border-black scale-105 shadow-md" : "border-transparent bg-gray-100"}`, children: sku.image ? /* @__PURE__ */ jsx("img", { src: sku.image, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xl", children: "👕" }) }),
+                              /* @__PURE__ */ jsx("span", { className: `text-[11px] font-semibold transition-colors ${activeColor === sku.color_name ? "text-black" : "text-gray-400"}`, children: sku.color_name })
+                            ]
+                          },
+                          sku.color_name
+                        )) })
+                      ] }),
+                      /* @__PURE__ */ jsxs("div", { children: [
+                        /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-700 mb-3", children: "Select Size" }),
+                        /* @__PURE__ */ jsx("div", { className: "flex gap-2 flex-wrap", children: sizesForColor.map((sku) => /* @__PURE__ */ jsxs(
+                          "button",
+                          {
+                            onClick: () => {
+                              addToCart(variantProduct, sku);
+                              setVariantProduct(null);
+                              setSelectedColor("");
+                            },
+                            disabled: sku.stock === 0,
+                            className: `relative px-5 py-3 rounded-xl border-2 font-bold text-sm transition-all
+                                                    ${sku.stock === 0 ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50" : "border-gray-200 text-gray-900 hover:border-black hover:bg-black hover:text-white active:scale-95 bg-white shadow-sm"}`,
+                            children: [
+                              sku.size_name,
+                              sku.stock === 0 && /* @__PURE__ */ jsx("span", { className: "absolute inset-0 flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "w-full border-t border-gray-300 absolute rotate-[-10deg]" }) })
+                            ]
+                          },
+                          sku.id
+                        )) }),
+                        /* @__PURE__ */ jsxs("div", { className: "mt-4 flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3", children: [
+                          /* @__PURE__ */ jsx("span", { children: "Price" }),
+                          /* @__PURE__ */ jsxs("span", { className: "font-bold text-black text-lg", children: [
+                            "₹",
+                            sizesForColor[0]?.selling_price ?? "—",
+                            sizesForColor.some((s) => s.selling_price !== sizesForColor[0]?.selling_price) ? "+" : ""
+                          ] })
+                        ] })
+                      ] })
+                    ] })
+                  ]
+                }
+              )
+            }
+          );
+        })(),
+        showCustomerModal && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-5 border-b border-gray-100", children: [
+            /* @__PURE__ */ jsx("h3", { className: "font-bold text-gray-900 text-lg", children: "Customer Details" }),
+            /* @__PURE__ */ jsx("button", { onClick: () => setShowCustomerModal(false), className: "text-gray-400 hover:text-black p-1 rounded-full hover:bg-gray-100", children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "p-5 space-y-4", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1", children: "Name" }),
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "text",
+                  placeholder: "Customer name",
+                  value: customerNameDraft,
+                  onChange: (e) => setCustomerNameDraft(e.target.value),
+                  className: "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-black focus:border-black outline-none",
+                  autoFocus: true
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1", children: "Phone (for WhatsApp receipt)" }),
+              /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+                /* @__PURE__ */ jsx("div", { className: "w-[110px] shrink-0", children: /* @__PURE__ */ jsx(
+                  CountryCodePicker,
+                  {
+                    value: customerCountryCodeDraft,
+                    onChange: setCustomerCountryCodeDraft
+                  }
+                ) }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "tel",
+                    placeholder: "Mobile number",
+                    value: customerPhoneDraft,
+                    onChange: (e) => setCustomerPhoneDraft(e.target.value.replace(/[^0-9]/g, "")),
+                    className: "flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-black focus:border-black outline-none"
+                  }
+                )
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "p-5 pt-0 flex gap-3", children: [
+            customerName && /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => {
+                  setCustomerName("");
+                  setCustomerPhone("");
+                  setCustomerCountryCode("+91");
+                  setShowCustomerModal(false);
+                },
+                className: "flex-1 border border-red-200 text-red-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-red-50 transition",
+                children: "Remove"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => {
+                  setCustomerName(customerNameDraft);
+                  setCustomerPhone(customerPhoneDraft);
+                  setCustomerCountryCode(customerCountryCodeDraft);
+                  setShowCustomerModal(false);
+                },
+                className: "flex-1 bg-black text-white py-2.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition",
+                children: "Save"
+              }
+            )
+          ] })
+        ] }) })
+      ]
+    }
+  );
+}
+Dashboard.layout = (page) => page;
+const __vite_glob_0_17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Dashboard
+}, Symbol.toStringTag, { value: "Module" }));
+function ReceiptBuilder() {
+  const [brandName, setBrandName] = useState("VYORA PREMIUM");
+  const [address, setAddress] = useState("123 Fashion Street, New Delhi\nGSTIN: 22AAAAA0000A1Z5");
+  const [footerText, setFooterText] = useState("Thank you for shopping!\nNo returns on discounted items.");
+  const [printerSize, setPrinterSize] = useState("80mm");
+  const [barcodeType, setBarcodeType] = useState("QR");
+  const previewCart = [
+    { name: "Premium T-Shirt", qty: 2, price: 499, total: 998 },
+    { name: "Denim Jacket", qty: 1, price: 1299, total: 1299 }
+  ];
+  return /* @__PURE__ */ jsx(PosLayout, { title: "Receipt Builder", children: /* @__PURE__ */ jsxs("div", { className: "flex w-full h-[calc(100vh-4rem)] bg-gray-50 flex-col lg:flex-row overflow-hidden", children: [
+    /* @__PURE__ */ jsxs("div", { className: "w-full lg:w-1/2 p-6 lg:p-10 overflow-y-auto bg-white border-r border-gray-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex justify-between items-center mb-8", children: /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-black uppercase tracking-wider", children: "Receipt Designer" }) }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide", children: "Paper Width" }),
+          /* @__PURE__ */ jsxs("div", { className: "flex space-x-4", children: [
+            /* @__PURE__ */ jsx("label", { className: `flex-1 p-4 border rounded-xl cursor-pointer text-center font-bold transition-all shadow-sm ${printerSize === "58mm" ? "border-black bg-black text-white" : "border-gray-300 hover:border-black text-gray-700 bg-white"}`, onClick: () => setPrinterSize("58mm"), children: "58mm (Small)" }),
+            /* @__PURE__ */ jsx("label", { className: `flex-1 p-4 border rounded-xl cursor-pointer text-center font-bold transition-all shadow-sm ${printerSize === "80mm" ? "border-black bg-black text-white" : "border-gray-300 hover:border-black text-gray-700 bg-white"}`, onClick: () => setPrinterSize("80mm"), children: "80mm (Standard)" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Brand Name" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              value: brandName,
+              onChange: (e) => setBrandName(e.target.value),
+              className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-1 focus:ring-black focus:border-black bg-gray-50 focus:bg-white transition-colors"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Address & GSTIN" }),
+          /* @__PURE__ */ jsx(
+            "textarea",
+            {
+              value: address,
+              onChange: (e) => setAddress(e.target.value),
+              rows: 3,
+              className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-1 focus:ring-black focus:border-black bg-gray-50 focus:bg-white transition-colors"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Footer / Return Policy" }),
+          /* @__PURE__ */ jsx(
+            "textarea",
+            {
+              value: footerText,
+              onChange: (e) => setFooterText(e.target.value),
+              rows: 3,
+              className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-1 focus:ring-black focus:border-black bg-gray-50 focus:bg-white transition-colors"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Bottom Barcode (For Returns)" }),
+          /* @__PURE__ */ jsxs(
+            "select",
+            {
+              value: barcodeType,
+              onChange: (e) => setBarcodeType(e.target.value),
+              className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-1 focus:ring-black focus:border-black bg-gray-50 focus:bg-white transition-colors",
+              children: [
+                /* @__PURE__ */ jsx("option", { value: "QR", children: "2D QR Code" }),
+                /* @__PURE__ */ jsx("option", { value: "1D", children: "1D Barcode" }),
+                /* @__PURE__ */ jsx("option", { value: "None", children: "None" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("button", { className: "w-full bg-black text-white p-4 rounded-xl font-bold text-lg hover:bg-gray-900 transition active:scale-95 shadow-xl shadow-gray-300 mt-8 uppercase tracking-wide", children: "Save Template" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "w-full lg:w-1/2 p-6 lg:p-10 flex flex-col items-center overflow-y-auto bg-gray-200/80 inset-0", children: [
+      /* @__PURE__ */ jsx("p", { className: "text-gray-500 font-bold mb-6 uppercase tracking-widest text-sm bg-white/50 px-4 py-1.5 rounded-full border border-gray-300", children: "Live Thermal Preview" }),
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 text-black font-mono transition-all duration-300 relative mx-auto",
+          style: {
+            width: printerSize === "58mm" ? "280px" : "380px",
+            minHeight: "400px"
+          },
+          children: [
+            /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 right-0 h-2 -mt-2 opacity-50 flex overflow-hidden", children: [...Array(30)].map((_, i) => /* @__PURE__ */ jsx("div", { className: "w-3 h-3 bg-white rotate-45 transform -translate-y-2 translate-x-1 shrink-0" }, i)) }),
+            /* @__PURE__ */ jsxs("div", { className: "text-center mb-6 border-b border-dashed border-gray-400 pb-4", children: [
+              /* @__PURE__ */ jsx("h1", { className: "text-2xl font-bold uppercase mb-2 leading-none", children: brandName }),
+              /* @__PURE__ */ jsx("p", { className: "text-xs whitespace-pre-wrap leading-tight text-gray-700", children: address }),
+              /* @__PURE__ */ jsxs("p", { className: "text-[11px] mt-3 text-gray-500", children: [
+                "Date: ",
+                (/* @__PURE__ */ new Date()).toLocaleDateString(),
+                " ",
+                (/* @__PURE__ */ new Date()).toLocaleTimeString()
+              ] }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500", children: "Receipt #: POS-123456" })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "mb-4 min-h-[120px]", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-xs", children: [
+              /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "border-b border-dashed border-gray-400", children: [
+                /* @__PURE__ */ jsx("th", { className: "text-left pb-2 text-gray-600 font-medium", children: "Item" }),
+                /* @__PURE__ */ jsx("th", { className: "text-center pb-2 text-gray-600 font-medium", children: "Qty" }),
+                /* @__PURE__ */ jsx("th", { className: "text-right pb-2 text-gray-600 font-medium", children: "Total" })
+              ] }) }),
+              /* @__PURE__ */ jsx("tbody", { children: previewCart.map((item, idx) => /* @__PURE__ */ jsxs("tr", { children: [
+                /* @__PURE__ */ jsx("td", { className: "py-2 pr-2 font-medium", children: item.name }),
+                /* @__PURE__ */ jsx("td", { className: "text-center py-2", children: item.qty }),
+                /* @__PURE__ */ jsxs("td", { className: "text-right py-2 font-medium", children: [
+                  "₹",
+                  item.total
+                ] })
+              ] }, idx)) })
+            ] }) }),
+            /* @__PURE__ */ jsxs("div", { className: "border-t border-dashed border-gray-400 pt-3 mb-6 space-y-1.5", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-xs text-gray-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "Subtotal:" }),
+                /* @__PURE__ */ jsx("span", { children: "₹2297.00" })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-xs text-gray-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "GST (Included):" }),
+                /* @__PURE__ */ jsx("span", { children: "₹109.38" })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-[15px] mt-3 pt-3 border-t border-dashed border-gray-400", children: [
+                /* @__PURE__ */ jsx("span", { children: "TOTAL:" }),
+                /* @__PURE__ */ jsx("span", { children: "₹2297.00" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "text-center pt-5 border-t border-dashed border-gray-400", children: [
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] whitespace-pre-wrap mb-5 text-gray-600", children: footerText }),
+              barcodeType === "QR" && /* @__PURE__ */ jsx("div", { className: "flex justify-center mb-2", children: /* @__PURE__ */ jsx("div", { className: "w-28 h-28 border-[3px] border-black p-1 flex items-center justify-center relative", children: /* @__PURE__ */ jsx("div", { className: "w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTMgM2g4djhIM3YtOGptMiAydjRoNHYtNEg1em0xNCAwdi0yaC04djhoOHYtNGgtMnYtMmgyeXpNMyAxM2g4djhIM3YtOGptMiAydjRoNHYtNEg1em0xNiAySDE1djRINDUydi0yaDR2LTJoMnY0aDJ2LTR6bS0yLTJoLTR2MmgydjIuNWgzdi00LjVoLTF6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48L3N2Zz4=')] opacity-80" }) }) }),
+              barcodeType === "1D" && /* @__PURE__ */ jsx("div", { className: "flex justify-center mb-2", children: /* @__PURE__ */ jsx("div", { className: "w-56 h-14 bg-[repeating-linear-gradient(90deg,#000,#000_3px,transparent_3px,transparent_6px,#000_6px,#000_8px,transparent_8px,transparent_11px)] opacity-90" }) }),
+              barcodeType !== "None" && /* @__PURE__ */ jsx("p", { className: "text-[10px] tracking-widest mt-1 text-gray-500", children: "POS-123456" })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 left-0 right-0 h-2 -mb-2 opacity-50 flex overflow-hidden", children: [...Array(30)].map((_, i) => /* @__PURE__ */ jsx("div", { className: "w-3 h-3 bg-white rotate-45 transform translate-y-2 translate-x-1 shrink-0" }, i)) })
+          ]
+        }
+      )
+    ] })
+  ] }) });
+}
+ReceiptBuilder.layout = (page) => page;
+const __vite_glob_0_19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: ReceiptBuilder
+}, Symbol.toStringTag, { value: "Module" }));
+function Returns() {
+  const posBaseUrl = "/" + window.location.pathname.split("/")[1];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [returnQtys, setReturnQtys] = useState({});
+  const [isSearching, setIsSearching] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [imageModal, setImageModal] = useState({ isOpen: false, title: "", images: [] });
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const [exchangeMode, setExchangeMode] = useState(true);
+  const [activeMobileTab, setActiveMobileTab] = useState("returns");
+  const [catalog, setCatalog] = useState([]);
+  const [exchangeCart, setExchangeCart] = useState([]);
+  const [scanInput, setScanInput] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [locations, setLocations] = useState([]);
+  const [shiftStarted, setShiftStarted] = useState(false);
+  useEffect(() => {
+    const savedCatalog = localStorage.getItem("pos_catalog");
+    const savedLocation = localStorage.getItem("pos_location_id") || localStorage.getItem("pos_location");
+    if (savedCatalog) setCatalog(JSON.parse(savedCatalog));
+    fetch(`${posBaseUrl}/api/locations`).then((res) => res.json()).then((data) => setLocations(data)).catch(console.error);
+    if (savedLocation) {
+      setLocationId(savedLocation);
+      setShiftStarted(true);
+    }
+  }, []);
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`${posBaseUrl}/api/orders/search?query=${encodeURIComponent(searchQuery.trim())}`);
+      const data = await res.json();
+      setOrders(data);
+      setSelectedOrder(null);
+      setShowMobileDetails(false);
+      setReturnQtys({});
+      setExchangeMode(true);
+      setExchangeCart([]);
+    } catch (error) {
+      console.error(error);
+      alert("Error searching for orders.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  const selectOrder = (order) => {
+    setSelectedOrder(order);
+    setShowMobileDetails(true);
+    setExchangeMode(true);
+    setActiveMobileTab("returns");
+    setExchangeCart([]);
+    const initialQtys = {};
+    order.items.forEach((item) => {
+      initialQtys[item.id] = 0;
+    });
+    setReturnQtys(initialQtys);
+  };
+  const updateReturnQty = (itemId, delta, maxReturnable) => {
+    setReturnQtys((prev) => {
+      const current = prev[itemId] || 0;
+      const next = current + delta;
+      if (next < 0 || next > maxReturnable) return prev;
+      return { ...prev, [itemId]: next };
+    });
+  };
+  const processScanCode = (code) => {
+    let found = false;
+    for (const product of catalog) {
+      const sku = product.skus?.find((s) => s.barcode === code.trim() || s.short_code === code.trim());
+      if (sku) {
+        addToExchangeCart(product, sku);
+        found = true;
+        break;
+      }
+    }
+    if (!found) alert("Barcode not found in this location's catalog!");
+  };
+  const handleScan = (e) => {
+    if (e.key === "Enter" && scanInput.trim() !== "") {
+      processScanCode(scanInput);
+      setScanInput("");
+    }
+  };
+  const addToExchangeCart = (product, sku) => {
+    setExchangeCart((prev) => {
+      const existing = prev.find((item) => item.sku_id === sku.id);
+      if (existing) {
+        return prev.map((item) => item.sku_id === sku.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, {
+        sku_id: sku.id,
+        product_id: product.id,
+        name: product.name,
+        price: sku.selling_price,
+        qty: 1,
+        image: sku.image,
+        color_name: sku.color_name,
+        size_name: sku.size_name,
+        gallery: sku.gallery || (sku.image ? [sku.image] : [])
+      }];
+    });
+  };
+  const updateExchangeQty = (sku_id, newQty) => {
+    if (newQty <= 0) {
+      setExchangeCart((prev) => prev.filter((i) => i.sku_id !== sku_id));
+    } else {
+      setExchangeCart((prev) => prev.map((i) => i.sku_id === sku_id ? { ...i, qty: newQty } : i));
+    }
+  };
+  const totalRefund = useMemo(() => {
+    if (!selectedOrder) return 0;
+    return selectedOrder.items.reduce((sum, item) => {
+      const qty = returnQtys[item.id] || 0;
+      return sum + item.price * qty;
+    }, 0);
+  }, [selectedOrder, returnQtys]);
+  const exchangeTotal = useMemo(() => {
+    return exchangeCart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  }, [exchangeCart]);
+  const balanceDue = exchangeTotal - totalRefund;
+  const isOrderOld = useMemo(() => {
+    if (!selectedOrder) return false;
+    const orderDate = new Date(selectedOrder.created_at);
+    const daysOld = ((/* @__PURE__ */ new Date()).getTime() - orderDate.getTime()) / (1e3 * 3600 * 24);
+    return daysOld > 30;
+  }, [selectedOrder]);
+  const processTransaction = async () => {
+    if (totalRefund <= 0 && exchangeTotal <= 0) return;
+    if (!locationId) {
+      alert("No active POS location found. Please start a shift on the Dashboard first.");
+      return;
+    }
+    const itemsToReturn = Object.entries(returnQtys).filter(([_, qty]) => qty > 0).map(([id, qty]) => ({ id: parseInt(id), return_qty: qty }));
+    if (itemsToReturn.length === 0) {
+      alert("Please select at least one item to return/exchange.");
+      return;
+    }
+    const payload = {
+      location_id: parseInt(locationId),
+      items: itemsToReturn,
+      exchange_items: exchangeMode ? exchangeCart : []
+    };
+    setIsProcessing(true);
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+      const response = await fetch(`${posBaseUrl}/api/orders/${selectedOrder.id}/refund`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken
+        },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (response.ok) {
+        alert(`Success! Transaction Complete.
+
+Refunded/Credited: ₹${result.refunded_amount}${result.new_order_id ? `
+New Order #: EXC-${result.new_order_id}` : ""}`);
+        handleSearch();
+      } else {
+        alert(`Error: ${result.error || "Failed to process transaction"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error processing transaction.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  return /* @__PURE__ */ jsxs(PosLayout, { children: [
+    showCamera && /* @__PURE__ */ jsx(
+      CameraScanner,
+      {
+        onClose: () => setShowCamera(false),
+        onScan: (code) => {
+          setShowCamera(false);
+          processScanCode(code);
+        }
+      }
+    ),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col lg:flex-row h-full w-full bg-gray-50 overflow-hidden", children: [
+      /* @__PURE__ */ jsxs("div", { className: `w-full lg:w-1/3 bg-white border-r border-gray-200 flex-col z-10 shadow-xl shadow-gray-200/50 ${selectedOrder && showMobileDetails ? "hidden lg:flex" : "flex"} h-full`, children: [
+        /* @__PURE__ */ jsxs("div", { className: "p-6 border-b border-gray-100 bg-gray-50", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold uppercase tracking-widest text-black mb-6", children: "Order Lookup" }),
+          /* @__PURE__ */ jsxs("form", { onSubmit: handleSearch, className: "relative", children: [
+            /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "text",
+                value: searchQuery,
+                onChange: (e) => setSearchQuery(e.target.value),
+                placeholder: "Order # or Phone Number",
+                className: "w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-xl focus:ring-0 focus:border-black transition-colors font-medium text-lg placeholder:font-normal shadow-sm",
+                autoFocus: true
+              }
+            ),
+            /* @__PURE__ */ jsx("svg", { className: "w-6 h-6 absolute left-4 top-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" }) }),
+            /* @__PURE__ */ jsx("button", { type: "submit", className: "hidden", children: "Search" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "flex-1 lg:overflow-y-auto p-4 space-y-3 pb-32 lg:pb-4 h-full", children: isSearching ? /* @__PURE__ */ jsx("div", { className: "text-center py-10 text-gray-500 font-bold uppercase tracking-widest text-sm", children: "Searching..." }) : orders.length === 0 ? /* @__PURE__ */ jsx("div", { className: "text-center py-10 text-gray-400 font-medium", children: "No orders found" }) : orders.map((order) => /* @__PURE__ */ jsxs(
+          "div",
+          {
+            onClick: () => selectOrder(order),
+            className: `p-4 rounded-xl cursor-pointer border transition-all ${selectedOrder?.id === order.id ? "border-black shadow-lg bg-black text-white" : "border-gray-200 bg-white hover:border-black"}`,
+            children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start mb-2", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-bold tracking-wide", children: order.order_number }),
+                /* @__PURE__ */ jsxs("span", { className: `font-bold ${selectedOrder?.id === order.id ? "text-gray-300" : "text-gray-500"}`, children: [
+                  "₹",
+                  order.total_amount
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: `text-sm ${selectedOrder?.id === order.id ? "text-gray-400" : "text-gray-500"}`, children: [
+                order.customer_name || "Walk-in",
+                " • ",
+                order.customer_phone || "No Phone"
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: `text-xs mt-2 font-medium flex justify-between ${selectedOrder?.id === order.id ? "text-gray-400" : "text-gray-400"}`, children: [
+                /* @__PURE__ */ jsx("span", { children: new Date(order.created_at).toLocaleDateString() }),
+                /* @__PURE__ */ jsx("span", { children: order.location_name || "Online Store" })
+              ] })
+            ]
+          },
+          order.id
+        )) })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: `w-full lg:w-2/3 flex-col bg-gray-50 relative overflow-hidden h-full ${selectedOrder && showMobileDetails ? "flex" : "hidden lg:flex"}`, children: !selectedOrder ? /* @__PURE__ */ jsxs("div", { className: "flex-1 flex flex-col items-center justify-center text-gray-400", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-6xl mb-4 opacity-50", children: "🔄" }),
+        /* @__PURE__ */ jsx("p", { className: "text-lg font-bold uppercase tracking-widest text-gray-400", children: "Select an order to begin" })
+      ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsxs("div", { className: "shrink-0 p-4 lg:p-6 bg-white border-b border-gray-200 shadow-sm flex flex-col z-10", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start lg:items-center w-full", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 lg:gap-3 mb-1", children: [
+                /* @__PURE__ */ jsx("button", { onClick: () => setShowMobileDetails(false), className: "lg:hidden p-1 -ml-1 text-gray-500 hover:text-black", children: /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 19l-7-7 7-7" }) }) }),
+                /* @__PURE__ */ jsx("h3", { className: "text-lg lg:text-2xl font-bold uppercase text-black truncate", children: selectedOrder.order_number }),
+                isOrderOld && /* @__PURE__ */ jsx("span", { className: "hidden sm:inline-block bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider", children: "Past 30 Days" })
+              ] }),
+              /* @__PURE__ */ jsxs("p", { className: "text-gray-500 font-medium text-xs lg:text-sm pl-8 lg:pl-0", children: [
+                "Paid: ₹",
+                selectedOrder.total_amount,
+                selectedOrder.discount_amount > 0 && ` (-₹${selectedOrder.discount_amount})`
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex gap-1.5 lg:gap-2 ml-2 shrink-0", children: [
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  onClick: () => setExchangeMode(true),
+                  className: `px-3 lg:px-4 py-2 rounded-lg font-bold transition flex items-center gap-1 lg:gap-2 ${exchangeMode ? "bg-blue-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`,
+                  children: [
+                    /* @__PURE__ */ jsx("span", { className: "text-sm", children: "EXC" }),
+                    /* @__PURE__ */ jsx("span", { className: "hidden lg:inline text-sm", children: "🛍️" })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => {
+                    setExchangeMode(false);
+                    setActiveMobileTab("returns");
+                  },
+                  className: `px-3 lg:px-4 py-2 rounded-lg font-bold transition ${!exchangeMode ? "bg-black text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`,
+                  children: /* @__PURE__ */ jsx("span", { className: "text-sm", children: "RET" })
+                }
+              )
+            ] })
+          ] }),
+          exchangeMode && /* @__PURE__ */ jsxs("div", { className: "flex lg:hidden mt-4 bg-gray-100 p-1 rounded-xl shadow-inner gap-1", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => setActiveMobileTab("returns"),
+                className: `flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition ${activeMobileTab === "returns" ? "bg-white shadow text-black" : "text-gray-500 hover:text-gray-900"}`,
+                children: "Returning Items (Credit)"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => {
+                  let currentTotalRefund = 0;
+                  selectedOrder.items.forEach((item) => {
+                    const qty = returnQtys[item.id] || 0;
+                    currentTotalRefund += qty * item.price;
+                  });
+                  if (currentTotalRefund <= 0) {
+                    alert("Please select at least one item to return before adding new items.");
+                    return;
+                  }
+                  setActiveMobileTab("new");
+                },
+                className: `flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition ${activeMobileTab === "new" ? "bg-white shadow text-black" : "text-gray-500 hover:text-gray-900"}`,
+                children: "New Items (Debit)"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden", children: [
+          /* @__PURE__ */ jsxs("div", { className: `${activeMobileTab === "returns" || !exchangeMode ? "flex" : "hidden"} lg:flex flex-none lg:flex-1 flex-col lg:overflow-y-auto ${exchangeMode ? "border-b lg:border-b-0 lg:border-r border-gray-200" : ""}`, children: [
+            /* @__PURE__ */ jsx("div", { className: "p-4 bg-gray-100 border-b border-gray-200 sticky top-0 z-10", children: /* @__PURE__ */ jsx("h4", { className: "font-bold text-gray-700 uppercase tracking-widest text-xs", children: "Returning Items (Credit)" }) }),
+            /* @__PURE__ */ jsx("div", { className: "p-4 space-y-3", children: selectedOrder.items.map((item) => {
+              const maxReturnable = item.quantity - (item.returned_quantity || 0);
+              const currentReturnQty = returnQtys[item.id] || 0;
+              const isFullyReturned = maxReturnable === 0;
+              return /* @__PURE__ */ jsxs("div", { className: `bg-white p-4 rounded-xl shadow-sm border ${isFullyReturned ? "border-gray-100 opacity-50" : "border-gray-200"}`, children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mb-2", children: [
+                  item.image_url ? /* @__PURE__ */ jsx(
+                    "img",
+                    {
+                      src: item.image_url,
+                      onClick: () => setImageModal({ isOpen: true, title: item.product_name, images: item.gallery || [item.image_url] }),
+                      className: "w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
+                    }
+                  ) : /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 border border-gray-200" }),
+                  /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start", children: [
+                    /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+                      /* @__PURE__ */ jsx("h5", { className: "font-bold text-gray-900", children: item.product_name }),
+                      item.variant_name && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-0.5", children: item.variant_name })
+                    ] }),
+                    /* @__PURE__ */ jsxs("span", { className: "font-bold text-gray-900", children: [
+                      "₹",
+                      item.price
+                    ] })
+                  ] }) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "text-xs text-gray-500 mb-3 flex justify-between", children: /* @__PURE__ */ jsxs("span", { children: [
+                  "Bought: ",
+                  item.quantity,
+                  " | Already Returned: ",
+                  item.returned_quantity || 0
+                ] }) }),
+                isFullyReturned ? /* @__PURE__ */ jsxs("div", { className: "text-center text-xs font-bold uppercase tracking-widest text-gray-400 bg-gray-50 py-2 rounded-lg", children: [
+                  "Fully ",
+                  selectedOrder.status === "exchanged" || selectedOrder.status === "partially returned" ? "Exchanged" : "Returned"
+                ] }) : /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-gray-500", children: "Return Qty:" }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-3 bg-gray-50 rounded-lg p-1 border border-gray-200", children: [
+                    /* @__PURE__ */ jsx("button", { onClick: () => updateReturnQty(item.id, -1, maxReturnable), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 active:scale-95 transition", children: "-" }),
+                    /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900 w-4 text-center", children: currentReturnQty }),
+                    /* @__PURE__ */ jsx("button", { onClick: () => updateReturnQty(item.id, 1, maxReturnable), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 active:scale-95 transition", children: "+" })
+                  ] })
+                ] })
+              ] }, item.id);
+            }) })
+          ] }),
+          exchangeMode && /* @__PURE__ */ jsxs("div", { className: `${activeMobileTab === "new" ? "flex" : "hidden"} lg:flex flex-none lg:flex-1 flex-col bg-white lg:overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)]`, children: [
+            /* @__PURE__ */ jsx("div", { className: "p-4 bg-blue-50 border-b border-blue-100 sticky top-0 z-10", children: /* @__PURE__ */ jsxs("h4", { className: "font-bold text-blue-800 uppercase tracking-widest text-xs flex justify-between", children: [
+              /* @__PURE__ */ jsx("span", { children: "New Items (Debit)" }),
+              /* @__PURE__ */ jsxs("span", { className: "bg-blue-200 text-blue-900 px-2 py-0.5 rounded", children: [
+                "Store: ",
+                locations?.find((l) => l.id == locationId)?.name || locationId
+              ] })
+            ] }) }),
+            /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-100 flex gap-2", children: [
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "text",
+                  placeholder: "Scan barcode or press Enter...",
+                  value: scanInput,
+                  onChange: (e) => setScanInput(e.target.value),
+                  onKeyDown: handleScan,
+                  className: "flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-black focus:border-black transition-colors font-medium",
+                  autoFocus: true
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowCamera(true),
+                  className: "px-4 py-3 bg-black hover:bg-gray-800 text-white font-bold rounded-lg transition border border-gray-800 whitespace-nowrap text-sm shadow-sm flex items-center gap-2",
+                  title: "Scan with camera",
+                  children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2, children: [
+                    /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
+                    /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M15 13a3 3 0 11-6 0 3 3 0 016 0z" })
+                  ] })
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "flex-1 overflow-y-auto p-4 space-y-3", children: exchangeCart.length === 0 ? /* @__PURE__ */ jsx("div", { className: "h-full flex items-center justify-center text-gray-400 text-sm font-medium", children: "Scan items to add to exchange cart" }) : exchangeCart.map((item) => /* @__PURE__ */ jsxs("div", { className: "bg-white p-4 rounded-xl shadow-sm border border-gray-200", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mb-3", children: [
+                item.image ? /* @__PURE__ */ jsx(
+                  "img",
+                  {
+                    src: item.image,
+                    onClick: () => setImageModal({ isOpen: true, title: item.name, images: item.gallery || [item.image] }),
+                    className: "w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
+                  }
+                ) : /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 border border-gray-200" }),
+                /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+                    /* @__PURE__ */ jsx("h5", { className: "font-bold text-gray-900 line-clamp-2 pr-2", children: item.name }),
+                    (item.color_name || item.size_name) && (item.color_name !== "Default" || item.size_name !== "Default") && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-0.5", children: [item.color_name !== "Default" ? item.color_name : null, item.size_name !== "Default" ? item.size_name : null].filter(Boolean).join(" / ") })
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { className: "font-bold text-gray-900 whitespace-nowrap", children: [
+                    "₹",
+                    item.price
+                  ] })
+                ] }) })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                /* @__PURE__ */ jsx("button", { onClick: () => updateExchangeQty(item.sku_id, 0), className: "text-red-500 text-xs font-bold uppercase tracking-wider hover:underline", children: "Remove" }),
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-3 bg-gray-50 rounded-lg p-1 border border-gray-200", children: [
+                  /* @__PURE__ */ jsx("button", { onClick: () => updateExchangeQty(item.sku_id, item.qty - 1), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 active:scale-95 transition", children: "-" }),
+                  /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900 w-4 text-center", children: item.qty }),
+                  /* @__PURE__ */ jsx("button", { onClick: () => updateExchangeQty(item.sku_id, item.qty + 1), className: "w-8 h-8 bg-white rounded shadow-sm flex items-center justify-center font-bold text-gray-700 active:scale-95 transition", children: "+" })
+                ] })
+              ] })
+            ] }, item.sku_id)) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "shrink-0 p-6 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] z-20", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex gap-8", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-gray-400 uppercase tracking-widest mb-1", children: "Return Credit" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-xl font-bold text-green-600", children: [
+                  "+₹",
+                  totalRefund.toFixed(2)
+                ] })
+              ] }),
+              exchangeMode && /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-gray-400 uppercase tracking-widest mb-1", children: "New Items" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-xl font-bold text-red-500", children: [
+                  "-₹",
+                  exchangeTotal.toFixed(2)
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "text-right", children: [
+              /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-gray-400 uppercase tracking-widest mb-1", children: balanceDue > 0 ? "Balance Due (Collect)" : "Refund Due (Pay)" }),
+              /* @__PURE__ */ jsxs("p", { className: `text-4xl font-bold ${balanceDue > 0 ? "text-black" : "text-black"}`, children: [
+                "₹",
+                Math.abs(balanceDue).toFixed(2)
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              disabled: totalRefund <= 0 && exchangeTotal <= 0 || isProcessing,
+              onClick: processTransaction,
+              className: `w-full py-4 rounded-xl font-bold text-xl transition shadow-xl uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed ${balanceDue > 0 ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" : "bg-black text-white hover:bg-gray-900 shadow-gray-300"}`,
+              children: isProcessing ? "Processing..." : balanceDue > 0 ? `Collect ₹${balanceDue.toFixed(2)} & Process` : `Process Refund of ₹${Math.abs(balanceDue).toFixed(2)}`
+            }
+          )
+        ] })
+      ] }) })
+    ] }),
+    imageModal.isOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in-up", children: [
+      /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50", children: [
+        /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 uppercase tracking-wide truncate pr-4", children: imageModal.title }),
+        /* @__PURE__ */ jsx("button", { onClick: () => setImageModal({ isOpen: false, title: "", images: [] }), className: "text-gray-400 hover:text-black bg-white shadow-sm border border-gray-200 rounded-full p-2 transition", children: "✕" })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "p-6 overflow-y-auto flex-1 bg-gray-100", children: imageModal.images.length === 0 ? /* @__PURE__ */ jsx("div", { className: "text-center text-gray-400 font-bold py-10 uppercase tracking-widest", children: "No images available" }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6", children: imageModal.images.map((img, idx) => /* @__PURE__ */ jsx("div", { className: "bg-white rounded-xl overflow-hidden shadow-md border border-gray-200", children: /* @__PURE__ */ jsx("img", { src: img, className: "w-full h-auto object-contain bg-gray-50 aspect-[3/4]" }) }, idx)) }) })
+    ] }) })
+  ] });
+}
+Returns.layout = (page) => page;
+const __vite_glob_0_20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Returns
 }, Symbol.toStringTag, { value: "Module" }));
 function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   const { openAuthModal: openAuthModal2, openQuickView } = useUIStore();
@@ -8105,7 +10041,7 @@ function ProductPage({ product }) {
     /* @__PURE__ */ jsx(ProductDetailClient, { product, policies, coupons })
   ] });
 }
-const __vite_glob_0_16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ProductPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8138,7 +10074,7 @@ function ShopPage() {
     )
   ] });
 }
-const __vite_glob_0_17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ShopPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8222,7 +10158,7 @@ function SearchInput({ initialValue = "" }) {
     ) }, idx)) }) })
   ] });
 }
-const __vite_glob_0_19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   SearchInput
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8249,9 +10185,100 @@ function SearchPage() {
     ] })
   ] });
 }
-const __vite_glob_0_18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: SearchPage
+}, Symbol.toStringTag, { value: "Module" }));
+function StoreLocator({ stores }) {
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-gray-50 pb-20", children: [
+    /* @__PURE__ */ jsxs(Head, { children: [
+      /* @__PURE__ */ jsx("title", { children: "Our Stores" }),
+      stores.length === 0 && /* @__PURE__ */ jsx("meta", { name: "robots", content: "noindex, nofollow" })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "bg-black text-white pt-24 pb-20 px-6 relative overflow-hidden", children: [
+      /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-noise opacity-10 pointer-events-none" }),
+      /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto text-center relative z-10", children: [
+        /* @__PURE__ */ jsx("h1", { className: "text-4xl md:text-5xl font-black mb-6 tracking-tight uppercase", children: "Our Stores" }),
+        /* @__PURE__ */ jsx("p", { className: "text-gray-400 max-w-xl mx-auto text-base sm:text-lg", children: "Find a location near you to experience our collection in person." })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "max-w-7xl mx-auto px-6 -mt-10 relative z-20", children: stores.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-3xl shadow-xl p-16 text-center border border-gray-100", children: [
+      /* @__PURE__ */ jsx(MapPin, { className: "w-16 h-16 text-gray-300 mx-auto mb-4" }),
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-gray-900 mb-2", children: "No Stores Currently Available" }),
+      /* @__PURE__ */ jsx("p", { className: "text-gray-500", children: "Check back soon for new locations." })
+    ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8", children: stores.map((store) => /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-3xl overflow-hidden shadow-lg shadow-gray-100 border border-gray-100 flex flex-col hover:-translate-y-1 transition-transform duration-300", children: [
+      /* @__PURE__ */ jsxs("div", { className: "h-64 bg-gray-200 relative", children: [
+        store.store_image ? /* @__PURE__ */ jsx("img", { src: `/storage/${store.store_image}`, alt: store.name, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center bg-gray-100", children: /* @__PURE__ */ jsx(MapPin, { className: "w-12 h-12 text-gray-300" }) }),
+        /* @__PURE__ */ jsx("div", { className: "absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-black", children: store.type === "temporary" ? "Pop-up / Stall" : "Permanent Store" })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "p-8 flex-grow flex flex-col", children: [
+        /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 mb-2", children: store.name }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-4 mb-8 flex-grow", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+            /* @__PURE__ */ jsx(MapPin, { className: "w-5 h-5 text-gray-400 shrink-0 mt-0.5" }),
+            /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-600 leading-relaxed", children: [
+              store.address,
+              store.address_line_2 && /* @__PURE__ */ jsxs(Fragment, { children: [
+                /* @__PURE__ */ jsx("br", {}),
+                store.address_line_2
+              ] }),
+              /* @__PURE__ */ jsx("br", {}),
+              store.city,
+              ", ",
+              store.state,
+              " ",
+              store.pincode
+            ] })
+          ] }),
+          store.operating_hours && /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+            /* @__PURE__ */ jsx(Clock, { className: "w-5 h-5 text-gray-400 shrink-0 mt-0.5" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600", children: store.operating_hours })
+          ] }),
+          (store.start_date || store.end_date) && store.type === "temporary" && /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+            /* @__PURE__ */ jsx(Calendar, { className: "w-5 h-5 text-gray-400 shrink-0 mt-0.5" }),
+            /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-600", children: [
+              store.start_date && /* @__PURE__ */ jsxs("span", { children: [
+                "From: ",
+                new Date(store.start_date).toLocaleDateString()
+              ] }),
+              store.start_date && store.end_date && /* @__PURE__ */ jsx("br", {}),
+              store.end_date && /* @__PURE__ */ jsxs("span", { children: [
+                "Until: ",
+                new Date(store.end_date).toLocaleDateString()
+              ] })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 pt-4 border-t border-gray-100", children: [
+          store.map_link ? /* @__PURE__ */ jsx(
+            "a",
+            {
+              href: store.map_link,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              className: "flex-grow flex items-center justify-center h-12 rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity shadow-sm",
+              style: { backgroundColor: "var(--primary)", color: "var(--secondary)" },
+              children: "Visit Store"
+            }
+          ) : /* @__PURE__ */ jsx("div", { className: "flex-grow bg-gray-100 text-gray-400 flex items-center justify-center h-12 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-not-allowed", children: "No Map Link" }),
+          store.contact_phone && /* @__PURE__ */ jsx(
+            "a",
+            {
+              href: `tel:${store.contact_phone}`,
+              className: "w-12 h-12 flex items-center justify-center rounded-xl hover:opacity-90 transition-opacity shrink-0 shadow-sm",
+              style: { backgroundColor: "var(--primary)", color: "var(--secondary)" },
+              title: `Call ${store.contact_phone}`,
+              children: /* @__PURE__ */ jsx(PhoneCall, { className: "w-4 h-4" })
+            }
+          )
+        ] })
+      ] })
+    ] }, store.id)) }) })
+  ] });
+}
+const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: StoreLocator
 }, Symbol.toStringTag, { value: "Module" }));
 function WishlistPage() {
   const wishlist = useWishlistStore();
@@ -8305,7 +10332,7 @@ function WishlistPage() {
     )) })
   ] });
 }
-const __vite_glob_0_20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: WishlistPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9099,7 +11126,7 @@ createServer(
       return title ? title.includes(appName) ? title : `${title} - ${appName}` : appName;
     },
     resolve: (name) => {
-      const pages = /* @__PURE__ */ Object.assign({ "./Pages/Account/Index.tsx": __vite_glob_0_0, "./Pages/Account/OrderDetails.tsx": __vite_glob_0_1, "./Pages/Account/Orders.tsx": __vite_glob_0_2, "./Pages/Auth/Login.tsx": __vite_glob_0_3, "./Pages/Auth/Register.tsx": __vite_glob_0_4, "./Pages/Cart.tsx": __vite_glob_0_5, "./Pages/Category/Show.tsx": __vite_glob_0_6, "./Pages/Checkout.tsx": __vite_glob_0_7, "./Pages/Checkout/ThankYou.tsx": __vite_glob_0_8, "./Pages/CmsPage.tsx": __vite_glob_0_9, "./Pages/Collection/Show.tsx": __vite_glob_0_10, "./Pages/GiftCards/Index.tsx": __vite_glob_0_11, "./Pages/GiftCards/MyCards.tsx": __vite_glob_0_12, "./Pages/GiftCards/Share.tsx": __vite_glob_0_13, "./Pages/Home.tsx": __vite_glob_0_14, "./Pages/LegalPage.tsx": __vite_glob_0_15, "./Pages/Product/Show.tsx": __vite_glob_0_16, "./Pages/Shop/Index.tsx": __vite_glob_0_17, "./Pages/Shop/Search.tsx": __vite_glob_0_18, "./Pages/Shop/SearchInput.tsx": __vite_glob_0_19, "./Pages/Wishlist.tsx": __vite_glob_0_20 });
+      const pages = /* @__PURE__ */ Object.assign({ "./Pages/Account/Index.tsx": __vite_glob_0_0, "./Pages/Account/OrderDetails.tsx": __vite_glob_0_1, "./Pages/Account/Orders.tsx": __vite_glob_0_2, "./Pages/Auth/Login.tsx": __vite_glob_0_3, "./Pages/Auth/Register.tsx": __vite_glob_0_4, "./Pages/Auth/ResetPassword.tsx": __vite_glob_0_5, "./Pages/Cart.tsx": __vite_glob_0_6, "./Pages/Category/Show.tsx": __vite_glob_0_7, "./Pages/Checkout.tsx": __vite_glob_0_8, "./Pages/Checkout/ThankYou.tsx": __vite_glob_0_9, "./Pages/CmsPage.tsx": __vite_glob_0_10, "./Pages/Collection/Show.tsx": __vite_glob_0_11, "./Pages/GiftCards/Index.tsx": __vite_glob_0_12, "./Pages/GiftCards/MyCards.tsx": __vite_glob_0_13, "./Pages/GiftCards/Share.tsx": __vite_glob_0_14, "./Pages/Home.tsx": __vite_glob_0_15, "./Pages/LegalPage.tsx": __vite_glob_0_16, "./Pages/Pos/Dashboard.tsx": __vite_glob_0_17, "./Pages/Pos/Layout.tsx": __vite_glob_0_18, "./Pages/Pos/ReceiptBuilder.tsx": __vite_glob_0_19, "./Pages/Pos/Returns.tsx": __vite_glob_0_20, "./Pages/Product/Show.tsx": __vite_glob_0_21, "./Pages/Shop/Index.tsx": __vite_glob_0_22, "./Pages/Shop/Search.tsx": __vite_glob_0_23, "./Pages/Shop/SearchInput.tsx": __vite_glob_0_24, "./Pages/StoreLocator/Index.tsx": __vite_glob_0_25, "./Pages/Wishlist.tsx": __vite_glob_0_26 });
       let pageModule = pages[`./Pages/${name}.tsx`];
       if (!pageModule) {
         const pagesJsx = /* @__PURE__ */ Object.assign({});

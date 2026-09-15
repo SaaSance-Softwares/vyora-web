@@ -22,20 +22,32 @@ class ThrottleAuthWithBackoff
 
         $keys = $this->resolveRequestSignatures($request);
 
-        foreach ($keys as $key) {
-            if ($this->hasTooManyAttempts($key)) {
-                $retryAfter = Cache::get($this->lockoutKey($key)) - time();
-                $headers = ['Retry-After' => $retryAfter > 0 ? $retryAfter : 60];
-                throw new ThrottleRequestsException('Too many authentication attempts. Please try again later.', null, $headers);
+        // Skip applying auth lockout to send-otp and forgot-password as they have their own middleware
+        $path = $request->path();
+        $isSendRequest = str_contains($path, 'send-otp') || str_contains($path, 'forgot-password');
+
+        if (!$isSendRequest) {
+            foreach ($keys as $key) {
+                if ($this->hasTooManyAttempts($key)) {
+                    $retryAfter = Cache::get($this->lockoutKey($key)) - time();
+                    $headers = ['Retry-After' => $retryAfter > 0 ? $retryAfter : 60];
+                    throw new ThrottleRequestsException('Too many authentication attempts. Please try again later.', null, $headers);
+                }
             }
         }
 
         $response = $next($request);
 
+        if ($isSendRequest) {
+            return $response;
+        }
+
         if ($this->isSuccessfulLoginResponse($response)) {
             foreach ($keys as $key) {
                 $this->clear($key);
             }
+            // Clear OTP rate limits since they successfully verified/logged in
+            \App\Http\Middleware\ThrottleOtpWithBackoff::clearAll($request);
         } else {
             foreach ($keys as $key) {
                 $this->incrementAttempt($key, $maxAttempts, $backoffMinutes);
@@ -53,6 +65,14 @@ class ThrottleAuthWithBackoff
 
         if ($request->filled('email')) {
             $keys[] = 'auth_backoff_email:' . strtolower($request->input('email'));
+        }
+
+        if ($request->filled('phone')) {
+            $keys[] = 'auth_backoff_phone:' . preg_replace('/[^0-9]/', '', $request->input('phone'));
+        }
+
+        if ($request->filled('identifier')) {
+            $keys[] = 'auth_backoff_identifier:' . strtolower($request->input('identifier'));
         }
 
         return $keys;

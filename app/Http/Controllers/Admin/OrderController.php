@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
+    use \App\Traits\OrderStatusNotificationTrait;
+
     /* ------------------------------------------------------------------ */
     /*  Index — Orders List */
     /* ------------------------------------------------------------------ */

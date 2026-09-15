@@ -55,7 +55,7 @@ class AdminSettingController extends Controller
      */
     public function users()
     {
-        $adminRoles = ['administrator', 'editor', 'manager', 'customer_service'];
+        $adminRoles = ['administrator', 'editor', 'manager', 'customer_service', 'pos_cashier'];
         $users = User::whereIn('role', $adminRoles)->get();
 
         $roles = [
@@ -63,6 +63,7 @@ class AdminSettingController extends Controller
             'editor' => 'Editor (Content & Pages)',
             'manager' => 'Manager (Orders & Inventory)',
             'customer_service' => 'Customer Service (Support & Orders)',
+            'pos_cashier' => 'POS Cashier (Point of Sale Only)',
         ];
 
         $modules = [

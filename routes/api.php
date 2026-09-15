@@ -47,18 +47,20 @@ Route::middleware('throttle:public_api')->group(function () {
 
 // Auth
 Route::middleware([
-    'throttle.auth.backoff',
     \Illuminate\Cookie\Middleware\EncryptCookies::class,
     \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     \Illuminate\Session\Middleware\StartSession::class,
 ])->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/register/send-otp', [AuthController::class, 'sendRegistrationOtp']);
-    Route::post('/register/verify-otp', [AuthController::class, 'verifyRegistrationOtp']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle.auth.backoff');
+    Route::post('/register/send-otp', [AuthController::class, 'sendRegistrationOtp'])->middleware('throttle.otp.backoff');
+    Route::post('/register/verify-otp', [AuthController::class, 'verifyRegistrationOtp'])->middleware('throttle.auth.backoff');
     
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/login/send-otp', [AuthController::class, 'sendLoginOtp']);
-    Route::post('/login/verify-otp', [AuthController::class, 'verifyLoginOtp']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle.auth.backoff');
+    Route::post('/login/send-otp', [AuthController::class, 'sendLoginOtp'])->middleware('throttle.otp.backoff');
+    Route::post('/login/verify-otp', [AuthController::class, 'verifyLoginOtp'])->middleware('throttle.auth.backoff');
+
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle.otp.backoff');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle.auth.backoff');
 });
 
 Route::middleware(['auth:sanctum', 'throttle:authenticated_api'])->group(function () {
