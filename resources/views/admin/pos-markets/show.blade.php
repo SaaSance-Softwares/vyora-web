@@ -108,7 +108,25 @@
                         </td>
                         <td class="px-6 py-4 text-gray-700 text-sm">{{ $sku->color_name ?? 'Default' }}</td>
                         <td class="px-6 py-4 text-gray-700 text-sm font-semibold">{{ $sku->size_name ?? 'Default' }}</td>
-                        <td class="px-6 py-4 text-gray-500 font-mono text-sm">{{ $sku->barcode ?? 'N/A' }}<hr class="my-1 border-gray-200">{{ $sku->short_code }}</td>
+                        <td class="px-6 py-4 text-gray-500 font-mono text-sm">
+                            <div class="flex items-center justify-between group gap-2">
+                                <div>
+                                    <div>{{ $sku->barcode ?? 'N/A' }}</div>
+                                    <hr class="my-1 border-gray-200">
+                                    <div>{{ $sku->short_code }}</div>
+                                </div>
+                                <button 
+                                    type="button"
+                                    @click="$dispatch('open-barcode-modal', { skuName: '{{ addslashes($sku->name) }}', barcode: '{{ $sku->barcode }}', shortCode: '{{ $sku->short_code }}' })"
+                                    class="text-gray-400 hover:text-black p-1.5 rounded-md hover:bg-gray-100 transition shadow-sm border border-transparent hover:border-gray-200"
+                                    title="View Barcodes"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-6 py-4 text-gray-400 line-through text-sm">₹{{ $sku->original_price }}</td>
                         
                         <td class="px-6 py-4">
@@ -308,10 +326,124 @@
         </div>
     </div>
 </div>
+    {{-- ── BARCODE MODAL ─────────────────────────────── --}}
+    <div x-data="barcodeModal()" @open-barcode-modal.window="openModal($event.detail)" x-show="isOpen" style="display: none;" class="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        
+        <div x-show="isOpen" x-transition.opacity class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" @click="closeModal()"></div>
+
+        <div x-show="isOpen" class="relative bg-white rounded-xl text-left shadow-2xl transform transition-all w-full max-w-md flex flex-col overflow-hidden border border-gray-100">
+            
+            <div class="bg-white px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900" x-text="skuName"></h3>
+                    <p class="text-xs text-gray-500">View QR & Barcode</p>
+                </div>
+                <button type="button" @click="closeModal()" class="text-gray-400 hover:text-gray-500 p-1.5 rounded-md hover:bg-gray-100 transition">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 bg-gray-50/50">
+                <button @click="setTab('product')" :class="tab === 'product' ? 'border-black text-black bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="flex-1 py-2.5 text-center border-b-2 font-medium text-sm transition-colors">
+                    Product SKU
+                </button>
+                <button @click="setTab('short')" :class="tab === 'short' ? 'border-black text-black bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="flex-1 py-2.5 text-center border-b-2 font-medium text-sm transition-colors flex items-center justify-center gap-1.5">
+                    Short SKU <span class="text-[9px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-sm uppercase tracking-wider font-bold">System</span>
+                </button>
+            </div>
+
+            <div class="p-6 bg-white flex flex-col items-center justify-center min-h-[300px]">
+                
+                <div x-show="tab === 'product'" class="w-full flex flex-col items-center space-y-6">
+                    <div class="flex flex-col items-center w-full">
+                        <div x-ref="qrProduct" class="mx-auto flex justify-center bg-white p-2 border border-gray-100 rounded-lg min-h-[144px]"></div>
+                        <p class="mt-4 text-xs font-mono font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded" x-text="barcode || 'N/A'"></p>
+                    </div>
+                    <div class="w-full h-px bg-gray-100"></div>
+                    <div class="flex flex-col items-center w-full px-2">
+                        <svg x-ref="bcProduct" class="max-w-full h-auto"></svg>
+                    </div>
+                </div>
+
+                <div x-show="tab === 'short'" class="w-full flex flex-col items-center space-y-6" style="display: none;">
+                    <div class="flex flex-col items-center w-full">
+                        <div x-ref="qrShort" class="mx-auto flex justify-center bg-white p-2 border border-gray-100 rounded-lg min-h-[144px]"></div>
+                        <p class="mt-4 text-xs font-mono font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded" x-text="shortCode || 'N/A'"></p>
+                    </div>
+                    <div class="w-full h-px bg-gray-100"></div>
+                    <div class="flex flex-col items-center w-full px-2">
+                        <svg x-ref="bcShort" class="max-w-full h-auto"></svg>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
 
 @push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
     document.addEventListener('alpine:init', () => {
+        Alpine.data('barcodeModal', () => ({
+            isOpen: false,
+            tab: 'product',
+            skuName: '',
+            barcode: '',
+            shortCode: '',
+            
+            openModal(data) {
+                this.skuName = data.skuName;
+                this.barcode = data.barcode;
+                this.shortCode = data.shortCode;
+                this.setTab('product');
+                this.isOpen = true;
+            },
+            
+            closeModal() {
+                this.isOpen = false;
+            },
+
+            setTab(t) {
+                this.tab = t;
+                setTimeout(() => {
+                    this.renderCodes();
+                }, 100);
+            },
+
+            renderCodes() {
+                try {
+                    if (this.barcode && this.barcode !== 'N/A') {
+                        const qrDiv = this.$refs.qrProduct;
+                        if (qrDiv && window.QRCode) {
+                            qrDiv.innerHTML = '';
+                            new QRCode(qrDiv, { text: this.barcode, width: 140, height: 140, colorDark: "#000000", colorLight: "#ffffff" });
+                        }
+                        
+                        const bcSvg = this.$refs.bcProduct;
+                        if (bcSvg && window.JsBarcode) JsBarcode(bcSvg, this.barcode, { format: "CODE128", width: 2, height: 60, displayValue: false });
+                    }
+                    
+                    if (this.shortCode && this.shortCode !== 'N/A') {
+                        const qrDiv = this.$refs.qrShort;
+                        if (qrDiv && window.QRCode) {
+                            qrDiv.innerHTML = '';
+                            new QRCode(qrDiv, { text: this.shortCode, width: 140, height: 140, colorDark: "#000000", colorLight: "#ffffff" });
+                        }
+                        
+                        const bcSvg = this.$refs.bcShort;
+                        if (bcSvg && window.JsBarcode) JsBarcode(bcSvg, this.shortCode, { format: "CODE128", width: 2, height: 60, displayValue: false });
+                    }
+                } catch (e) {
+                    console.error("Barcode Generation Error:", e);
+                }
+            }
+        }));
+
         Alpine.data('productSelector', () => ({
             products: [],
             searchQuery: '',

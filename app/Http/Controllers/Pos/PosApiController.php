@@ -138,6 +138,9 @@ class PosApiController extends Controller
             'orders.*.customer_phone' => 'nullable|string',
             'orders.*.items' => 'required|array',
             'orders.*.created_at' => 'required|string',
+            'orders.*.payment_method' => 'nullable|string',
+            'orders.*.amount_cash' => 'nullable|numeric',
+            'orders.*.amount_upi' => 'nullable|numeric',
         ]);
 
         DB::beginTransaction();
@@ -204,7 +207,9 @@ class PosApiController extends Controller
                     'source' => 'pos',
                     'status' => 'delivered',
                     'payment_status' => 'paid',
-                    'payment_method' => 'cash/upi',
+                    'payment_method' => $posOrder['payment_method'] ?? 'cash',
+                    'amount_cash' => $posOrder['amount_cash'] ?? 0,
+                    'amount_upi' => $posOrder['amount_upi'] ?? 0,
                     'total_amount' => $posOrder['total_amount'],
                     'amount_paid' => $posOrder['total_amount'],
                     'discount_amount' => $posOrder['discount_amount'] ?? 0,

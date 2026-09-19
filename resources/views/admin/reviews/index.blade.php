@@ -9,11 +9,30 @@
     </div>
 
 
+
+    <!-- Bulk Action Form & UI -->
+    <form action="{{ route('admin.reviews.bulk') }}" method="POST" id="bulk-action-form" class="mb-4" style="display: none;">
+        @csrf
+        <input type="hidden" name="action" id="bulk-action-input" value="approve">
+        <div id="bulk-action-inputs"></div>
+        
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 bg-gray-50 flex items-center justify-between">
+                <span class="text-sm text-gray-600 font-bold"><span id="selected-count">0</span> reviews selected</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="executeBulkAction('approve')" class="px-4 py-2 bg-green-100 text-green-800 text-xs font-bold rounded-lg hover:bg-green-200 transition-colors">Approve</button>
+                    <button type="button" onclick="executeBulkAction('reject')" class="px-4 py-2 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-lg hover:bg-yellow-200 transition-colors">Reject</button>
+                    <button type="button" onclick="executeBulkAction('delete')" class="px-4 py-2 bg-red-100 text-red-800 text-xs font-bold rounded-lg hover:bg-red-200 transition-colors">Delete</button>
+                </div>
+            </div>
+        </div>
+    </form>
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead class="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase">
                     <tr>
+                        <th class="px-6 py-4 w-12"><input type="checkbox" id="select-all" class="rounded border-gray-300 text-black focus:ring-black"></th>
                         <th class="px-6 py-4">Product</th>
                         <th class="px-6 py-4">Customer</th>
                         <th class="px-6 py-4">Rating</th>
@@ -26,9 +45,12 @@
                     @forelse($reviews as $review)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
+                                <input type="checkbox" value="{{ $review->id }}" class="review-checkbox rounded border-gray-300 text-black focus:ring-black">
+                            </td>
+                            <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    @if($review->product->preview_image)
-                                        <img src="{{ asset('storage/' . $review->product->preview_image) }}" class="w-10 h-10 rounded object-cover">
+                                    @if($review->product->image_url)
+                                        <img src="{{ $review->product->image_url }}" class="w-10 h-10 rounded object-cover">
                                     @else
                                         <div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -80,7 +102,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 italic">No reviews yet.</td>
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-400 italic">No reviews yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -119,12 +141,73 @@
 <script>
     function openReplyModal(reviewId, currentReply) {
         document.getElementById('replyModal').classList.remove('hidden');
-        document.getElementById('replyForm').action = `/admin/reviews/${reviewId}/reply`;
+        document.getElementById('replyForm').action = `{{ url(config('app.admin_path', 'admin').'/reviews') }}/${reviewId}/reply`;
         document.getElementById('admin_reply_input').value = currentReply || '';
     }
 
     function closeReplyModal() {
         document.getElementById('replyModal').classList.add('hidden');
+    }
+
+    function updateBulkActionBar() {
+        const checkboxes = document.querySelectorAll('.review-checkbox:checked');
+        const bulkActionForm = document.getElementById('bulk-action-form');
+        const selectedCount = document.getElementById('selected-count');
+        
+        selectedCount.textContent = checkboxes.length;
+        
+        if (checkboxes.length > 0) {
+            bulkActionForm.style.display = 'block';
+        } else {
+            bulkActionForm.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('select-all');
+        const checkboxes = document.querySelectorAll('.review-checkbox');
+
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkActionBar();
+        });
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                updateBulkActionBar();
+                if (!this.checked) {
+                    selectAll.checked = false;
+                } else if (document.querySelectorAll('.review-checkbox:checked').length === checkboxes.length) {
+                    selectAll.checked = true;
+                }
+            });
+        });
+    });
+
+    function executeBulkAction(action) {
+        let msg = '';
+        if (action === 'reject') {
+            msg = 'Are you sure you want to reject the selected reviews? They will be hidden from the storefront.';
+        } else if (action === 'delete') {
+            msg = 'Are you sure you want to permanently delete the selected reviews? This cannot be undone.';
+        }
+        
+        if (msg === '' || confirm(msg)) {
+            // Populate hidden inputs
+            const container = document.getElementById('bulk-action-inputs');
+            container.innerHTML = ''; // clear previous
+            
+            document.querySelectorAll('.review-checkbox:checked').forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_ids[]';
+                input.value = cb.value;
+                container.appendChild(input);
+            });
+            
+            document.getElementById('bulk-action-input').value = action;
+            document.getElementById('bulk-action-form').submit();
+        }
     }
 </script>
 @endpush

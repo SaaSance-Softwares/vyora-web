@@ -51,6 +51,7 @@ class SocialLoginController extends Controller
                 'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'User',
                 'email' => $socialUser->getEmail(),
                 'provider' => $provider,
+                'provider_id' => $socialUser->getId(),
             ];
             
             $payload = Crypt::encryptString(json_encode($pending));
@@ -102,6 +103,8 @@ class SocialLoginController extends Controller
                 'has_consented_to_marketing' => $request->has('has_consented_to_marketing') ? 1 : 0,
                 'consent_timestamp' => now(),
                 'consent_ip_address' => $request->ip(),
+                'provider' => $pending['provider'] ?? null,
+                'provider_id' => $pending['provider_id'] ?? null,
             ]);
         } else {
             $user = User::create([
@@ -114,6 +117,8 @@ class SocialLoginController extends Controller
                 'consent_timestamp' => now(),
                 'consent_ip_address' => $request->ip(),
                 'registration_ip' => $request->ip(),
+                'provider' => $pending['provider'] ?? null,
+                'provider_id' => $pending['provider_id'] ?? null,
             ]);
 
             try {

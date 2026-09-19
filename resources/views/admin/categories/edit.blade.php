@@ -3,7 +3,8 @@
 @section('header', 'Edit Category')
 
 @section('content')
-<div class="max-w-4xl mx-auto">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<div class="w-full">
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
             <h1 class="text-xl font-bold text-gray-900">Edit Category: {{ $category->name }}</h1>
@@ -14,90 +15,163 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Name -->
+            <div class="flex flex-col gap-6">
+                <!-- Category Name -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Category Name</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Category Name *</label>
                     <input type="text" name="name" value="{{ old('name', $category->name) }}" required
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                </div>
+                <!-- Status -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
+                        <span class="text-sm font-semibold text-gray-700">Active Category</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Inactive categories won't be visible to customers.</p>
                 </div>
 
                 <!-- Slug -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
-                    <input type="text" id="slug-input" name="slug" value="{{ old('slug', $category->slug) }}" required
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Slug *</label>
+                    <input type="text" name="slug" value="{{ old('slug', $category->slug) }}" required
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
                 </div>
-
-                <!-- Parent Category -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Parent Hierarchy</label>
-                    <select name="parent_id" class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
-                        <option value="">None (Root Category)</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ old('parent_id', $category->parent_id) == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Active Status -->
-                <div class="md:col-span-2">
-                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                <!-- Status -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
                         <input type="hidden" name="is_active" value="0">
                         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
-                        <div>
-                            <p class="text-sm font-bold text-gray-900 leading-none">Active Status</p>
-                            <p class="text-xs text-gray-500 mt-1">Visible on site storefront</p>
-                        </div>
+                        <span class="text-sm font-semibold text-gray-700">Active Category</span>
                     </label>
+                    <p class="text-xs text-gray-500 mt-1">Inactive categories won't be visible to customers.</p>
                 </div>
-            </div>
 
-            <hr class="border-gray-100 my-6">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Category Image -->
-                <div class="md:col-span-2">
+                <div class="w-full">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Category Image</label>
                     <div class="mb-3">
-                        <img id="image-preview" src="{{ $category->image ? asset($category->image) : '' }}" class="w-32 h-32 object-cover rounded-lg border border-gray-200 {{ $category->image ? '' : 'hidden' }}">
+                        <img id="image-preview" src="{{ $category->image ? url($category->image) : '' }}" 
+                            class="w-32 h-32 object-cover rounded-lg border border-gray-200 {{ $category->image ? '' : 'hidden' }}">
+                        @if($category->image)
+                        <label class="inline-flex items-center mt-2 text-sm text-red-600 cursor-pointer">
+                            <input type="checkbox" name="remove_image" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500 mr-2">
+                            Remove image
+                        </label>
+                        @endif
                     </div>
                     <input type="file" id="image-input" name="image" accept="image/*"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
                     <p class="text-xs text-gray-500 mt-1">Recommended size: 800x800px</p>
                 </div>
 
-                <div class="md:col-span-2">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 mt-4">Search Engine Optimization (SEO)</h3>
+                <!-- Category Banner Image -->
+                <div class="w-full">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Category Banner Image (Optional)</label>
+                    <div class="mb-3">
+                        <img id="banner-image-preview" src="{{ $category->banner_image_url ?? '' }}" class="w-64 h-32 object-cover rounded-lg border border-gray-200 {{ $category->banner_image ? '' : 'hidden' }}">
+                        @if($category->banner_image)
+                        <label class="inline-flex items-center mt-2 text-sm text-red-600 cursor-pointer">
+                            <input type="checkbox" name="remove_banner_image" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500 mr-2">
+                            Remove banner
+                        </label>
+                        @endif
+                    </div>
+                    <input type="file" id="banner-image-input" name="banner_image" accept="image/*"
+                        class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
+                    <p class="text-xs text-gray-500 mt-1">Background banner for the frontend page header.</p>
+                </div>
+
+
+                <!-- Category Description -->
+                <div class="w-full">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Category Description</label>
+                    <div id="description-editor" class="w-full border border-gray-300 rounded-lg bg-white" style="height: 200px;">
+                        {!! old('description', $category->description) !!}
+                    </div>
+                    <textarea name="description" class="hidden">{{ old('description', $category->description) }}</textarea>
+                </div>
+
+                <div class="w-full">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Search Engine Optimization (SEO)</h3>
                 </div>
 
                 <!-- Meta Title -->
-                <div class="md:col-span-2">
+                <div class="w-full">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Title</label>
                     <input type="text" name="meta_title" value="{{ old('meta_title', $category->meta_title) }}" placeholder="Optimized Page Title"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
                 </div>
+                <!-- Status -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
+                        <span class="text-sm font-semibold text-gray-700">Active Category</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Inactive categories won't be visible to customers.</p>
+                </div>
 
                 <!-- Social Image -->
-                <div class="md:col-span-2">
+                <div class="w-full">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Social Share Image (OG Image)</label>
                     <div class="mb-3">
-                        <img id="social-preview" src="{{ $category->social_image ? asset($category->social_image) : '' }}" class="w-32 h-20 object-cover rounded-lg border border-gray-200 {{ $category->social_image ? '' : 'hidden' }}">
+                        <img id="social-preview" src="{{ $category->social_image ? url($category->social_image) : '' }}" 
+                            class="w-32 h-20 object-cover rounded-lg border border-gray-200 {{ $category->social_image ? '' : 'hidden' }}">
+                        @if($category->social_image)
+                        <label class="inline-flex items-center mt-2 text-sm text-red-600 cursor-pointer">
+                            <input type="checkbox" name="remove_social_image" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500 mr-2">
+                            Remove social image
+                        </label>
+                        @endif
                     </div>
                     <input type="file" id="social-image-input" name="social_image" accept="image/*"
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
                 </div>
 
                 <!-- Meta Description -->
-                <div class="md:col-span-2">
+                <div class="w-full">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Description</label>
                     <textarea name="meta_description" rows="3" placeholder="Brief description for search engines..."
                         class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('meta_description', $category->meta_description) }}</textarea>
                 </div>
+
+                <!-- Meta Keywords -->
+                <div class="w-full">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Keywords</label>
+                    <input type="text" name="meta_keywords" placeholder="Keywords for SEO, comma separated..." value="{{ old('meta_keywords', $category->meta_keywords) }}"
+                        class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                </div>
+                <!-- Status -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
+                        <span class="text-sm font-semibold text-gray-700">Active Category</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Inactive categories won't be visible to customers.</p>
+                </div>
+
+                <!-- AEO Use Case -->
+                <div class="w-full">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">AEO Use Case</label>
+                    <input type="text" name="aeo_use_case" placeholder="Use Case (e.g., Casual Wear, Gym Wear)" value="{{ old('aeo_use_case', $category->aeo_use_case) }}"
+                        class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                </div>
+                <!-- Status -->
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
+                        <span class="text-sm font-semibold text-gray-700">Active Category</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Inactive categories won't be visible to customers.</p>
+                </div>
             </div>
 
+            @include('admin.partials.faqs-editor', ['model' => $category])
+            
             <div class="pt-6 border-t border-gray-100 flex justify-end">
                 <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors">
                     Update Category
@@ -118,6 +192,17 @@
                     if (file) {
                         imagePreview.src = URL.createObjectURL(file);
                         imagePreview.classList.remove('hidden');
+                    }
+                });
+            }
+            const bannerInput = document.getElementById('banner-image-input');
+            const bannerPreview = document.getElementById('banner-image-preview');
+            if (bannerInput && bannerPreview) {
+                bannerInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        bannerPreview.src = URL.createObjectURL(file);
+                        bannerPreview.classList.remove('hidden');
                     }
                 });
             }
@@ -161,4 +246,29 @@
         }
     });
 </script>
+
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+    var quillDesc = new Quill('#description-editor', {
+        theme: 'snow'
+    });
+    
+    // Initialize content if it's there
+    var existingContent = document.querySelector('textarea[name="description"]').value;
+    if (existingContent && quillDesc.root.innerHTML === '<p><br></p>') {
+        // Only set it if quill is empty but textarea has content (just in case)
+        quillDesc.root.innerHTML = existingContent;
+    }
+
+    var form = document.querySelector('#description-editor').closest('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var html = quillDesc.root.innerHTML;
+            if (html === '<p><br></p>') html = '';
+            document.querySelector('textarea[name="description"]').value = html;
+        });
+    }
+</script>
+
 @endsection

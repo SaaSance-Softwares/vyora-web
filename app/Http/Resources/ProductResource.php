@@ -195,6 +195,7 @@ class ProductResource extends JsonResource
             // SEO
             'seo' => [
                 'title' => $this->seo_title,
+                'keywords' => $this->seo_keywords,
                 'description' => $this->seo_description,
             ],
 
@@ -224,7 +225,14 @@ class ProductResource extends JsonResource
                     'id' => $img->id,
                     'url' => str_starts_with($img->image_path, 'storage/') || str_starts_with($img->image_path, 'uploads/') ? asset($img->image_path) : asset('storage/'.$img->image_path),
                 ]),
-            ])->values(),
+            ]),
+            
+            // FAQs
+            'faqs' => $this->relationLoaded('faqs') ? $this->faqs->map(fn($f) => [
+                'id' => $f->id,
+                'question' => $f->question,
+                'answer' => $f->answer,
+            ]) : [],
         ];
     }
 }

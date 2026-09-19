@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 
 import { formatPrice } from '@/lib/utils';
+import { Star, StarHalf } from 'lucide-react';
 
 interface OrderItem {
     id: number;
@@ -56,6 +57,68 @@ export default function MyOrdersPage() {
     const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
     
     const [loading, setLoading] = useState(true);
+
+    const [reviewOrder, setReviewOrder] = useState<any>(null);
+    const [reviewModalItem, setReviewModalItem] = useState<any>(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [reviewLoading, setReviewLoading] = useState(false);
+
+    const handleReviewClick = (order: any, e: any) => {
+        e.preventDefault();
+        if (order.items && order.items.length === 1) {
+            openReviewModal(order.items[0]);
+        } else {
+            setReviewOrder(order);
+        }
+    };
+
+    const openReviewModal = (item: any) => {
+        setReviewOrder(null);
+        setReviewModalItem(item);
+        if (item.review) {
+            setReviewRating(item.review.rating);
+            setReviewComment(item.review.comment || '');
+        } else {
+            setReviewRating(5);
+            setReviewComment('');
+        }
+    };
+
+    const submitReview = async (e: any) => {
+        e.preventDefault();
+        if (!reviewModalItem) return;
+        setReviewLoading(true);
+        try {
+            if (reviewModalItem.review) {
+                router.put(`/reviews/${reviewModalItem.review.id}`, {
+                    rating: reviewRating,
+                    comment: reviewComment
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setReviewModalItem(null);
+                        fetchData();
+                    }
+                });
+            } else {
+                router.post(`/products/${reviewModalItem.product_id}/reviews`, {
+                    rating: reviewRating,
+                    comment: reviewComment
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setReviewModalItem(null);
+                        fetchData();
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setReviewLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -220,6 +283,12 @@ export default function MyOrdersPage() {
                                                             Track
                                                         </a>
                                                     )}
+                                                    {order.status === 'delivered' && (
+                                                        <button onClick={(e) => handleReviewClick(order, e)} className="flex items-center justify-center gap-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-500 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-yellow-200">
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                                                            Review
+                                                        </button>
+                                                    )}
                                                     <Link href={`/orders/${order.uuid}`} className="flex items-center justify-center gap-2 bg-gray-50 text-gray-900 hover:bg-primary hover:text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all">
                                                         Details
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
@@ -308,6 +377,115 @@ export default function MyOrdersPage() {
                     </>
                 )}
             </div>
+
+            {/* Item Selection Modal (for multi-item orders) */}
+            {reviewOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Select Item to Review</h3>
+                            <button onClick={() => setReviewOrder(null)} className="text-gray-400 hover:text-gray-900">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            {reviewOrder.items.map((item: any) => (
+                                <div key={item.id} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                                    <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                                        {item.image_url ? (
+                                            <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-[10px] text-gray-400">NA</div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-gray-900 text-sm truncate">{item.product_name}</h4>
+                                        <p className="text-xs text-gray-500 mt-1">{item.variant_name}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => openReviewModal(item)}
+                                        className="shrink-0 px-4 py-2 text-xs font-bold uppercase bg-black text-white rounded-lg hover:bg-gray-800"
+                                    >
+                                        {item.review ? 'Edit' : 'Review'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Review Form Modal */}
+            {reviewModalItem && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <h3 className="text-xl font-bold mb-4">{reviewModalItem.review ? 'Edit Review' : 'Write a Review'}</h3>
+                        <div className="flex gap-4 items-center mb-6 border-b pb-4">
+                            <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden">
+                                {reviewModalItem.image_url ? (
+                                    <img src={reviewModalItem.image_url} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">NA</div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-gray-900 leading-tight">{reviewModalItem.product_name}</p>
+                                {reviewModalItem.variant_name && <p className="text-xs text-gray-500 mt-1">{reviewModalItem.variant_name}</p>}
+                            </div>
+                        </div>
+                        
+                        <form onSubmit={submitReview}>
+                            <div className="mb-4">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Rating</label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                    <div key={star} className="relative w-8 h-8 group transition-transform hover:scale-110">
+                                        <Star className="w-8 h-8 text-gray-300 absolute inset-0 pointer-events-none" />
+                                        {reviewRating >= star ? (
+                                            <Star className="w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                        ) : reviewRating >= star - 0.5 ? (
+                                            <StarHalf className="w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                        ) : null}
+                                        <div className="absolute inset-0 flex">
+                                            <button type="button" onClick={() => setReviewRating(star - 0.5)} className="w-1/2 h-full z-10 focus:outline-none cursor-pointer" />
+                                            <button type="button" onClick={() => setReviewRating(star)} className="w-1/2 h-full z-10 focus:outline-none cursor-pointer" />
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                            
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Review Comment (Optional)</label>
+                                <textarea 
+                                    rows={4} 
+                                    value={reviewComment}
+                                    onChange={(e) => setReviewComment(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm p-3"
+                                    placeholder="What did you like or dislike? What did you use this product for?"
+                                ></textarea>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setReviewModalItem(null)} 
+                                    className="px-4 py-2 font-bold text-gray-500 hover:text-black transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={reviewLoading}
+                                    className="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm tracking-wide disabled:opacity-50"
+                                >
+                                    {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

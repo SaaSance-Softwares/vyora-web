@@ -135,10 +135,16 @@
                                             @php
                                                 $img = null;
                                                 if ($item->product) {
-                                                    $primary = $item->product->images->where('is_primary', true)->first() ?? $item->product->images->first();
-                                                    $img = $primary ? $primary->url : ($item->product->image_url ?? null);
-                                                }
-                                                if (!$img) {
+                                                    if ($item->sku && $item->sku->color_id) {
+                                                        $colorImg = $item->product->images->where('color_id', $item->sku->color_id)->where('is_primary', true)->first() 
+                                                                 ?? $item->product->images->where('color_id', $item->sku->color_id)->first();
+                                                        $img = $colorImg ? $colorImg->url : null;
+                                                    }
+                                                    if (!$img) {
+                                                        $primary = $item->product->images->where('is_primary', true)->first() ?? $item->product->images->first();
+                                                        $img = $primary ? $primary->url : ($item->product->image_url ?? null);
+                                                    }
+                                                } else {
                                                     $img = $item->image_url;
                                                 }
                                                 // Fallback for product name if not saved in order_items
@@ -161,7 +167,15 @@
 
                             {{-- Payment --}}
                             <td class="py-4 px-4">
-                                <div class="text-sm font-semibold text-gray-800">{{ $order->payment_method ?? '—' }}</div>
+                                <div class="text-sm font-semibold text-gray-800 uppercase">
+                                    {{ $order->payment_method ?? '—' }}
+                                    @if($order->payment_method === 'split' || $order->amount_cash > 0 || $order->amount_upi > 0)
+                                        <div class="text-[10px] text-gray-500 lowercase mt-0.5 tracking-wide flex flex-col">
+                                            @if($order->amount_cash > 0) <span class="text-gray-600 font-medium">₹{{ (int)$order->amount_cash }} cash</span> @endif
+                                            @if($order->amount_upi > 0) <span class="text-purple-600 font-medium">₹{{ (int)$order->amount_upi }} upi</span> @endif
+                                        </div>
+                                    @endif
+                                </div>
                                 @php
                                     $displayPaymentStatus = $order->payment_status;
                                     if ($order->payment_method === 'COD' && $order->payment_status === 'pending') {

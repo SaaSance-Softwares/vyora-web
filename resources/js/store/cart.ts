@@ -19,7 +19,9 @@ export interface CartItem {
     colorHex?: string;
     sizeName?: string;
     size?: string;
-    deliveryDate?: string;
+    deliveryDate?: string | null;
+    exchangeDays?: number | null;
+    returnDays?: number | null;
 }
 
 interface CartState {

@@ -123,6 +123,7 @@
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Type</label>
                                 <select name="shipping_rules[prepaid][type]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleShippingFields('prepaid', this.value)">
                                     <option value="free" {{ ($settings['shipping_rules']['prepaid']['type'] ?? '') === 'free' ? 'selected' : '' }}>Free Shipping</option>
+                                    <option value="included" {{ ($settings['shipping_rules']['prepaid']['type'] ?? '') === 'included' ? 'selected' : '' }}>Included</option>
                                     <option value="flat" {{ ($settings['shipping_rules']['prepaid']['type'] ?? '') === 'flat' ? 'selected' : '' }}>Flat Rate</option>
                                     <option value="tiered" {{ ($settings['shipping_rules']['prepaid']['type'] ?? '') === 'tiered' ? 'selected' : '' }}>Order Value Based (Tiered)</option>
                                 </select>
@@ -224,6 +225,7 @@
                                     <label class="block text-xs font-semibold text-gray-600 mb-1">Shipping Type</label>
                                     <select name="shipping_rules[cod][type]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleShippingFields('cod', this.value)">
                                         <option value="free" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'free' ? 'selected' : '' }}>Free Shipping</option>
+                                        <option value="included" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'included' ? 'selected' : '' }}>Included</option>
                                         <option value="flat" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'flat' ? 'selected' : '' }}>Flat Rate</option>
                                         <option value="tiered" {{ ($settings['shipping_rules']['cod']['type'] ?? '') === 'tiered' ? 'selected' : '' }}>Order Value Based (Tiered)</option>
                                     </select>
@@ -441,7 +443,7 @@
         const flatFields = document.querySelector('.flat-fields-' + method);
         const tieredFields = document.querySelector('.tiered-fields-' + method);
         
-        if (value === 'free') {
+        if (value === 'free' || value === 'included') {
             flatFields.style.display = 'none';
             tieredFields.style.display = 'none';
         } else if (value === 'flat') {

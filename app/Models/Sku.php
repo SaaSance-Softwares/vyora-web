@@ -23,6 +23,22 @@ class Sku extends Model
                 $sku->short_code = $short;
             }
         });
+
+        static::created(function ($sku) {
+            $sku->priceHistories()->create([
+                'price' => $sku->price,
+                'mrp' => $sku->mrp,
+            ]);
+        });
+
+        static::updated(function ($sku) {
+            if ($sku->isDirty('price') || $sku->isDirty('mrp')) {
+                $sku->priceHistories()->create([
+                    'price' => $sku->price,
+                    'mrp' => $sku->mrp,
+                ]);
+            }
+        });
     }
 
     public function color()
@@ -43,5 +59,10 @@ class Sku extends Model
     public function attributeValues()
     {
         return $this->belongsToMany(AttributeValue::class, 'sku_attribute_values');
+    }
+
+    public function priceHistories()
+    {
+        return $this->hasMany(SkuPriceHistory::class);
     }
 }

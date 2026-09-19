@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') - {{ config('app.name') }}</title>
     <meta name="description" content="@yield('meta_description')">
+    <meta property="og:site_name" content="{{ config('app.name') }}">
 
     {{-- Google Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">

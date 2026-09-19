@@ -48,6 +48,33 @@
         </div>
     </div>
 
+    <!-- Payment Breakdown Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full z-0"></div>
+            <div class="relative z-10">
+                <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2">Total Cash Collected</h3>
+                <div class="text-3xl font-black text-emerald-900">₹{{ number_format($totalCash, 2) }}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-purple-100 p-6 relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full z-0"></div>
+            <div class="relative z-10">
+                <h3 class="text-sm font-bold text-purple-600 uppercase tracking-wider mb-2">Total UPI Collected</h3>
+                <div class="text-3xl font-black text-purple-900">₹{{ number_format($totalUpi, 2) }}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-amber-100 p-6 relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full z-0"></div>
+            <div class="relative z-10">
+                <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <span>Total POS Discounts</span>
+                </h3>
+                <div class="text-3xl font-black text-amber-900">₹{{ number_format($totalDiscounts, 2) }}</div>
+            </div>
+        </div>
+    </div>
+
     @if($locationId === 'all')
     <!-- Store Breakdown (Only show if all stores selected) -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">

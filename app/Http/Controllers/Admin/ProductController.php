@@ -141,6 +141,9 @@ class ProductController extends Controller
             'seo_description' => 'nullable|string|max:5000',
             'seo_keywords' => 'nullable|string|max:1000',
             'is_returnable' => 'boolean',
+            'return_days' => 'nullable|integer|min:0',
+            'is_exchangeable' => 'boolean',
+            'exchange_days' => 'nullable|integer|min:0',
             'on_sale' => 'boolean',
             'use_qikink' => 'boolean',
             'tax_class' => 'nullable|string|max:255',
@@ -168,6 +171,9 @@ class ProductController extends Controller
             'new_skus.*.length' => 'nullable|numeric',
             'redirect_tab' => 'nullable|string|max:255',
             'preview_image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'faqs' => 'nullable|array',
+            'faqs.*.question' => 'required_with:faqs|string|max:1000',
+            'faqs.*.answer' => 'required_with:faqs|string',
         ]);
 
         // Create product
@@ -184,6 +190,9 @@ class ProductController extends Controller
             'seo_keywords' => $request->seo_keywords,
             'is_active' => false, // Products are inactive by default until admin activates
             'is_returnable' => $request->has('is_returnable'),
+            'return_days' => $request->return_days ?? 7,
+            'is_exchangeable' => $request->has('is_exchangeable'),
+            'exchange_days' => $request->exchange_days ?? 7,
             'on_sale' => $request->has('on_sale'),
             'use_qikink' => $request->has('use_qikink'),
             'tax_class' => $request->tax_class,
@@ -241,6 +250,18 @@ class ProductController extends Controller
                         'stock' => $newSku['stock'],
                         'color_id' => $newSku['color_id'] ?: null,
                         'size_id' => $sizeId,
+                    ]);
+                }
+            }
+        }
+
+        if ($request->has('faqs') && is_array($request->faqs)) {
+            foreach ($request->faqs as $index => $faqData) {
+                if (!empty($faqData['question']) && !empty($faqData['answer'])) {
+                    $product->faqs()->create([
+                        'question' => $faqData['question'],
+                        'answer' => $faqData['answer'],
+                        'sort_order' => $index
                     ]);
                 }
             }
@@ -328,6 +349,9 @@ class ProductController extends Controller
             'seo_keywords' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'is_returnable' => 'boolean',
+            'return_days' => 'nullable|integer|min:0',
+            'is_exchangeable' => 'boolean',
+            'exchange_days' => 'nullable|integer|min:0',
             'on_sale' => 'boolean',
             'use_qikink' => 'boolean',
             'tax_class' => 'nullable|string|max:255',
@@ -367,6 +391,9 @@ class ProductController extends Controller
             'new_skus.*.length' => 'nullable|numeric',
             'redirect_tab' => 'nullable|string|max:255',
             'preview_image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'faqs' => 'nullable|array',
+            'faqs.*.question' => 'required_with:faqs|string|max:1000',
+            'faqs.*.answer' => 'required_with:faqs|string',
         ]);
 
         // Update basic product details
@@ -384,6 +411,9 @@ class ProductController extends Controller
             'seo_keywords' => $request->seo_keywords,
             'is_active' => $request->has('is_active'),
             'is_returnable' => $request->has('is_returnable'),
+            'return_days' => $request->return_days ?? 7,
+            'is_exchangeable' => $request->has('is_exchangeable'),
+            'exchange_days' => $request->exchange_days ?? 7,
             'on_sale' => $request->has('on_sale'),
             'use_qikink' => $request->has('use_qikink'),
             'tax_class' => $request->tax_class,
@@ -500,6 +530,21 @@ class ProductController extends Controller
             }
         }
 
+        if ($request->has('faqs')) {
+            $product->faqs()->delete();
+            if (is_array($request->faqs)) {
+                foreach ($request->faqs as $index => $faqData) {
+                    if (!empty($faqData['question']) && !empty($faqData['answer'])) {
+                        $product->faqs()->create([
+                            'question' => $faqData['question'],
+                            'answer' => $faqData['answer'],
+                            'sort_order' => $index
+                        ]);
+                    }
+                }
+            }
+        }
+
         $tab = $request->input('redirect_tab', 'info');
 
         return redirect()->route('admin.products.edit', $product)
@@ -581,14 +626,14 @@ class ProductController extends Controller
 
         $updateData = [];
 
-        $fields = ['fit_id', 'fabric_id', 'product_type_id', 'delivery_timeline_id', 'tax_class'];
+        $fields = ['fit_id', 'fabric_id', 'product_type_id', 'delivery_timeline_id', 'tax_class', 'return_days', 'exchange_days'];
         foreach ($fields as $field) {
             if ($request->filled($field)) {
                 $updateData[$field] = $request->$field;
             }
         }
         
-        $boolFields = ['is_active', 'is_returnable', 'on_sale', 'use_qikink'];
+        $boolFields = ['is_active', 'is_returnable', 'is_exchangeable', 'on_sale', 'use_qikink'];
         foreach ($boolFields as $field) {
             if ($request->filled($field) && $request->$field !== 'leave') {
                 $updateData[$field] = $request->$field === '1';

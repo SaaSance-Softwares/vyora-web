@@ -10,6 +10,11 @@ class Product extends Model
 {
     use HasFactory, Searchable;
 
+    public function faqs()
+    {
+        return $this->morphMany(Faq::class, 'faqable')->orderBy('sort_order');
+    }
+
     public function toSearchableArray()
     {
         return [

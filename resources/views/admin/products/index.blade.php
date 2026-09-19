@@ -244,15 +244,7 @@
                             </select>
                         </div>
 
-                        <!-- Returnable -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Returnable</label>
-                            <select name="is_returnable" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
-                                <option value="leave">Leave Unchanged</option>
-                                <option value="1">Yes</option>
-                                <option value="0">No</option>
-                            </select>
-                        </div>
+
 
                         <!-- On Sale -->
                         <div>
@@ -324,6 +316,44 @@
                                         <label class="ml-2 block text-sm text-gray-900">{{ $col->name }}</label>
                                     </div>
                                 @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Return and Exchange Policies -->
+                    <div class="mt-6 border-t border-gray-100 pt-6">
+                        <h4 class="text-sm font-bold text-gray-900 mb-4">Return & Exchange</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Return -->
+                            <div class="bg-gray-50 border border-gray-200 rounded p-4 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Is Returnable?</label>
+                                    <select name="is_returnable" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                        <option value="leave">Leave Unchanged</option>
+                                        <option value="1">Yes</option>
+                                        <option value="0">No</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Return Days (Number only)</label>
+                                    <input type="number" name="return_days" min="0" placeholder="e.g. 7 (Leave blank to keep unchanged)" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                </div>
+                            </div>
+
+                            <!-- Exchange -->
+                            <div class="bg-gray-50 border border-gray-200 rounded p-4 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Is Exchangeable?</label>
+                                    <select name="is_exchangeable" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                        <option value="leave">Leave Unchanged</option>
+                                        <option value="1">Yes</option>
+                                        <option value="0">No</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Exchange Days (Number only)</label>
+                                    <input type="number" name="exchange_days" min="0" placeholder="e.g. 7 (Leave blank to keep unchanged)" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">
+                                </div>
                             </div>
                         </div>
                     </div>

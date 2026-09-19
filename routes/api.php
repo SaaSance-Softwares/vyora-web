@@ -28,6 +28,7 @@ Route::get('/user', function (Request $request) {
 Route::middleware('throttle:public_api')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{slug}', [ProductController::class, 'show']);
+    Route::get('/skus/{id}/price-history', [ProductController::class, 'priceHistory']);
     Route::post('/subscribe', [NewsletterController::class, 'subscribe']);
     Route::get('/search', [SearchController::class, 'index']);
     Route::get('/search-suggestions', [SearchController::class, 'suggestions']);

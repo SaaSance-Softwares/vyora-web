@@ -125,15 +125,21 @@ $shipping = $order->shippingAddress;
       <div class="divide-y divide-gray-50">
         @foreach($order->items as $item)
         @php
-          $img = null;
-          if($item->product) {
-            $primary = $item->product->images->where('is_primary',true)->first() ?? $item->product->images->first();
-            $img = $primary ? $primary->url : ($item->product->image_url ?? null);
-          }
-          if(!$img) {
-              $img = $item->image_url;
-          }
-          $attrs = $item->sku?->attributeValues ?? collect();
+            $img = null;
+            if ($item->product) {
+                if ($item->sku && $item->sku->color_id) {
+                    $colorImg = $item->product->images->where('color_id', $item->sku->color_id)->where('is_primary', true)->first() 
+                             ?? $item->product->images->where('color_id', $item->sku->color_id)->first();
+                    $img = $colorImg ? $colorImg->url : null;
+                }
+                if (!$img) {
+                    $primary = $item->product->images->where('is_primary', true)->first() ?? $item->product->images->first();
+                    $img = $primary ? $primary->url : ($item->product->image_url ?? null);
+                }
+            } else {
+                $img = $item->image_url;
+            }
+            $attrs = $item->sku?->attributeValues ?? collect();
         @endphp
         <div class="flex gap-4 p-5 hover:bg-gray-50/50 transition-colors">
           {{-- Image --}}
@@ -312,7 +318,17 @@ $shipping = $order->shippingAddress;
       <div class="mt-5 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
         <div>
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Method</p>
-          <p class="font-semibold text-gray-800">{{ $order->payment_method ?? '—' }}</p>
+          <p class="font-semibold text-gray-800 uppercase">{{ $order->payment_method ?? '—' }}</p>
+          @if($order->amount_cash > 0 || $order->amount_upi > 0)
+          <div class="mt-1.5 flex flex-col gap-1">
+             @if($order->amount_cash > 0)
+                <span class="text-[11px] font-bold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 inline-block w-max">CASH: ₹{{ number_format($order->amount_cash, 2) }}</span>
+             @endif
+             @if($order->amount_upi > 0)
+                <span class="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200 inline-block w-max">UPI: ₹{{ number_format($order->amount_upi, 2) }}</span>
+             @endif
+          </div>
+          @endif
         </div>
         <div>
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Status</p>

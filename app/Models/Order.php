@@ -24,6 +24,27 @@ class Order extends Model
                 $order->order_number = 'ORD-'.strtoupper(Str::random(8));
             }
         });
+
+        static::saved(function ($order) {
+            // Automatically sync 'order_status_id' when 'status' string is changed by API
+            if ($order->wasChanged('status') || $order->wasRecentlyCreated) {
+                $expectedStatus = \App\Models\OrderStatus::whereRaw('LOWER(name) = ?', [strtolower($order->status)])
+                    ->with(['smsTemplate', 'emailTemplate', 'whatsappTemplate'])
+                    ->first();
+
+                if ($expectedStatus && $order->order_status_id !== $expectedStatus->id) {
+                    Order::withoutEvents(function () use ($order, $expectedStatus) {
+                        $order->update(['order_status_id' => $expectedStatus->id]);
+                    });
+
+                    // Fire the dynamic templates linked to this OrderStatus
+                    $notifier = new class {
+                        use \App\Traits\OrderStatusNotificationTrait;
+                    };
+                    $notifier->fireOrderStatusNotifications($order, $expectedStatus);
+                }
+            }
+        });
     }
 
     /* ------------------------------------------------------------------ */

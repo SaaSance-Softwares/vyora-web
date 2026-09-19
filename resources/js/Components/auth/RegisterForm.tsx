@@ -356,7 +356,7 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
                                         placeholder="555 000 0000"
                                         className="w-full bg-transparent pl-9 pr-4 py-3 text-sm font-medium text-gray-900 focus:outline-none"
                                         value={form.phone}
-                                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                                        onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
                                     />
                                 </div>
                             </div>

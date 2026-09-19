@@ -98,6 +98,23 @@ class QikinkOrderService
             $firstName = array_shift($nameParts) ?: 'Customer';
             $lastName = count($nameParts) > 0 ? implode(' ', $nameParts) : '.';
 
+            // Format addresses to meet Qikink limits (max 90 chars for address1)
+            $addr1 = $address->address_line1 ?? '';
+            $addr2 = $address->address_line2 ?? '';
+
+            if (strlen($addr1) > 90) {
+                $wrapped = wordwrap($addr1, 90, "\n", true);
+                $lines = explode("\n", $wrapped);
+                $addr1 = $lines[0];
+                unset($lines[0]);
+                $overflow = implode(' ', $lines);
+                $addr2 = trim($overflow . ' ' . $addr2);
+            }
+
+            if (strlen($addr2) > 90) {
+                $addr2 = substr($addr2, 0, 90);
+            }
+
             // 4. Build Payload
             // QikInk rejects hyphens and special characters in order_number
             $payload = [
@@ -109,8 +126,8 @@ class QikinkOrderService
                 'shipping_address' => [
                     'first_name' => $firstName,
                     'last_name' => $lastName,
-                    'address1' => $address->address_line1 ?? '',
-                    'address2' => $address->address_line2 ?? '',
+                    'address1' => $addr1,
+                    'address2' => $addr2,
                     'phone' => $address->phone ?? '0000000000',
                     'email' => $address->email ?? 'customer@example.com',
                     'city' => $address->city ?? '',
@@ -122,29 +139,46 @@ class QikinkOrderService
 
             Log::info('Qikink: Submitting order payload', ['order_id' => $order->id, 'payload' => $payload]);
 
-            // 5. Submit Order to QikInk
-            $orderResponse = Http::withHeaders([
-                'Accesstoken' => $accessToken,
-                'ClientId' => $clientId,
-            ])->post("$baseUrl/api/order/create", $payload);
+            // 5. Submit Order to QikInk using raw cURL because QikInk API has strict case-sensitive header parsing 
+            // which fails with standard Guzzle/Laravel HTTP clients that normalize header names.
+            $ch = curl_init("$baseUrl/api/order/create");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Content-Type: application/json",
+                "ClientId: $clientId",
+                "Accesstoken: $accessToken"
+            ]);
 
-            if (! $orderResponse->successful()) {
+            $responseBody = curl_exec($ch);
+            $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $responseData = json_decode($responseBody, true);
+
+            if ($httpStatus < 200 || $httpStatus >= 300) {
                 Log::error('Qikink Order Creation Failed', [
                     'order_id' => $order->id,
-                    'status' => $orderResponse->status(),
-                    'response' => $orderResponse->body(),
+                    'status' => $httpStatus,
+                    'response' => $responseBody,
                     'payload' => $payload,
                 ]);
 
-                return ['success' => false, 'error' => 'Order Creation Failed: ' . $orderResponse->body()];
+                $errorMessage = 'Unknown Error';
+                if (is_array($responseData) && isset($responseData['error'])) {
+                    $errorMessage = is_string($responseData['error']) ? $responseData['error'] : json_encode($responseData['error']);
+                }
+
+                return ['success' => false, 'error' => 'Order Creation Failed: ' . $errorMessage];
             }
 
             Log::info('Qikink Order Created Successfully', [
                 'order_id' => $order->id,
-                'response' => $orderResponse->json(),
+                'response' => $responseData,
             ]);
 
-            $order->qikink_order_id = $orderResponse->json('order_id');
+            $order->qikink_order_id = $responseData['order_id'] ?? null;
             $order->save();
 
             return ['success' => true, 'error' => null];

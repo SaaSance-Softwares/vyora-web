@@ -480,7 +480,7 @@ function AddressesSection() {
                                 <CountryCodePicker value={countryCode} onChange={setCountryCode} />
                                 <input 
                                     value={form.phone} 
-                                    onChange={e => f('phone', e.target.value)} 
+                                    onChange={e => f('phone', e.target.value.replace(/\D/g, ''))} 
                                     placeholder="10-digit number"
                                     className="flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none" 
                                 />

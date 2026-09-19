@@ -58,35 +58,47 @@ use Inertia\Inertia;
 
 // Dynamic TXT and AI Feeds
 Route::get('/robots.txt', function () {
-    $content = "User-agent: *\nAllow: /\n";
+    $content = "User-agent: *
+Allow: /
+";
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
 
 Route::get('/llms.txt', function () {
     $appName = config('app.name', 'Vyora');
-    $content = "# AI Conversational Feed for {$appName}\n\n";
-    $content .= "Welcome to the AI feed for our application. This feed is designed to help language models understand our site.\n\n";
+    $content = "# AI Conversational Feed for {$appName}
+
+";
+    $content .= "Welcome to the AI feed for our application. This feed is designed to help language models understand our site.
+
+";
     
     // Categories
     $categories = \App\Models\Category::where('is_active', true)->whereNull('parent_id')->get();
     if ($categories->count() > 0) {
-        $content .= "## Store Categories\n";
+        $content .= "## Store Categories
+";
         foreach ($categories as $cat) {
             $url = url('/shop?category=' . $cat->slug);
-            $content .= "- [{$cat->name}]({$url})\n";
+            $content .= "- [{$cat->name}]({$url})
+";
         }
-        $content .= "\n";
+        $content .= "
+";
     }
 
     // Collections
     $collections = \App\Models\Collection::where('is_active', true)->get();
     if ($collections->count() > 0) {
-        $content .= "## Curated Collections\n";
+        $content .= "## Curated Collections
+";
         foreach ($collections as $col) {
             $url = url('/shop?collection=' . $col->slug);
-            $content .= "- [{$col->name}]({$url})\n";
+            $content .= "- [{$col->name}]({$url})
+";
         }
-        $content .= "\n";
+        $content .= "
+";
     }
 
     // Featured Products (limit to 50 to avoid massive files)
@@ -95,68 +107,97 @@ Route::get('/llms.txt', function () {
         ->limit(50)
         ->get();
     if ($products->count() > 0) {
-        $content .= "## Featured Products\n";
+        $content .= "## Featured Products
+";
         foreach ($products as $prod) {
             $url = url('/product/' . $prod->slug);
             $price = $prod->skus->min('price') ?? 0;
-            $content .= "- [{$prod->name}]({$url}) - ₹{$price}\n";
+            $content .= "- [{$prod->name}]({$url}) - ₹{$price}
+";
         }
-        $content .= "\n";
+        $content .= "
+";
     }
 
-    $content .= "## Capabilities\n";
-    $content .= "- Browse products\n- Place orders\n- View gift cards\n";
+    $content .= "## Capabilities
+";
+    $content .= "- Browse products
+- Place orders
+- View gift cards
+";
 
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
 
 Route::get('/llms-full.txt', function () {
     $appName = config('app.name', 'Vyora');
-    $content = "# {$appName} - Full AI Context\n\n";
-    $content .= "This is the comprehensive AI feed for {$appName}. It contains full details of all active products, categories, and policies.\n\n";
+    $content = "# {$appName} - Full AI Context
+
+";
+    $content .= "This is the comprehensive AI feed for {$appName}. It contains full details of all active products, categories, and policies.
+
+";
 
     // Products (All Active)
     $products = \App\Models\Product::with('skus')->where('is_active', true)->orderBy('created_at', 'desc')->get();
     if ($products->count() > 0) {
-        $content .= "## All Products\n\n";
+        $content .= "## All Products
+
+";
         foreach ($products as $prod) {
             $url = url('/product/' . $prod->slug);
             $price = $prod->skus->min('price') ?? 0;
             $mrp = $prod->skus->max('mrp') ?? 0;
             
-            $content .= "### {$prod->name}\n";
-            $content .= "- **Price:** ₹{$price}\n";
-            if ($mrp) $content .= "- **MRP:** ₹{$mrp}\n";
-            $content .= "- **URL:** {$url}\n";
+            $content .= "### {$prod->name}
+";
+            $content .= "- **Price:** ₹{$price}
+";
+            if ($mrp) $content .= "- **MRP:** ₹{$mrp}
+";
+            $content .= "- **URL:** {$url}
+";
             if ($prod->long_description) {
-                $content .= "- **Description:** " . trim(preg_replace('/\s+/', ' ', strip_tags($prod->long_description))) . "\n";
+                $content .= "- **Description:** " . trim(preg_replace('/\s+/', ' ', strip_tags($prod->long_description))) . "
+";
             }
-            $content .= "\n";
+            $content .= "
+";
         }
     }
 
     // Categories
     $categories = \App\Models\Category::where('is_active', true)->get();
     if ($categories->count() > 0) {
-        $content .= "## All Categories\n";
+        $content .= "## All Categories
+";
         foreach ($categories as $cat) {
             $url = url('/shop?category=' . $cat->slug);
-            $content .= "- [{$cat->name}]({$url})\n";
+            $content .= "- [{$cat->name}]({$url})
+";
         }
-        $content .= "\n";
+        $content .= "
+";
     }
 
     // Policies / Legal Pages
     if (class_exists(\App\Models\LegalPage::class)) {
         $policies = \App\Models\LegalPage::where('is_published', true)->get();
         if ($policies->count() > 0) {
-            $content .= "## Store Policies\n\n";
+            $content .= "## Store Policies
+
+";
             foreach ($policies as $policy) {
                 $url = url('/' . $policy->slug);
-                $content .= "### {$policy->title}\n";
-                $content .= "- **URL:** {$url}\n\n";
+                $content .= "### {$policy->title}
+";
+                $content .= "- **URL:** {$url}
+
+";
                 if ($policy->content) {
-                    $content .= trim(strip_tags($policy->content)) . "\n\n";
+                    $content .= trim(strip_tags($policy->content)) . "
+
+";
                 }
             }
         }
@@ -170,8 +211,10 @@ Route::get('/llm.txt', function () {
 });
 
 Route::get('/security.txt', function () {
-    $content = "Contact: security@" . request()->getHost() . "\n";
-    $content .= "Expires: " . now()->addYear()->toIso8601String() . "\n";
+    $content = "Contact: security@" . request()->getHost() . "
+";
+    $content .= "Expires: " . now()->addYear()->toIso8601String() . "
+";
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
 
@@ -181,6 +224,7 @@ Route::get('/shop', [PageController::class, 'shop'])->name('frontend.shop');
 Route::get('/search', [PageController::class, 'search'])->name('frontend.search');
 Route::get('/product/{slug}', [PageController::class, 'product'])->name('frontend.product');
 Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('frontend.reviews.store');
+Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('frontend.reviews.update');
 Route::get('/category/{slug}', [PageController::class, 'category'])->name('frontend.category');
 Route::get('/collection/{slug}', [PageController::class, 'collection'])->name('frontend.collection');
 Route::get('/cart', [PageController::class, 'cart'])->name('frontend.cart');
@@ -494,6 +538,9 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
             Route::post('/integrations/algolia/sync', [IntegrationSettingsController::class, 'syncAlgolia'])->name('integrations.algolia.sync');
             Route::post('/integrations/shiprocket/test', [IntegrationSettingsController::class, 'testShiprocket'])->name('integrations.shiprocket.test');
             Route::post('/integrations/saasance-push/test', [IntegrationSettingsController::class, 'testSaasancePush'])->name('integrations.saasance-push.test');
+            Route::get('/integrations/zoho-books/auth/redirect', [IntegrationSettingsController::class, 'zohoOAuthRedirect'])->name('integrations.zoho-books.redirect');
+            Route::get('/integrations/zoho-books/auth/callback', [IntegrationSettingsController::class, 'zohoOAuthCallback'])->name('integrations.zoho-books.callback');
+            Route::post('/integrations/zoho-books/sync-past', [IntegrationSettingsController::class, 'syncZohoPastOrders'])->name('integrations.zoho-books.sync-past');
             // Navbar Settings
             Route::get('/navbar-settings', [NavbarSettingsController::class, 'index'])->name('navbar-settings.index');
             Route::put('/navbar-settings', [NavbarSettingsController::class, 'update'])->name('navbar-settings.update');
@@ -546,7 +593,9 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
 
         // Reviews
         Route::get('/reviews', [App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('reviews.index');
+        Route::post('/reviews/bulk', [App\Http\Controllers\Admin\ReviewController::class, 'bulkAction'])->name('reviews.bulk');
         Route::post('/reviews/{review}/reply', [App\Http\Controllers\Admin\ReviewController::class, 'reply'])->name('reviews.reply');
+        Route::post('/reviews/{review}/toggle-approval', [App\Http\Controllers\Admin\ReviewController::class, 'toggleApproval'])->name('reviews.toggle-approval');
         Route::delete('/reviews/{review}', [App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('reviews.destroy');
 
         // DPDP Mandate / Legal Pages

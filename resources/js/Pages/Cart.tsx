@@ -4,7 +4,7 @@ import { useWishlistStore, WishlistItem } from '@/store/wishlist';
 import { formatPrice } from '@/lib/utils';
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye, RefreshCcw, RotateCcw } from 'lucide-react';
 
 /* ── Cart Item ────────────────────────────────────────────────────────────── */
 function CartRow({ item, update, remove }: {
@@ -13,58 +13,83 @@ function CartRow({ item, update, remove }: {
     remove: (id: number) => void;
 }) {
     return (
-        <div className="flex gap-4 py-5 border-b border-gray-100 last:border-0">
-            <Link href={`/product/${item.slug}`} className="relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 block">
-                {item.image && <img src={item.image} alt={item.name} className="w-full h-full object-cover" />}
-            </Link>
+        <div className="flex flex-col py-5 border-b border-gray-100 last:border-0">
+            <div className="flex gap-4">
+                <Link href={`/product/${item.slug}`} className="relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 block">
+                    {item.image && <img src={item.image} alt={item.name} className="w-full h-full object-cover" />}
+                </Link>
 
-            <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                    <Link href={`/product/${item.slug}`}>
-                        <h3 className="text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2">{item.name}</h3>
-                    </Link>
-                    <button onClick={() => remove(item.skuId)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5">
-                        <Trash2 size={15} />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {item.colorName && (
-                        <span className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            <span className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: item.colorHex || '#aaa' }} />
-                            {item.colorName}
-                        </span>
-                    )}
-                    {item.sizeName && (
-                        <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Size {item.sizeName}
-                        </span>
-                    )}
-                    {item.deliveryDate && (
-                        <span className="text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                            Delivered by: {item.deliveryDate}
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg">
-                        <button onClick={() => update(item.skuId, Math.max(1, item.quantity - 1))} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
-                            <Minus size={12} strokeWidth={3} />
-                        </button>
-                        <span className="text-sm font-bold text-gray-900 w-7 text-center">{item.quantity}</span>
-                        <button onClick={() => update(item.skuId, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
-                            <Plus size={12} strokeWidth={3} />
+                <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                        <Link href={`/product/${item.slug}`}>
+                            <h3 className="text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2">{item.name}</h3>
+                        </Link>
+                        <button onClick={() => remove(item.skuId)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5">
+                            <Trash2 size={15} />
                         </button>
                     </div>
-                    <div className="flex flex-col items-end">
-                        <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
-                        {item.mrp && item.mrp > item.price ? (
-                            <p className="text-[10px] text-gray-400 line-through mt-0.5">{formatPrice(item.mrp * item.quantity)}</p>
-                        ) : null}
+
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {item.colorName && (
+                            <span className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                <span className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: item.colorHex || '#aaa' }} />
+                                {item.colorName}
+                            </span>
+                        )}
+                        {item.sizeName && (
+                            <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                Size {item.sizeName}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-2 border border-gray-200 rounded-lg">
+                            <button onClick={() => update(item.skuId, Math.max(1, item.quantity - 1))} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
+                                <Minus size={12} strokeWidth={3} />
+                            </button>
+                            <span className="text-sm font-bold text-gray-900 w-7 text-center">{item.quantity}</span>
+                            <button onClick={() => update(item.skuId, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
+                                <Plus size={12} strokeWidth={3} />
+                            </button>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                            {item.mrp && item.mrp > item.price ? (
+                                <p className="text-[10px] text-gray-400 line-through mt-0.5">{formatPrice(item.mrp * item.quantity)}</p>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             </div>
+            {item.deliveryDate && (
+                <>
+                    <hr className="mt-4 mb-3 border-gray-100" />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50">
+                        <div className="flex items-center gap-1.5">
+                            <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                            <span>Delivered by <span className="font-semibold text-gray-900">{item.deliveryDate}</span></span>
+                        </div>
+                        
+                        {(item.exchangeDays !== null || item.returnDays !== null) && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px]">
+                                {item.exchangeDays !== null && item.exchangeDays !== undefined && (
+                                    <span className="flex items-center gap-1">
+                                        <RefreshCcw size={12} className="text-gray-400" />
+                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span> from the date of delivery
+                                    </span>
+                                )}
+                                {item.returnDays !== null && item.returnDays !== undefined && (
+                                    <span className="flex items-center gap-1">
+                                        <RotateCcw size={12} className="text-gray-400" />
+                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span> from the date of delivery
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -203,6 +228,13 @@ export default function CartPage() {
         const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
     const discount = cart.appliedCoupon?.discountAmount || 0;
     
+    let shippingLabel = 'Calculated at checkout';
+    if (settings?.shipping_rules?.prepaid) {
+        if (settings.shipping_rules.prepaid.type === 'free') shippingLabel = 'Free';
+        else if (settings.shipping_rules.prepaid.type === 'included') shippingLabel = 'Included';
+        else if (settings.shipping_rules.prepaid.type === 'flat' && parseFloat(settings.shipping_rules.prepaid.fee) === 0) shippingLabel = 'Free';
+    }
+    
     let taxAmount = 0;
     const isTaxEnabled = settings?.is_tax_enabled == '1';
     const taxLabel = settings?.tax_label || 'Tax';
@@ -309,7 +341,7 @@ export default function CartPage() {
                                 )}
                                 <div className="flex justify-between text-gray-500">
                                     <span>Shipping</span>
-                                    <span>Calculated at checkout</span>
+                                    <span>{shippingLabel}</span>
                                 </div>
                                 {isTaxEnabled && settings?.show_tax_in_cart_checkout !== '0' && (
                                     <>

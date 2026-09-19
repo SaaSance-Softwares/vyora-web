@@ -6,6 +6,7 @@ import { Link } from '@inertiajs/react';
 
 import { formatPrice } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/react';
+import { Star, StarHalf } from 'lucide-react';
 
 interface OrderItem {
     id: number;
@@ -20,6 +21,13 @@ interface OrderItem {
             featured_image?: string;
         }
     }
+    review?: {
+        id: number;
+        rating: number;
+        comment: string;
+        is_approved: boolean;
+    };
+    product_id: number;
 }
 
 interface Address {
@@ -45,6 +53,8 @@ interface Order {
     payment_method: string;
     payment_status: string;
     created_at: string;
+    order_return_valid_till?: string | null;
+    order_exchange_valid_till?: string | null;
     items: OrderItem[];
     shipping_address: Address;
     tracking_url: string | null;
@@ -63,6 +73,59 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
 
     const [actionModal, setActionModal] = useState<'cancel' | 'return' | 'exchange' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    
+    // Review Modal State
+    const [reviewModalItem, setReviewModalItem] = useState<OrderItem | null>(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [reviewLoading, setReviewLoading] = useState(false);
+
+    const openReviewModal = (item: OrderItem) => {
+        setReviewModalItem(item);
+        if (item.review) {
+            setReviewRating(item.review.rating);
+            setReviewComment(item.review.comment || '');
+        } else {
+            setReviewRating(5);
+            setReviewComment('');
+        }
+    };
+
+    const submitReview = async (e: any) => {
+        e.preventDefault();
+        if (!reviewModalItem) return;
+        setReviewLoading(true);
+        try {
+            if (reviewModalItem.review) {
+                // Update
+                router.put(`/reviews/${reviewModalItem.review.id}`, {
+                    rating: reviewRating,
+                    comment: reviewComment
+                }, {
+                    onSuccess: () => {
+                        setReviewModalItem(null);
+                        fetchOrder();
+                    }
+                });
+            } else {
+                // Store
+                router.post(`/products/${reviewModalItem.product_id}/reviews`, {
+                    rating: reviewRating,
+                    comment: reviewComment
+                }, {
+                    onSuccess: () => {
+                        setReviewModalItem(null);
+                        fetchOrder();
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setReviewLoading(false);
+        }
+    };
+
     
     const getActionFee = (action: 'cancel' | 'return' | 'exchange') => {
         const method = order?.payment_method === 'cod' ? 'cod' : 'prepaid';
@@ -231,13 +294,23 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="mt-4 flex items-center gap-6">
-                                                    <div className="text-sm font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-gray-700">
-                                                        Qty: {item.quantity}
+                                                <div className="mt-4 flex flex-wrap items-center gap-4">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="text-sm font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-gray-700">
+                                                            Qty: {item.quantity}
+                                                        </div>
+                                                        <div className="text-base font-bold text-gray-900">
+                                                            {formatPrice(parseFloat(item.price as string || "0") * item.quantity)}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-base font-bold text-gray-900">
-                                                        {formatPrice(parseFloat(item.price as string || "0") * item.quantity)}
-                                                    </div>
+                                                    {order.status === 'delivered' && (
+                                                        <button 
+                                                            onClick={() => openReviewModal(item)}
+                                                            className="ml-auto text-xs font-bold uppercase tracking-wider px-4 py-2 border rounded-lg transition-colors hover:bg-gray-50"
+                                                        >
+                                                            {item.review ? 'Edit Review' : 'Write a Review'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -411,6 +484,16 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                         )}
                                         {order.status === 'delivered' && (
                                             <>
+                                                {order.order_exchange_valid_till && (
+                                                    <p className="text-xs font-semibold text-gray-500 mb-1">
+                                                        Exchange available till <span className="text-gray-900">{order.order_exchange_valid_till}</span>
+                                                    </p>
+                                                )}
+                                                {order.order_return_valid_till && (
+                                                    <p className="text-xs font-semibold text-gray-500 mb-2">
+                                                        Return available till <span className="text-gray-900">{order.order_return_valid_till}</span>
+                                                    </p>
+                                                )}
                                                 {!hasNonReturnableItems ? (
                                                     <button onClick={() => setActionModal('return')} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
                                                         Return Order
@@ -476,6 +559,78 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                     </div>
                 )}
             </div>
+            
+            {/* Review Modal */}
+            {reviewModalItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <h3 className="text-xl font-bold mb-4">{reviewModalItem.review ? 'Edit Review' : 'Write a Review'}</h3>
+                        <div className="flex gap-4 items-center mb-6 border-b pb-4">
+                            <div className="w-16 h-20 bg-gray-100 rounded-lg overflow-hidden">
+                                {(reviewModalItem.image_url || reviewModalItem.sku?.product?.featured_image) ? (
+                                    <img src={reviewModalItem.image_url || reviewModalItem.sku?.product?.featured_image} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">NA</div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-gray-900 leading-tight">{reviewModalItem.product_name}</p>
+                                {reviewModalItem.variant_name && <p className="text-xs text-gray-500 mt-1">{reviewModalItem.variant_name}</p>}
+                            </div>
+                        </div>
+                        
+                        <form onSubmit={submitReview}>
+                            <div className="mb-4">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Rating</label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                    <div key={star} className="relative w-8 h-8 group transition-transform hover:scale-110">
+                                        <Star className="w-8 h-8 text-gray-300 absolute inset-0 pointer-events-none" />
+                                        {reviewRating >= star ? (
+                                            <Star className="w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                        ) : reviewRating >= star - 0.5 ? (
+                                            <StarHalf className="w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                        ) : null}
+                                        <div className="absolute inset-0 flex">
+                                            <button type="button" onClick={() => setReviewRating(star - 0.5)} className="w-1/2 h-full z-10 focus:outline-none cursor-pointer" />
+                                            <button type="button" onClick={() => setReviewRating(star)} className="w-1/2 h-full z-10 focus:outline-none cursor-pointer" />
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                            
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Review Comment (Optional)</label>
+                                <textarea 
+                                    rows={4} 
+                                    value={reviewComment}
+                                    onChange={(e) => setReviewComment(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm p-3"
+                                    placeholder="What did you like or dislike? What did you use this product for?"
+                                ></textarea>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setReviewModalItem(null)} 
+                                    className="px-4 py-2 font-bold text-gray-500 hover:text-black transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={reviewLoading}
+                                    className="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm tracking-wide disabled:opacity-50"
+                                >
+                                    {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

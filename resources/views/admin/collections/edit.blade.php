@@ -3,7 +3,8 @@
 @section('header', 'Edit Collection')
 
 @section('content')
-<div class="max-w-5xl mx-auto">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<div class="w-full">
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
             <h1 class="text-xl font-bold">Edit Collection: {{ $collection->name }}</h1>
@@ -13,7 +14,7 @@
         <form id="edit-collection-form" action="{{ route('admin.collections.update', $collection) }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-8">
             @csrf @method('PUT')
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="flex flex-col gap-6">
                 <!-- Info -->
                 <div class="space-y-4">
                     <h3 class="font-bold text-gray-900 border-b pb-2">General Information</h3>
@@ -27,14 +28,35 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                        <textarea name="description" rows="5" class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('description', $collection->description) }}</textarea>
+                        <div id="description-editor" class="w-full border border-gray-300 rounded-lg bg-white" style="height: 200px;">
+                            {!! old('description', $collection->description) !!}
+                        </div>
+                        <textarea name="description" class="hidden">{{ old('description', $collection->description) }}</textarea>
                     </div>
                 </div>
 
                 <!-- Products & Visibility -->
                 <div class="space-y-6">
                     <div>
-                        <h3 class="font-bold text-gray-900 border-b pb-2 mb-4">Storefront Visibility</h3>
+                        
+                <!-- Collection Banner Image -->
+                <div class="w-full mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Collection Banner Image (Optional)</label>
+                    <div class="mb-3">
+                        <img id="banner-image-preview" src="{{ $collection->banner_image_url ?? '' }}" class="w-64 h-32 object-cover rounded-lg border border-gray-200 {{ $collection->banner_image ? '' : 'hidden' }}">
+                        @if($collection->banner_image)
+                        <label class="inline-flex items-center mt-2 text-sm text-red-600 cursor-pointer">
+                            <input type="checkbox" name="remove_banner_image" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500 mr-2">
+                            Remove banner
+                        </label>
+                        @endif
+                    </div>
+                    <input type="file" id="banner-image-input" name="banner_image" accept="image/*"
+                        class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 cursor-pointer">
+                    <p class="text-xs text-gray-500 mt-1">Background banner for the frontend page header.</p>
+                </div>
+
+<h3 class="font-bold text-gray-900 border-b pb-2 mb-4">Storefront Visibility</h3>
                         <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
                             <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" name="is_active" value="1" {{ old('is_active', $collection->is_active) ? 'checked' : '' }} class="h-4 w-4 border-gray-300 rounded text-black focus:ring-black">
@@ -77,7 +99,7 @@
             <!-- Social SEO Section -->
             <div class="pt-6 border-t border-gray-100">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">Social SEO Metadata (OG & Twitter)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex flex-col gap-6">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Social Title</label>
                         <input type="text" name="social_title" value="{{ old('social_title', $collection->social_title) }}" placeholder="e.g. Shop the Winter Collection"
@@ -90,6 +112,10 @@
                         @if($collection->social_image)
                             <div class="mb-3">
                                 <img src="/{{ $collection->social_image }}" alt="Social Image" class="w-32 h-auto rounded border border-gray-200">
+                                <label class="inline-flex items-center mt-2 text-sm text-red-600 cursor-pointer">
+                                    <input type="checkbox" name="remove_social_image" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500 mr-2">
+                                    Remove social image
+                                </label>
                             </div>
                         @endif
                         <input type="file" name="social_image" accept="image/*"
@@ -97,14 +123,29 @@
                         <p class="text-xs text-gray-500 mt-1">Recommended size: 1200x630 pixels (for OG/Twitter cards).</p>
                     </div>
 
-                    <div class="md:col-span-2">
+                    <div class="w-full">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Social Description</label>
                         <textarea name="social_description" rows="3" placeholder="Description shown on social media shares..."
                             class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('social_description', $collection->social_description) }}</textarea>
                     </div>
+
+                    <!-- Meta Keywords -->
+                    <div class="w-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Keywords</label>
+                        <input type="text" name="meta_keywords" placeholder="Keywords for SEO, comma separated..." value="{{ old('meta_keywords', $collection->meta_keywords) }}"
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                    </div>
+
+                    <!-- AEO Use Case -->
+                    <div class="w-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">AEO Use Case</label>
+                        <input type="text" name="aeo_use_case" placeholder="Use Case (e.g., Summer Collection)" value="{{ old('aeo_use_case', $collection->aeo_use_case) }}"
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">
+                    </div>
                 </div>
             </div>
 
+            @include('admin.partials.faqs-editor', ['model' => $collection])
             <div class="pt-6 border-t border-gray-100 flex justify-end">
                 <button type="submit" class="bg-black text-white px-8 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors">
                     Save Collection
@@ -115,7 +156,22 @@
 </div>
 
 @push('scripts')
+
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const bannerInput = document.getElementById('banner-image-input');
+        const bannerPreview = document.getElementById('banner-image-preview');
+        if (bannerInput && bannerPreview) {
+            bannerInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    bannerPreview.src = URL.createObjectURL(file);
+                    bannerPreview.classList.remove('hidden');
+                }
+            });
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('product-search');
         const resultsContainer = document.getElementById('search-results');
@@ -157,5 +213,45 @@
         document.addEventListener('click', e => { if (!searchInput.contains(e.target)) resultsContainer.classList.add('hidden'); });
     });
 </script>
+
 @endpush
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const bannerInput = document.getElementById('banner-image-input');
+        const bannerPreview = document.getElementById('banner-image-preview');
+        if (bannerInput && bannerPreview) {
+            bannerInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    bannerPreview.src = URL.createObjectURL(file);
+                    bannerPreview.classList.remove('hidden');
+                }
+            });
+        }
+    });
+
+    var quillDesc = new Quill('#description-editor', {
+        theme: 'snow'
+    });
+    
+    // Initialize content if it's there
+    var existingContent = document.querySelector('textarea[name="description"]').value;
+    if (existingContent && quillDesc.root.innerHTML === '<p><br></p>') {
+        // Only set it if quill is empty but textarea has content (just in case)
+        quillDesc.root.innerHTML = existingContent;
+    }
+
+    var form = document.querySelector('#description-editor').closest('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var html = quillDesc.root.innerHTML;
+            if (html === '<p><br></p>') html = '';
+            document.querySelector('textarea[name="description"]').value = html;
+        });
+    }
+</script>
+
 @endsection

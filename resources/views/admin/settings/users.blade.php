@@ -226,7 +226,7 @@
         document.getElementById('panel-title').innerText = 'Edit Admin User';
         document.getElementById('panel-desc').innerText = 'Modify account privileges, password, and module permissions.';
         
-        document.getElementById('user-form').action = `/admin/settings/users/${user.id}`;
+        document.getElementById('user-form').action = `{{ url(config('app.admin_path', 'admin').'/settings/users') }}/${user.id}`;
         document.getElementById('form-method').value = 'PUT';
         
         document.getElementById('field-name').value = user.name;

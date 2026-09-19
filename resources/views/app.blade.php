@@ -108,7 +108,11 @@
         <link rel="canonical" href="{{ url()->current() }}" />
         
         <meta name="description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        @if(isset($meta_keywords) && $meta_keywords)
+            <meta name="keywords" content="{{ $meta_keywords }}" />
+        @endif
         
+        <meta property="og:site_name" content="{{ $storeName }}" />
         <meta property="og:title" content="{{ $og_title ?? $storeName }}" />
         <meta property="og:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
         <meta name="twitter:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />

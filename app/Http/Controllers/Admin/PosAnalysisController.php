@@ -34,6 +34,9 @@ class PosAnalysisController extends Controller
         // Metrics
         $totalSales = (clone $query)->sum('total_amount');
         $totalOrders = (clone $query)->count();
+        $totalCash = (clone $query)->sum('amount_cash');
+        $totalUpi = (clone $query)->sum('amount_upi');
+        $totalDiscounts = (clone $query)->sum('discount_amount');
         $uniqueCustomers = (clone $query)->distinct('customer_phone')->count('customer_phone');
         
         $aov = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
@@ -91,6 +94,9 @@ class PosAnalysisController extends Controller
             'locationId',
             'totalSales',
             'totalOrders',
+            'totalCash',
+            'totalUpi',
+            'totalDiscounts',
             'aov',
             'aovPerCustomer',
             'storeStats',

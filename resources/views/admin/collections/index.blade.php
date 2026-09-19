@@ -40,7 +40,7 @@
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="font-bold text-gray-900 not-italic">{{ $collection->name }}</div>
-                                <div class="text-[10px] text-gray-400 mt-0.5">{{ Str::limit($collection->description, 50) ?: 'No description' }}</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">{{ Str::limit(strip_tags($collection->description), 50) ?: 'No description' }}</div>
                             </td>
                             <td class="px-6 py-4 text-gray-500 font-mono text-xs">/{{ $collection->slug }}</td>
                             <td class="px-6 py-4 text-center">

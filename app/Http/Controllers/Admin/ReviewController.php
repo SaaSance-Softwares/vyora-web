@@ -44,4 +44,38 @@ class ReviewController extends Controller
 
         return back()->with('success', 'Review deleted successfully.');
     }
+
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:approve,reject,delete',
+            'selected_ids' => 'required|array',
+            'selected_ids.*' => 'exists:reviews,id',
+        ]);
+
+        $action = $request->action;
+        $ids = $request->selected_ids;
+
+        if ($action === 'approve') {
+            Review::whereIn('id', $ids)->update(['is_approved' => true]);
+            return back()->with('success', 'Selected reviews have been approved.');
+        } elseif ($action === 'reject') {
+            Review::whereIn('id', $ids)->update(['is_approved' => false]);
+            return back()->with('success', 'Selected reviews have been rejected.');
+        } elseif ($action === 'delete') {
+            $reviews = Review::whereIn('id', $ids)->get();
+            foreach ($reviews as $review) {
+                foreach ($review->images as $image) {
+                    $path = public_path($image->image_path);
+                    if (file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+                $review->delete();
+            }
+            return back()->with('success', 'Selected reviews have been deleted.');
+        }
+
+        return back()->with('error', 'Invalid action.');
+    }
 }

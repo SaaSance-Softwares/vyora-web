@@ -88,15 +88,28 @@ class SyncQikinkOrders extends Command
     private function syncOrder(Order $order, string $accessToken, string $clientId, string $baseUrl)
     {
         try {
-            $response = Http::withHeaders([
-                'Accesstoken' => $accessToken,
-                'ClientId' => $clientId,
-            ])->get("$baseUrl/api/order", [
-                'id' => $order->qikink_order_id
+            // Using raw cURL due to Qikink's strict case-sensitive header requirements 
+            // and occasional hanging connections if normalized by Laravel/Guzzle
+            $ch = curl_init("$baseUrl/api/order?id=" . urlencode($order->qikink_order_id));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 seconds timeout
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Content-Type: application/json",
+                "ClientId: $clientId",
+                "Accesstoken: $accessToken"
             ]);
 
-            if ($response->successful()) {
-                $qikinkOrder = $response->json();
+            $responseBody = curl_exec($ch);
+            $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                throw new \Exception("cURL Error: " . $curlError);
+            }
+
+            if ($httpStatus >= 200 && $httpStatus < 300) {
+                $qikinkOrder = json_decode($responseBody, true);
                 
                 if (!$qikinkOrder || isset($qikinkOrder['error'])) {
                     $this->error("Error fetching order {$order->order_number}: " . ($qikinkOrder['error'] ?? 'Unknown error'));
@@ -177,7 +190,7 @@ class SyncQikinkOrders extends Command
                     $this->line("No updates for order {$order->order_number}.");
                 }
             } else {
-                $this->error("Failed to fetch order {$order->order_number}. HTTP " . $response->status());
+                $this->error("Failed to fetch order {$order->order_number}. HTTP " . $httpStatus . " Response: " . $responseBody);
             }
         } catch (\Exception $e) {
             $this->error("Exception while syncing order {$order->order_number}: " . $e->getMessage());

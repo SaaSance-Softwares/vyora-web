@@ -53,7 +53,11 @@ class OrderController extends Controller
                     $liveImageUrl = $primary ? $primary->url : null;
                 }
 
-                if ($liveImageUrl) {
+                // Attach review if exists
+            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->first();
+            $item->review = $review;
+            
+            if ($liveImageUrl) {
                     $item->image_url = $liveImageUrl;
                 } else {
                     if (empty($item->image_url) || $item->image_url === 'null') {
@@ -107,6 +111,7 @@ class OrderController extends Controller
             'payment_method' => 'nullable|string|in:online,cod,prepaid',
             'coupon_code' => 'nullable|string|max:255',
             'gift_card_code' => 'nullable|string|max:255',
+            'cart_token' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -468,6 +473,15 @@ class OrderController extends Controller
                 }
             }
 
+            if ($request->filled('cart_token')) {
+                \App\Models\Cart::where('cart_token', $request->input('cart_token'))
+                    ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+            } elseif ($request->user()) {
+                \App\Models\Cart::where('user_id', $request->user()->id)
+                    ->whereIn('status', ['active', 'abandoned'])
+                    ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+            }
+
             return response()->json([
                 'success' => true,
                 'order_uuid' => $order->uuid,
@@ -494,7 +508,10 @@ class OrderController extends Controller
             ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress'])
             ->firstOrFail();
 
-        $order->items->transform(function ($item) use ($order) {
+        $orderReturnTill = null;
+        $orderExchangeTill = null;
+
+        $order->items->transform(function ($item) use ($order, &$orderReturnTill, &$orderExchangeTill) {
             // Prefer live product image if available (resolves broken old URLs)
             $liveImageUrl = null;
             $product = $item->product ?? ($item->sku ? $item->sku->product : null);
@@ -503,6 +520,10 @@ class OrderController extends Controller
                 $liveImageUrl = $primary ? $primary->url : null;
             }
 
+            // Attach review if exists
+            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->first();
+            $item->review = $review;
+            
             if ($liveImageUrl) {
                 $item->image_url = $liveImageUrl;
             } else {
@@ -524,11 +545,33 @@ class OrderController extends Controller
             } elseif ($item->sku && $item->sku->product && $item->sku->product->deliveryTimeline) {
                 $maxDays = $item->sku->product->deliveryTimeline->max_days;
             }
-            $item->delivery_date = $order->created_at->addDays($maxDays)->format('jS F Y');
+            
+            $baseDateForDelivery = $order->delivered_at ? \Carbon\Carbon::parse($order->delivered_at) : $order->created_at->addDays($maxDays);
+            $item->delivery_date = $baseDateForDelivery->format('jS M Y');
+
+            if ($product) {
+                if ($product->is_returnable && $product->return_days) {
+                    $rDate = $baseDateForDelivery->copy()->addDays($product->return_days);
+                    $item->return_valid_till = $rDate->format('jS M Y');
+                    if (!$orderReturnTill || $rDate->lt($orderReturnTill)) {
+                        $orderReturnTill = $rDate;
+                    }
+                }
+                if ($product->is_exchangeable && $product->exchange_days) {
+                    $eDate = $baseDateForDelivery->copy()->addDays($product->exchange_days);
+                    $item->exchange_valid_till = $eDate->format('jS M Y');
+                    if (!$orderExchangeTill || $eDate->lt($orderExchangeTill)) {
+                        $orderExchangeTill = $eDate;
+                    }
+                }
+            }
+
             return $item;
         });
 
         $data = $order->toArray();
+        $data['order_return_valid_till'] = $orderReturnTill ? $orderReturnTill->format('jS M Y') : null;
+        $data['order_exchange_valid_till'] = $orderExchangeTill ? $orderExchangeTill->format('jS M Y') : null;
         $data['tracking_url'] = $order->tracking_url;
         $data['tracking_number'] = $order->tracking_number;
         $data['courier_partner'] = $order->courier_partner;

@@ -136,6 +136,10 @@
                 <div class="w-14 h-14 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
                     <img src="https://saasance.com/vyora-admin-icon.png" alt="SaaSance Push Relay" class="w-8 h-8 object-contain" />
                 </div>
+                @elseif($slug === 'zoho-books')
+                <div class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0">
+                    <img src="{{ asset('vyora-asset/integration/zoho/zohobooks.webp') }}" alt="Zoho Books" class="w-9 h-9 object-contain" />
+                </div>
                 @else
                 <div class="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
                     <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>

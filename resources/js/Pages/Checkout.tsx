@@ -11,7 +11,7 @@ import CheckoutAddress from '@/components/checkout/CheckoutAddress';
 import CountryCodePicker from '@/Components/auth/CountryCodePicker';
 import {
     Trash2, Plus, Minus, Tag, Ticket, X, ChevronRight,
-    ShoppingBag, ArrowRight, AlertCircle, Check, MapPin, Lock, Gift
+    ShoppingBag, ArrowRight, AlertCircle, Check, MapPin, Lock, Gift, RefreshCcw, RotateCcw
 } from 'lucide-react';
 
 /* ── Coupon Modal ─────────────────────────────────────────────────────────── */
@@ -57,58 +57,83 @@ function CartRow({ item, update, remove }: {
     remove: (id: number) => void;
 }) {
     return (
-        <div className="flex gap-4 py-5 border-b border-gray-100 last:border-0">
-            <Link href={`/product/${item.slug}`} className="relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-                {item.image && <img src={item.image} alt={item.name} fill className="object-cover" unoptimized />}
-            </Link>
+        <div className="flex flex-col py-5 border-b border-gray-100 last:border-0">
+            <div className="flex gap-4">
+                <Link href={`/product/${item.slug}`} className="relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                    {item.image && <img src={item.image} alt={item.name} fill className="object-cover" unoptimized />}
+                </Link>
 
-            <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                    <Link href={`/product/${item.slug}`}>
-                        <h3 className="text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2">{item.name}</h3>
-                    </Link>
-                    <button onClick={() => remove(item.skuId)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5">
-                        <Trash2 size={15} />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {item.colorName && (
-                        <span className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            <span className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: item.colorHex || '#aaa' }} />
-                            {item.colorName}
-                        </span>
-                    )}
-                    {item.sizeName && (
-                        <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Size {item.sizeName}
-                        </span>
-                    )}
-                    {item.deliveryDate && (
-                        <span className="text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                            Delivered by: {item.deliveryDate}
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg">
-                        <button onClick={() => update(item.skuId, Math.max(1, item.quantity - 1))} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
-                            <Minus size={12} strokeWidth={3} />
-                        </button>
-                        <span className="text-sm font-bold text-gray-900 w-7 text-center">{item.quantity}</span>
-                        <button onClick={() => update(item.skuId, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
-                            <Plus size={12} strokeWidth={3} />
+                <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                        <Link href={`/product/${item.slug}`}>
+                            <h3 className="text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2">{item.name}</h3>
+                        </Link>
+                        <button onClick={() => remove(item.skuId)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5">
+                            <Trash2 size={15} />
                         </button>
                     </div>
-                    <div className="flex flex-col items-end">
-                        <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
-                        {item.mrp && item.mrp > item.price ? (
-                            <p className="text-[10px] text-gray-400 line-through mt-0.5">{formatPrice(item.mrp * item.quantity)}</p>
-                        ) : null}
+
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {item.colorName && (
+                            <span className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                <span className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: item.colorHex || '#aaa' }} />
+                                {item.colorName}
+                            </span>
+                        )}
+                        {item.sizeName && (
+                            <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                Size {item.sizeName}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-2 border border-gray-200 rounded-lg">
+                            <button onClick={() => update(item.skuId, Math.max(1, item.quantity - 1))} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
+                                <Minus size={12} strokeWidth={3} />
+                            </button>
+                            <span className="text-sm font-bold text-gray-900 w-7 text-center">{item.quantity}</span>
+                            <button onClick={() => update(item.skuId, item.quantity + 1)} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500">
+                                <Plus size={12} strokeWidth={3} />
+                            </button>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                            {item.mrp && item.mrp > item.price ? (
+                                <p className="text-[10px] text-gray-400 line-through mt-0.5">{formatPrice(item.mrp * item.quantity)}</p>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             </div>
+            {item.deliveryDate && (
+                <>
+                    <hr className="mt-4 mb-3 border-gray-100" />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50">
+                        <div className="flex items-center gap-1.5">
+                            <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                            <span>Delivered by <span className="font-semibold text-gray-900">{item.deliveryDate}</span></span>
+                        </div>
+                        
+                        {(item.exchangeDays !== null || item.returnDays !== null) && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px]">
+                                {item.exchangeDays !== null && item.exchangeDays !== undefined && (
+                                    <span className="flex items-center gap-1">
+                                        <RefreshCcw size={12} className="text-gray-400" />
+                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span> from the date of delivery
+                                    </span>
+                                )}
+                                {item.returnDays !== null && item.returnDays !== undefined && (
+                                    <span className="flex items-center gap-1">
+                                        <RotateCcw size={12} className="text-gray-400" />
+                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span> from the date of delivery
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -133,6 +158,7 @@ export default function CheckoutPage() {
     const storeName = sharedSettings?.store_name || 'Store';
     const cart = useCartStore();
     const { user } = useAuthStore();
+    const { openAuthModal } = useUIStore();
     const [mounted, setMounted] = useState(false);
 
     const [couponInput, setCouponInput] = useState('');
@@ -336,6 +362,7 @@ export default function CheckoutPage() {
                 payment_method: paymentMethod,
                 coupon_code: cart.appliedCoupon?.code || null,
                 gift_card_code: gcApplied?.code || null,
+                cart_token: (cart as any).cartToken || null,
                 items: cart.items.map(i => ({ sku_id: i.skuId, quantity: i.quantity, image: i.image }))
             });
 
@@ -343,10 +370,12 @@ export default function CheckoutPage() {
                 const orderUUID = r.data.order_uuid;
                 const upfrontAmount = r.data.upfront_amount || 0;
 
+                // Clear cart immediately since order is placed (backend already marked it completed)
+                cart.clearCart();
+
                 // If COD (without upfront payment) or Total is 0, we are done
                 if ((paymentMethod === 'cod' && upfrontAmount <= 0) || total <= 0) {
                     setOrderUUID(orderUUID);
-                    cart.clearCart();
                     window.location.href = `/checkout/thank-you/${orderUUID}`;
                     return;
                 }
@@ -369,10 +398,9 @@ export default function CheckoutPage() {
                                 });
                                 if (verifyRes.data.success) {
                                     setOrderUUID(orderUUID);
-                                    cart.clearCart();
                                     window.location.href = `/checkout/thank-you/${orderUUID}`;
                                 } else {
-                                    setOrderErr('Payment verification failed. Please contact support.');
+                                    setOrderErr('Payment verification failed.');
                                     try { await api.post('/api/payment/failed', { order_uuid: orderUUID }); } catch (e) {}
                                 }
                             } catch (err: any) {
@@ -493,6 +521,7 @@ export default function CheckoutPage() {
     const calcShipping = (rule: any) => {
         if (!rule) return 0;
         if (rule.type === 'free') return 0;
+        if (rule.type === 'included') return 0;
         if (rule.type === 'flat') return parseFloat(rule.fee) || 0;
         if (rule.type === 'conditional') {
             return subtotalAfterDiscount >= (parseFloat(rule.threshold) || 0) ? 0 : (parseFloat(rule.fee) || 0);
@@ -521,6 +550,9 @@ export default function CheckoutPage() {
         if (activeRule.type === 'free') {
             shipping = 0;
             shippingType = 'Free';
+        } else if (activeRule.type === 'included') {
+            shipping = 0;
+            shippingType = 'Included';
         } else if (activeRule.type === 'flat') {
             shipping = parseFloat(activeRule.fee) || 0;
             shippingType = shipping === 0 ? 'Free' : formatPrice(shipping);
@@ -606,7 +638,7 @@ export default function CheckoutPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
             <Head title="Checkout" />
             
             {/* Processing Modal */}
@@ -820,7 +852,7 @@ export default function CheckoutPage() {
                             <div className="flex justify-between text-gray-500">
                                 <span>Shipping</span>
                                 <span>
-                                    {shippingType === 'Free' ? 'Free' : formatPrice(shipping)}
+                                    {shippingType === 'Free' || shippingType === 'Included' ? shippingType : (shippingType === 'Calculated at next step' ? shippingType : formatPrice(shipping))}
                                 </span>
                             </div>
                             {isTaxEnabled && settings?.show_tax_in_cart_checkout !== '0' && (

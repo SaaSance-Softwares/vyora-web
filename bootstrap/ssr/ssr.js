@@ -3,15 +3,16 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
-import { Link, usePage, router, Head, createInertiaApp } from "@inertiajs/react";
-import { ChevronDown, Search, User, ArrowRight, LogOut, Shield, MapPin, Package, Gift, ChevronRight, Wallet, AlertCircle, Check, Lock, EyeOff, Eye, Plus, Pencil, Trash2, Mail, Phone, ShoppingBag, Heart, Minus, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, Share2, Star, Ruler, ChevronUp, ShieldCheck, TrendingUp, Calendar, PhoneCall, Home as Home$1, Menu, Landmark } from "lucide-react";
-import { clsx } from "clsx";
+import { Link, usePage, router, Head, useForm, createInertiaApp } from "@inertiajs/react";
+import { ChevronDown, Search, User, ArrowRight, LogOut, Shield, MapPin, Package, Gift, ChevronRight, Wallet, AlertCircle, Check, Lock, EyeOff, Eye, Plus, Pencil, Trash2, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, Minus, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark } from "lucide-react";
+import clsx$1, { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line } from "recharts";
 import createServer from "@inertiajs/react/server";
 import { renderToString } from "react-dom/server";
 const api = axios.create({
@@ -919,7 +920,7 @@ function AddressesSection() {
               "input",
               {
                 value: form.phone,
-                onChange: (e) => f("phone", e.target.value),
+                onChange: (e) => f("phone", e.target.value.replace(/\D/g, "")),
                 placeholder: "10-digit number",
                 className: "flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none"
               }
@@ -972,7 +973,7 @@ function AddressesSection() {
 }
 function AccountPage() {
   const { user, logout } = useAuthStore();
-  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const { openAuthModal } = useUIStore();
   const [mounted, setMounted] = useState(false);
   const getInitialTab = () => {
     if (typeof window !== "undefined") {
@@ -1175,6 +1176,52 @@ function OrderDetailsPage({ uuid }) {
   const [loading, setLoading] = useState(true);
   const [actionModal, setActionModal] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const openReviewModal = (item) => {
+    setReviewModalItem(item);
+    if (item.review) {
+      setReviewRating(item.review.rating);
+      setReviewComment(item.review.comment || "");
+    } else {
+      setReviewRating(5);
+      setReviewComment("");
+    }
+  };
+  const submitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewModalItem) return;
+    setReviewLoading(true);
+    try {
+      if (reviewModalItem.review) {
+        router.put(`/reviews/${reviewModalItem.review.id}`, {
+          rating: reviewRating,
+          comment: reviewComment
+        }, {
+          onSuccess: () => {
+            setReviewModalItem(null);
+            fetchOrder();
+          }
+        });
+      } else {
+        router.post(`/products/${reviewModalItem.product_id}/reviews`, {
+          rating: reviewRating,
+          comment: reviewComment
+        }, {
+          onSuccess: () => {
+            setReviewModalItem(null);
+            fetchOrder();
+          }
+        });
+      }
+    } catch (e2) {
+      console.error(e2);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
   const getActionFee = (action) => {
     const method = order?.payment_method === "cod" ? "cod" : "prepaid";
     const rules = settings?.shipping_rules?.[method];
@@ -1240,272 +1287,348 @@ function OrderDetailsPage({ uuid }) {
   const hasNonReturnableItems = order.items.some((item) => {
     return item.sku?.product?.is_returnable === 0 || item.sku?.product?.is_returnable === false;
   });
-  return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-gray-50 py-12 md:py-20 font-sans", children: /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8", children: [
-    /* @__PURE__ */ jsxs("div", { className: "mb-8", children: [
-      /* @__PURE__ */ jsxs(Link, { href: "/orders", className: "inline-flex items-center text-sm text-gray-500 hover:text-black transition-colors mb-6 font-medium", children: [
-        /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 mr-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M10 19l-7-7m0 0l7-7m-7 7h18" }) }),
-        "Back to Orders"
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsxs("h1", { className: "text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight", children: [
-            "Order #",
-            order.order_number
-          ] }),
-          /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-500 mt-2 font-medium", children: [
-            "Placed on ",
-            new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
-            " at ",
-            new Date(order.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-          ] })
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-gray-50 py-12 md:py-20 font-sans", children: [
+    /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8", children: [
+      /* @__PURE__ */ jsxs("div", { className: "mb-8", children: [
+        /* @__PURE__ */ jsxs(Link, { href: "/orders", className: "inline-flex items-center text-sm text-gray-500 hover:text-black transition-colors mb-6 font-medium", children: [
+          /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 mr-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M10 19l-7-7m0 0l7-7m-7 7h18" }) }),
+          "Back to Orders"
         ] }),
-        /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx("span", { className: `inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusStyle(order.status)} shadow-sm`, children: order.status }) })
-      ] })
-    ] }),
-    (order.status === "shipped" || order.status === "delivered" && order.tracking_number) && /* @__PURE__ */ jsxs("div", { className: "mb-8 bg-gradient-to-r from-gray-900 to-black rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden", children: [
-      /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none" }),
-      /* @__PURE__ */ jsxs("div", { className: "relative z-10", children: [
-        /* @__PURE__ */ jsx("h3", { className: "text-lg font-bold text-white tracking-wide", children: "Tracking Information" }),
-        /* @__PURE__ */ jsxs("p", { className: "text-gray-300 mt-2 text-sm", children: [
-          order.courier_partner ? `${order.courier_partner} - ` : "",
-          order.tracking_number ? /* @__PURE__ */ jsx("span", { className: "font-mono bg-white/10 px-2.5 py-1 rounded-md text-white border border-white/20", children: order.tracking_number }) : "Preparing tracking details..."
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-4", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsxs("h1", { className: "text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight", children: [
+              "Order #",
+              order.order_number
+            ] }),
+            /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-500 mt-2 font-medium", children: [
+              "Placed on ",
+              new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
+              " at ",
+              new Date(order.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx("span", { className: `inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusStyle(order.status)} shadow-sm`, children: order.status }) })
         ] })
       ] }),
-      order.tracking_url && /* @__PURE__ */ jsx(
-        "a",
-        {
-          href: order.tracking_url,
-          target: "_blank",
-          rel: "noopener noreferrer",
-          className: "relative z-10 inline-flex items-center justify-center px-6 py-3 bg-white text-black text-sm font-bold rounded-xl hover:bg-gray-100 transition-transform hover:scale-105 active:scale-95 shadow-lg w-full sm:w-auto",
-          children: "Track Package"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-8", children: [
-      /* @__PURE__ */ jsx("div", { className: "lg:col-span-7 xl:col-span-8 space-y-6", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100", children: [
-        /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4", children: "Items Ordered" }),
-        /* @__PURE__ */ jsx("div", { className: "space-y-6", children: order.items.map((item) => {
-          const imgUrl = item.image_url || item.sku?.product?.featured_image;
-          return /* @__PURE__ */ jsxs("div", { className: "flex gap-4 sm:gap-6 group", children: [
-            /* @__PURE__ */ jsx("div", { className: "w-24 h-32 sm:w-28 sm:h-36 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative shadow-sm transition-transform group-hover:scale-[1.02]", children: imgUrl ? /* @__PURE__ */ jsx(
-              "img",
-              {
-                src: imgUrl,
-                alt: item.product_name,
-                className: "w-full h-full object-cover object-top"
-              }
-            ) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-xs text-gray-400 font-medium bg-gray-100", children: "No Image" }) }),
-            /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0 flex flex-col justify-center", children: [
-              /* @__PURE__ */ jsx("div", { className: "flex justify-between items-start gap-4", children: /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900 leading-tight", children: item.product_name }),
-                item.variant_name && /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-1 font-medium", children: item.variant_name }),
-                item.delivery_date && /* @__PURE__ */ jsxs("p", { className: "text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100", children: [
-                  "Delivered by: ",
-                  /* @__PURE__ */ jsx("span", { className: "font-bold", children: item.delivery_date })
-                ] })
-              ] }) }),
-              /* @__PURE__ */ jsxs("div", { className: "mt-4 flex items-center gap-6", children: [
-                /* @__PURE__ */ jsxs("div", { className: "text-sm font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-gray-700", children: [
-                  "Qty: ",
-                  item.quantity
-                ] }),
-                /* @__PURE__ */ jsx("div", { className: "text-base font-bold text-gray-900", children: formatPrice(parseFloat(item.price || "0") * item.quantity) })
-              ] })
-            ] })
-          ] }, item.id);
-        }) })
-      ] }) }),
-      /* @__PURE__ */ jsxs("div", { className: "lg:col-span-5 xl:col-span-4 space-y-6", children: [
-        /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
-          /* @__PURE__ */ jsx("h2", { className: "text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4", children: "Order Summary" }),
-          /* @__PURE__ */ jsxs("div", { className: "space-y-2.5 text-sm", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
-              /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
-              /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-900", children: formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0)) })
-            ] }),
-            order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) > safeSubtotal && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-              /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
-              /* @__PURE__ */ jsxs("span", { children: [
-                "−",
-                formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal)
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
-              /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
-              /* @__PURE__ */ jsx("span", { children: formatPrice(safeSubtotal) })
-            ] }),
-            parseFloat(order.coupon_discount_amount || "0") > 0 || parseFloat(order.prepaid_discount_amount || "0") > 0 || parseFloat(order.gift_card_discount_amount || "0") > 0 ? /* @__PURE__ */ jsxs(Fragment, { children: [
-              parseFloat(order.coupon_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-                /* @__PURE__ */ jsxs("span", { children: [
-                  "Coupon Discount ",
-                  order.coupon_code ? `(${order.coupon_code})` : ""
-                ] }),
-                /* @__PURE__ */ jsxs("span", { children: [
-                  "−",
-                  formatPrice(parseFloat(order.coupon_discount_amount || "0"))
-                ] })
-              ] }),
-              parseFloat(order.prepaid_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-                /* @__PURE__ */ jsx("span", { children: "Prepaid Discount" }),
-                /* @__PURE__ */ jsxs("span", { children: [
-                  "−",
-                  formatPrice(parseFloat(order.prepaid_discount_amount || "0"))
-                ] })
-              ] }),
-              parseFloat(order.gift_card_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-                /* @__PURE__ */ jsx("span", { children: "Gift Card Applied" }),
-                /* @__PURE__ */ jsxs("span", { children: [
-                  "−",
-                  formatPrice(parseFloat(order.gift_card_discount_amount || "0"))
-                ] })
-              ] })
-            ] }) : parseFloat(order.discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-              /* @__PURE__ */ jsx("span", { children: "Coupon Discount" }),
-              /* @__PURE__ */ jsxs("span", { children: [
-                "−",
-                formatPrice(parseFloat(order.discount_amount || "0"))
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
-              /* @__PURE__ */ jsx("span", { children: "Shipping" }),
-              /* @__PURE__ */ jsx("span", { children: parseFloat(order.shipping_amount || "0") === 0 ? "Free" : formatPrice(parseFloat(order.shipping_amount || "0")) })
-            ] }),
-            order.tax_breakdown && Object.keys(order.tax_breakdown).length > 0 ? Object.entries(order.tax_breakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
-              /* @__PURE__ */ jsxs("span", { children: [
-                "Tax @ ",
-                rate,
-                "% ",
-                Math.abs(parseFloat(order.total_amount || "0") + parseFloat(order.discount_amount || "0") - (safeSubtotal + parseFloat(order.shipping_amount || "0"))) < 0.1 ? "(Included)" : "(Excluded)"
-              ] }),
-              /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
-            ] }, rate)) : parseFloat(order.tax_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
-              /* @__PURE__ */ jsxs("span", { children: [
-                "Tax ",
-                Math.abs(parseFloat(order.total_amount || "0") + parseFloat(order.discount_amount || "0") - (safeSubtotal + parseFloat(order.shipping_amount || "0"))) < 0.1 ? "(Included)" : "(Excluded)"
-              ] }),
-              /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.tax_amount || "0")) })
-            ] }),
-            order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal + parseFloat(order.discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600 font-medium pt-1", children: [
-              /* @__PURE__ */ jsx("span", { children: "Total Savings" }),
-              /* @__PURE__ */ jsx("span", { children: formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal + parseFloat(order.discount_amount || "0")) })
-            ] }),
-            /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-100 my-1" }),
-            /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-base", children: [
-              /* @__PURE__ */ jsx("span", { children: "Total" }),
-              /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.total_amount || "0")) })
-            ] }),
-            parseFloat(order.upfront_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2 p-3 bg-orange-50 border border-orange-100 rounded-lg space-y-2", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-sm text-orange-800 font-semibold", children: [
-                /* @__PURE__ */ jsx("span", { children: "Upfront (Non Refundable)" }),
-                /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.upfront_amount || "0")) })
-              ] }),
-              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-xs text-orange-700 font-bold", children: [
-                /* @__PURE__ */ jsx("span", { children: "Due on Delivery" }),
-                /* @__PURE__ */ jsx("span", { children: formatPrice(Math.max(0, parseFloat(order.total_amount || "0") - parseFloat(order.upfront_amount || "0"))) })
-              ] })
-            ] })
+      (order.status === "shipped" || order.status === "delivered" && order.tracking_number) && /* @__PURE__ */ jsxs("div", { className: "mb-8 bg-gradient-to-r from-gray-900 to-black rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden", children: [
+        /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none" }),
+        /* @__PURE__ */ jsxs("div", { className: "relative z-10", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-lg font-bold text-white tracking-wide", children: "Tracking Information" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-gray-300 mt-2 text-sm", children: [
+            order.courier_partner ? `${order.courier_partner} - ` : "",
+            order.tracking_number ? /* @__PURE__ */ jsx("span", { className: "font-mono bg-white/10 px-2.5 py-1 rounded-md text-white border border-white/20", children: order.tracking_number }) : "Preparing tracking details..."
           ] })
-        ] }) }),
-        /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
-          /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold text-gray-900 mb-6", children: "Order Details" }),
-          /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Shipping Address" }),
-              /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
-                /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: order.shipping_address.name }),
-                order.shipping_address.address_line1,
-                /* @__PURE__ */ jsx("br", {}),
-                order.shipping_address.address_line2 && /* @__PURE__ */ jsxs(Fragment, { children: [
-                  order.shipping_address.address_line2,
-                  /* @__PURE__ */ jsx("br", {})
-                ] }),
-                order.shipping_address.city,
-                ", ",
-                order.shipping_address.state,
-                " ",
-                order.shipping_address.zip_code
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Contact Details" }),
-              /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-800 font-medium space-y-1.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" }) }),
-                  order.shipping_address.email
-                ] }),
-                /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }) }),
-                  order.shipping_address.phone
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 pt-6 border-t border-gray-100", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-2", children: "Payment Method" }),
-                /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-900 font-bold", children: order.payment_method })
-              ] }),
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-2", children: "Payment Status" }),
-                /* @__PURE__ */ jsx("p", { className: `text-sm font-extrabold capitalize ${order.payment_status === "paid" ? "text-emerald-600" : "text-amber-600"}`, children: order.payment_status })
-              ] })
-            ] })
-          ] })
-        ] }) }),
-        (order.status === "pending" || order.status === "processing" || order.status === "delivered") && /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
-          /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold text-gray-900 mb-4", children: "Order Actions" }),
-          /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3", children: [
-            (order.status === "pending" || order.status === "processing") && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("cancel"), className: "w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors", children: "Cancel Order" }),
-            order.status === "delivered" && /* @__PURE__ */ jsxs(Fragment, { children: [
-              !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("return"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }),
-              /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("exchange"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
-            ] })
-          ] })
-        ] }) })
-      ] })
-    ] }),
-    actionModal && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm", children: /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200", children: /* @__PURE__ */ jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxs("h3", { className: "text-xl font-bold text-gray-900 capitalize mb-2", children: [
-        actionModal,
-        " Order"
-      ] }),
-      /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-600 mb-6", children: [
-        "Are you sure you want to ",
-        actionModal,
-        " this order?"
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-medium", children: [
-          /* @__PURE__ */ jsxs("span", { className: "text-gray-700 capitalize", children: [
-            actionModal,
-            " Fee"
-          ] }),
-          /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: formatPrice(getActionFee(actionModal)) })
         ] }),
-        order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200", children: "Note: The upfront shipping amount is non-refundable." }),
-        order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200", children: "Note: The fee will be automatically deducted from your refund." })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
-        /* @__PURE__ */ jsx(
-          "button",
+        order.tracking_url && /* @__PURE__ */ jsx(
+          "a",
           {
-            onClick: () => setActionModal(null),
-            className: "flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors",
-            children: "No, Keep It"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: handleActionSubmit,
-            disabled: actionLoading,
-            className: `flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading ? "opacity-70 cursor-not-allowed" : ""}`,
-            children: actionLoading ? /* @__PURE__ */ jsx("div", { className: "w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" }) : "Confirm"
+            href: order.tracking_url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            className: "relative z-10 inline-flex items-center justify-center px-6 py-3 bg-white text-black text-sm font-bold rounded-xl hover:bg-gray-100 transition-transform hover:scale-105 active:scale-95 shadow-lg w-full sm:w-auto",
+            children: "Track Package"
           }
         )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-12 gap-8", children: [
+        /* @__PURE__ */ jsx("div", { className: "lg:col-span-7 xl:col-span-8 space-y-6", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100", children: [
+          /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4", children: "Items Ordered" }),
+          /* @__PURE__ */ jsx("div", { className: "space-y-6", children: order.items.map((item) => {
+            const imgUrl = item.image_url || item.sku?.product?.featured_image;
+            return /* @__PURE__ */ jsxs("div", { className: "flex gap-4 sm:gap-6 group", children: [
+              /* @__PURE__ */ jsx("div", { className: "w-24 h-32 sm:w-28 sm:h-36 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative shadow-sm transition-transform group-hover:scale-[1.02]", children: imgUrl ? /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: imgUrl,
+                  alt: item.product_name,
+                  className: "w-full h-full object-cover object-top"
+                }
+              ) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-xs text-gray-400 font-medium bg-gray-100", children: "No Image" }) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0 flex flex-col justify-center", children: [
+                /* @__PURE__ */ jsx("div", { className: "flex justify-between items-start gap-4", children: /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900 leading-tight", children: item.product_name }),
+                  item.variant_name && /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-1 font-medium", children: item.variant_name }),
+                  item.delivery_date && /* @__PURE__ */ jsxs("p", { className: "text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100", children: [
+                    "Delivered by: ",
+                    /* @__PURE__ */ jsx("span", { className: "font-bold", children: item.delivery_date })
+                  ] })
+                ] }) }),
+                /* @__PURE__ */ jsxs("div", { className: "mt-4 flex flex-wrap items-center gap-4", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-6", children: [
+                    /* @__PURE__ */ jsxs("div", { className: "text-sm font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-gray-700", children: [
+                      "Qty: ",
+                      item.quantity
+                    ] }),
+                    /* @__PURE__ */ jsx("div", { className: "text-base font-bold text-gray-900", children: formatPrice(parseFloat(item.price || "0") * item.quantity) })
+                  ] }),
+                  order.status === "delivered" && /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: () => openReviewModal(item),
+                      className: "ml-auto text-xs font-bold uppercase tracking-wider px-4 py-2 border rounded-lg transition-colors hover:bg-gray-50",
+                      children: item.review ? "Edit Review" : "Write a Review"
+                    }
+                  )
+                ] })
+              ] })
+            ] }, item.id);
+          }) })
+        ] }) }),
+        /* @__PURE__ */ jsxs("div", { className: "lg:col-span-5 xl:col-span-4 space-y-6", children: [
+          /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
+            /* @__PURE__ */ jsx("h2", { className: "text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4", children: "Order Summary" }),
+            /* @__PURE__ */ jsxs("div", { className: "space-y-2.5 text-sm", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
+                /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-900", children: formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0)) })
+              ] }),
+              order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) > safeSubtotal && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "−",
+                  formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal)
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
+                /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
+                /* @__PURE__ */ jsx("span", { children: formatPrice(safeSubtotal) })
+              ] }),
+              parseFloat(order.coupon_discount_amount || "0") > 0 || parseFloat(order.prepaid_discount_amount || "0") > 0 || parseFloat(order.gift_card_discount_amount || "0") > 0 ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                parseFloat(order.coupon_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "Coupon Discount ",
+                    order.coupon_code ? `(${order.coupon_code})` : ""
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "−",
+                    formatPrice(parseFloat(order.coupon_discount_amount || "0"))
+                  ] })
+                ] }),
+                parseFloat(order.prepaid_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+                  /* @__PURE__ */ jsx("span", { children: "Prepaid Discount" }),
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "−",
+                    formatPrice(parseFloat(order.prepaid_discount_amount || "0"))
+                  ] })
+                ] }),
+                parseFloat(order.gift_card_discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+                  /* @__PURE__ */ jsx("span", { children: "Gift Card Applied" }),
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "−",
+                    formatPrice(parseFloat(order.gift_card_discount_amount || "0"))
+                  ] })
+                ] })
+              ] }) : parseFloat(order.discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "Coupon Discount" }),
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "−",
+                  formatPrice(parseFloat(order.discount_amount || "0"))
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+                /* @__PURE__ */ jsx("span", { children: "Shipping" }),
+                /* @__PURE__ */ jsx("span", { children: parseFloat(order.shipping_amount || "0") === 0 ? "Free" : formatPrice(parseFloat(order.shipping_amount || "0")) })
+              ] }),
+              order.tax_breakdown && Object.keys(order.tax_breakdown).length > 0 ? Object.entries(order.tax_breakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "Tax @ ",
+                  rate,
+                  "% ",
+                  Math.abs(parseFloat(order.total_amount || "0") + parseFloat(order.discount_amount || "0") - (safeSubtotal + parseFloat(order.shipping_amount || "0"))) < 0.1 ? "(Included)" : "(Excluded)"
+                ] }),
+                /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
+              ] }, rate)) : parseFloat(order.tax_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "Tax ",
+                  Math.abs(parseFloat(order.total_amount || "0") + parseFloat(order.discount_amount || "0") - (safeSubtotal + parseFloat(order.shipping_amount || "0"))) < 0.1 ? "(Included)" : "(Excluded)"
+                ] }),
+                /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.tax_amount || "0")) })
+              ] }),
+              order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal + parseFloat(order.discount_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600 font-medium pt-1", children: [
+                /* @__PURE__ */ jsx("span", { children: "Total Savings" }),
+                /* @__PURE__ */ jsx("span", { children: formatPrice(order.items.reduce((acc, item) => acc + parseFloat(item.sku?.mrp || item.price || "0") * item.quantity, 0) - safeSubtotal + parseFloat(order.discount_amount || "0")) })
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-100 my-1" }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-base", children: [
+                /* @__PURE__ */ jsx("span", { children: "Total" }),
+                /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.total_amount || "0")) })
+              ] }),
+              parseFloat(order.upfront_amount || "0") > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2 p-3 bg-orange-50 border border-orange-100 rounded-lg space-y-2", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-sm text-orange-800 font-semibold", children: [
+                  /* @__PURE__ */ jsx("span", { children: "Upfront (Non Refundable)" }),
+                  /* @__PURE__ */ jsx("span", { children: formatPrice(parseFloat(order.upfront_amount || "0")) })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-xs text-orange-700 font-bold", children: [
+                  /* @__PURE__ */ jsx("span", { children: "Due on Delivery" }),
+                  /* @__PURE__ */ jsx("span", { children: formatPrice(Math.max(0, parseFloat(order.total_amount || "0") - parseFloat(order.upfront_amount || "0"))) })
+                ] })
+              ] })
+            ] })
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
+            /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold text-gray-900 mb-6", children: "Order Details" }),
+            /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Shipping Address" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
+                  /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: order.shipping_address.name }),
+                  order.shipping_address.address_line1,
+                  /* @__PURE__ */ jsx("br", {}),
+                  order.shipping_address.address_line2 && /* @__PURE__ */ jsxs(Fragment, { children: [
+                    order.shipping_address.address_line2,
+                    /* @__PURE__ */ jsx("br", {})
+                  ] }),
+                  order.shipping_address.city,
+                  ", ",
+                  order.shipping_address.state,
+                  " ",
+                  order.shipping_address.zip_code
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Contact Details" }),
+                /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-800 font-medium space-y-1.5", children: [
+                  /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" }) }),
+                    order.shipping_address.email
+                  ] }),
+                  /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }) }),
+                    order.shipping_address.phone
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 pt-6 border-t border-gray-100", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-2", children: "Payment Method" }),
+                  /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-900 font-bold", children: order.payment_method })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-2", children: "Payment Status" }),
+                  /* @__PURE__ */ jsx("p", { className: `text-sm font-extrabold capitalize ${order.payment_status === "paid" ? "text-emerald-600" : "text-amber-600"}`, children: order.payment_status })
+                ] })
+              ] })
+            ] })
+          ] }) }),
+          (order.status === "pending" || order.status === "processing" || order.status === "delivered") && /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
+            /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold text-gray-900 mb-4", children: "Order Actions" }),
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3", children: [
+              (order.status === "pending" || order.status === "processing") && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("cancel"), className: "w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors", children: "Cancel Order" }),
+              order.status === "delivered" && /* @__PURE__ */ jsxs(Fragment, { children: [
+                order.order_exchange_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-gray-500 mb-1", children: [
+                  "Exchange available till ",
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: order.order_exchange_valid_till })
+                ] }),
+                order.order_return_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-gray-500 mb-2", children: [
+                  "Return available till ",
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: order.order_return_valid_till })
+                ] }),
+                !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("return"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }),
+                /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("exchange"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
+              ] })
+            ] })
+          ] }) })
+        ] })
+      ] }),
+      actionModal && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm", children: /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200", children: /* @__PURE__ */ jsxs("div", { className: "p-6", children: [
+        /* @__PURE__ */ jsxs("h3", { className: "text-xl font-bold text-gray-900 capitalize mb-2", children: [
+          actionModal,
+          " Order"
+        ] }),
+        /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-600 mb-6", children: [
+          "Are you sure you want to ",
+          actionModal,
+          " this order?"
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-medium", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-gray-700 capitalize", children: [
+              actionModal,
+              " Fee"
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: formatPrice(getActionFee(actionModal)) })
+          ] }),
+          order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200", children: "Note: The upfront shipping amount is non-refundable." }),
+          order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200", children: "Note: The fee will be automatically deducted from your refund." })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => setActionModal(null),
+              className: "flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors",
+              children: "No, Keep It"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: handleActionSubmit,
+              disabled: actionLoading,
+              className: `flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading ? "opacity-70 cursor-not-allowed" : ""}`,
+              children: actionLoading ? /* @__PURE__ */ jsx("div", { className: "w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" }) : "Confirm"
+            }
+          )
+        ] })
+      ] }) }) })
+    ] }),
+    reviewModalItem && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl", children: [
+      /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold mb-4", children: reviewModalItem.review ? "Edit Review" : "Write a Review" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-4 items-center mb-6 border-b pb-4", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-16 h-20 bg-gray-100 rounded-lg overflow-hidden", children: reviewModalItem.image_url || reviewModalItem.sku?.product?.featured_image ? /* @__PURE__ */ jsx("img", { src: reviewModalItem.image_url || reviewModalItem.sku?.product?.featured_image, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center text-[10px] text-gray-400", children: "NA" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex-1", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-bold text-gray-900 leading-tight", children: reviewModalItem.product_name }),
+          reviewModalItem.variant_name && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mt-1", children: reviewModalItem.variant_name })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("form", { onSubmit: submitReview, children: [
+        /* @__PURE__ */ jsxs("div", { className: "mb-4", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Rating" }),
+          /* @__PURE__ */ jsx("div", { className: "flex gap-2", children: [1, 2, 3, 4, 5].map((star) => /* @__PURE__ */ jsxs("div", { className: "relative w-8 h-8 group transition-transform hover:scale-110", children: [
+            /* @__PURE__ */ jsx(Star, { className: "w-8 h-8 text-gray-300 absolute inset-0 pointer-events-none" }),
+            reviewRating >= star ? /* @__PURE__ */ jsx(Star, { className: "w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : reviewRating >= star - 0.5 ? /* @__PURE__ */ jsx(StarHalf, { className: "w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : null,
+            /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 flex", children: [
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setReviewRating(star - 0.5), className: "w-1/2 h-full z-10 focus:outline-none cursor-pointer" }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setReviewRating(star), className: "w-1/2 h-full z-10 focus:outline-none cursor-pointer" })
+            ] })
+          ] }, star)) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Review Comment (Optional)" }),
+          /* @__PURE__ */ jsx(
+            "textarea",
+            {
+              rows: 4,
+              value: reviewComment,
+              onChange: (e) => setReviewComment(e.target.value),
+              className: "w-full border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm p-3",
+              placeholder: "What did you like or dislike? What did you use this product for?"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-3", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setReviewModalItem(null),
+              className: "px-4 py-2 font-bold text-gray-500 hover:text-black transition-colors",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "submit",
+              disabled: reviewLoading,
+              className: "bg-black text-white px-6 py-2 rounded-xl font-bold text-sm tracking-wide disabled:opacity-50",
+              children: reviewLoading ? "Submitting..." : "Submit Review"
+            }
+          )
+        ] })
       ] })
-    ] }) }) })
-  ] }) });
+    ] }) })
+  ] });
 }
 const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -1520,6 +1643,64 @@ function MyOrdersPage() {
   const [orderPage, setOrderPage] = useState(1);
   const [giftCards, setGiftCards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const handleReviewClick = (order, e) => {
+    e.preventDefault();
+    if (order.items && order.items.length === 1) {
+      openReviewModal(order.items[0]);
+    } else {
+      setReviewOrder(order);
+    }
+  };
+  const openReviewModal = (item) => {
+    setReviewOrder(null);
+    setReviewModalItem(item);
+    if (item.review) {
+      setReviewRating(item.review.rating);
+      setReviewComment(item.review.comment || "");
+    } else {
+      setReviewRating(5);
+      setReviewComment("");
+    }
+  };
+  const submitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewModalItem) return;
+    setReviewLoading(true);
+    try {
+      if (reviewModalItem.review) {
+        router.put(`/reviews/${reviewModalItem.review.id}`, {
+          rating: reviewRating,
+          comment: reviewComment
+        }, {
+          preserveScroll: true,
+          onSuccess: () => {
+            setReviewModalItem(null);
+            fetchData();
+          }
+        });
+      } else {
+        router.post(`/products/${reviewModalItem.product_id}/reviews`, {
+          rating: reviewRating,
+          comment: reviewComment
+        }, {
+          preserveScroll: true,
+          onSuccess: () => {
+            setReviewModalItem(null);
+            fetchData();
+          }
+        });
+      }
+    } catch (e2) {
+      console.error(e2);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
   useEffect(() => {
     if (user) {
       fetchData();
@@ -1583,147 +1764,230 @@ function MyOrdersPage() {
       [1, 2, 3].map((i) => /* @__PURE__ */ jsx("div", { className: "mb-6 h-40 bg-white border border-gray-100 rounded-2xl animate-pulse" }, i))
     ] });
   }
-  return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-[#fafafa]", children: /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-16", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12", children: [
-      /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("h1", { className: "text-3xl md:text-5xl font-heading font-black tracking-tight text-gray-900", children: [
-          "Account ",
-          /* @__PURE__ */ jsx("span", { className: "text-primary", children: "History" })
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-[#fafafa]", children: [
+    /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-16", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsxs("h1", { className: "text-3xl md:text-5xl font-heading font-black tracking-tight text-gray-900", children: [
+            "Account ",
+            /* @__PURE__ */ jsx("span", { className: "text-primary", children: "History" })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "text-gray-500 mt-2", children: "Manage your orders and digital assets." })
         ] }),
-        /* @__PURE__ */ jsx("p", { className: "text-gray-500 mt-2", children: "Manage your orders and digital assets." })
+        /* @__PURE__ */ jsxs("div", { className: "flex p-1.5 bg-gray-100 rounded-2xl w-fit", children: [
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              onClick: () => setActiveTab("orders"),
+              className: `px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "orders" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"}`,
+              children: [
+                "Orders (",
+                orderMeta?.total || 0,
+                ")"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              onClick: () => setActiveTab("giftcards"),
+              className: `px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "giftcards" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"}`,
+              children: [
+                "Gift Cards (",
+                giftCards.length,
+                ")"
+              ]
+            }
+          )
+        ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex p-1.5 bg-gray-100 rounded-2xl w-fit", children: [
-        /* @__PURE__ */ jsxs(
+      activeTab === "orders" ? /* @__PURE__ */ jsx(Fragment, { children: orders.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-20 bg-white border border-dashed border-gray-200 rounded-[2.5rem] shadow-sm", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100", children: /* @__PURE__ */ jsx("svg", { className: "w-10 h-10 text-gray-300", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" }) }) }),
+        /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 mb-2", children: "No orders yet" }),
+        /* @__PURE__ */ jsx("p", { className: "text-gray-500 mb-8", children: "Looks like you haven't made your first purchase." }),
+        /* @__PURE__ */ jsxs(Link, { href: "/shop", className: "inline-flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs hover:bg-gray-800 transition-all group", children: [
+          "Start Shopping",
+          /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 group-hover:translate-x-1 transition-transform", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M14 5l7 7m0 0l-7 7m7-7H3" }) })
+        ] })
+      ] }) : /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+        /* @__PURE__ */ jsx("div", { className: "grid gap-6", children: orders.map((order) => /* @__PURE__ */ jsxs("div", { className: "group bg-white border border-gray-100 rounded-[2rem] p-6 md:p-8 transition-all duration-300 hover:shadow-[0_20px_50px_rgb(0,0,0,0.04)] hover:-translate-y-1 relative overflow-hidden", children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-[5rem] -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-500" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-10 flex flex-col lg:flex-row gap-8 items-start lg:items-center", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full lg:w-auto", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between lg:justify-start gap-4 mb-4", children: [
+                /* @__PURE__ */ jsx("span", { className: `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`, children: order.status }),
+                /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-400 font-medium", children: new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) })
+              ] }),
+              /* @__PURE__ */ jsxs("h3", { className: "text-xl font-heading font-black text-gray-900 mb-1 group-hover:text-primary transition-colors", children: [
+                "#",
+                order.order_number
+              ] }),
+              /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-500", children: [
+                "Total ",
+                /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-bold ml-1", children: formatPrice(order.total_amount) }),
+                /* @__PURE__ */ jsx("span", { className: "mx-2 text-gray-200", children: "|" }),
+                order.items_count,
+                " ",
+                order.items_count === 1 ? "Item" : "Items"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto overflow-hidden", children: order.items?.slice(0, 4).map((item, idx) => /* @__PURE__ */ jsxs("div", { title: item.delivery_date ? `Delivered by: ${item.delivery_date}` : item.product_name, className: "relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105", children: [
+              item.image_url ? /* @__PURE__ */ jsx("img", { src: item.image_url, alt: item.product_name, fill: true, className: "object-cover", unoptimized: true }) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-[10px] text-gray-300", children: "NA" }),
+              idx === 3 && order.items.length > 4 && /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center text-white text-xs font-bold", children: [
+                "+",
+                order.items.length - 3
+              ] })
+            ] }, item.id)) }),
+            /* @__PURE__ */ jsxs("div", { className: "w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50 flex gap-2", children: [
+              order.tracking_url && /* @__PURE__ */ jsxs(
+                "a",
+                {
+                  href: order.tracking_url,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  className: "flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-indigo-200",
+                  children: [
+                    /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" }) }),
+                    "Track"
+                  ]
+                }
+              ),
+              order.status === "delivered" && /* @__PURE__ */ jsxs("button", { onClick: (e) => handleReviewClick(order, e), className: "flex items-center justify-center gap-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-500 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-yellow-200", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" }) }),
+                "Review"
+              ] }),
+              /* @__PURE__ */ jsxs(Link, { href: `/orders/${order.uuid}`, className: "flex items-center justify-center gap-2 bg-gray-50 text-gray-900 hover:bg-primary hover:text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all", children: [
+                "Details",
+                /* @__PURE__ */ jsx("svg", { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 5l7 7-7 7" }) })
+              ] })
+            ] })
+          ] })
+        ] }, order.uuid)) }),
+        orderMeta && orderMeta.last_page > 1 && /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center gap-2 mt-12", children: Array.from({ length: orderMeta.last_page }, (_, i) => i + 1).map((p) => /* @__PURE__ */ jsx(
           "button",
           {
-            onClick: () => setActiveTab("orders"),
-            className: `px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "orders" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"}`,
-            children: [
-              "Orders (",
-              orderMeta?.total || 0,
-              ")"
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxs(
+            onClick: () => setOrderPage(p),
+            className: `w-10 h-10 rounded-xl text-xs font-bold transition-all ${orderPage === p ? "bg-black text-white" : "bg-white border border-gray-100 text-gray-500 hover:border-gray-300"}`,
+            children: p
+          },
+          p
+        )) })
+      ] }) }) : /* @__PURE__ */ jsx(Fragment, { children: giftCards.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-20 bg-white border border-dashed border-gray-200 rounded-[2.5rem]", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6", children: /* @__PURE__ */ jsx("svg", { className: "w-10 h-10 text-gray-300", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }) }),
+        /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 mb-2", children: "No Gift Cards" }),
+        /* @__PURE__ */ jsx("p", { className: "text-gray-500 mb-8", children: "You don't have any active gift cards in your wallet." }),
+        /* @__PURE__ */ jsx(Link, { href: "/gift-cards", className: "inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs", children: "Browse Gift Cards" })
+      ] }) : /* @__PURE__ */ jsx("div", { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-8", children: giftCards.map((card) => /* @__PURE__ */ jsx("div", { className: "relative group perspective", children: /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-br from-gray-900 to-black p-8 rounded-[2.5rem] text-white overflow-hidden shadow-2xl transition-all duration-500 group-hover:rotate-y-12", children: [
+        /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl" }),
+        /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full -ml-16 -mb-16 blur-xl" }),
+        /* @__PURE__ */ jsxs("div", { className: "relative z-10 flex flex-col h-full", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start mb-12", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-1", children: "Redemption Code" }),
+              /* @__PURE__ */ jsx("h4", { className: "text-lg font-mono font-bold tracking-wider", children: card.plain_code })
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: `px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${card.status_badge.class}`, children: card.status_badge.label })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-auto", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-end justify-between", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-widest opacity-40 mb-1", children: "Balance" }),
+                /* @__PURE__ */ jsx("p", { className: "text-3xl font-heading font-black", children: formatPrice(card.remaining_amount) })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "text-right", children: [
+                /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-widest opacity-40 mb-1", children: "Original Value" }),
+                /* @__PURE__ */ jsx("p", { className: "text-sm font-bold opacity-80", children: formatPrice(card.amount) })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "mt-8 pt-6 border-t border-white/10 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest opacity-40", children: [
+              /* @__PURE__ */ jsx("span", { children: card.card_number }),
+              /* @__PURE__ */ jsxs("span", { children: [
+                "Valid until ",
+                card.expires_at ? new Date(card.expires_at).toLocaleDateString() : "Infinite"
+              ] })
+            ] })
+          ] })
+        ] })
+      ] }) }, card.id)) }) })
+    ] }),
+    reviewOrder && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-y-auto", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-6", children: [
+        /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold", children: "Select Item to Review" }),
+        /* @__PURE__ */ jsx("button", { onClick: () => setReviewOrder(null), className: "text-gray-400 hover:text-gray-900", children: /* @__PURE__ */ jsx("svg", { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" }) }) })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "space-y-4", children: reviewOrder.items.map((item) => /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-16 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0", children: item.image_url ? /* @__PURE__ */ jsx("img", { src: item.image_url, alt: item.product_name, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-[10px] text-gray-400", children: "NA" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+          /* @__PURE__ */ jsx("h4", { className: "font-bold text-gray-900 text-sm truncate", children: item.product_name }),
+          /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mt-1", children: item.variant_name })
+        ] }),
+        /* @__PURE__ */ jsx(
           "button",
           {
-            onClick: () => setActiveTab("giftcards"),
-            className: `px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === "giftcards" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"}`,
-            children: [
-              "Gift Cards (",
-              giftCards.length,
-              ")"
-            ]
+            onClick: () => openReviewModal(item),
+            className: "shrink-0 px-4 py-2 text-xs font-bold uppercase bg-black text-white rounded-lg hover:bg-gray-800",
+            children: item.review ? "Edit" : "Review"
           }
         )
-      ] })
-    ] }),
-    activeTab === "orders" ? /* @__PURE__ */ jsx(Fragment, { children: orders.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-20 bg-white border border-dashed border-gray-200 rounded-[2.5rem] shadow-sm", children: [
-      /* @__PURE__ */ jsx("div", { className: "w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100", children: /* @__PURE__ */ jsx("svg", { className: "w-10 h-10 text-gray-300", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" }) }) }),
-      /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 mb-2", children: "No orders yet" }),
-      /* @__PURE__ */ jsx("p", { className: "text-gray-500 mb-8", children: "Looks like you haven't made your first purchase." }),
-      /* @__PURE__ */ jsxs(Link, { href: "/shop", className: "inline-flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs hover:bg-gray-800 transition-all group", children: [
-        "Start Shopping",
-        /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 group-hover:translate-x-1 transition-transform", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M14 5l7 7m0 0l-7 7m7-7H3" }) })
-      ] })
-    ] }) : /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-      /* @__PURE__ */ jsx("div", { className: "grid gap-6", children: orders.map((order) => /* @__PURE__ */ jsxs("div", { className: "group bg-white border border-gray-100 rounded-[2rem] p-6 md:p-8 transition-all duration-300 hover:shadow-[0_20px_50px_rgb(0,0,0,0.04)] hover:-translate-y-1 relative overflow-hidden", children: [
-        /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-[5rem] -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-500" }),
-        /* @__PURE__ */ jsxs("div", { className: "relative z-10 flex flex-col lg:flex-row gap-8 items-start lg:items-center", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full lg:w-auto", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between lg:justify-start gap-4 mb-4", children: [
-              /* @__PURE__ */ jsx("span", { className: `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`, children: order.status }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-400 font-medium", children: new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) })
-            ] }),
-            /* @__PURE__ */ jsxs("h3", { className: "text-xl font-heading font-black text-gray-900 mb-1 group-hover:text-primary transition-colors", children: [
-              "#",
-              order.order_number
-            ] }),
-            /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-500", children: [
-              "Total ",
-              /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-bold ml-1", children: formatPrice(order.total_amount) }),
-              /* @__PURE__ */ jsx("span", { className: "mx-2 text-gray-200", children: "|" }),
-              order.items_count,
-              " ",
-              order.items_count === 1 ? "Item" : "Items"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto overflow-hidden", children: order.items?.slice(0, 4).map((item, idx) => /* @__PURE__ */ jsxs("div", { title: item.delivery_date ? `Delivered by: ${item.delivery_date}` : item.product_name, className: "relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105", children: [
-            item.image_url ? /* @__PURE__ */ jsx("img", { src: item.image_url, alt: item.product_name, fill: true, className: "object-cover", unoptimized: true }) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-[10px] text-gray-300", children: "NA" }),
-            idx === 3 && order.items.length > 4 && /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center text-white text-xs font-bold", children: [
-              "+",
-              order.items.length - 3
-            ] })
-          ] }, item.id)) }),
-          /* @__PURE__ */ jsxs("div", { className: "w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50 flex gap-2", children: [
-            order.tracking_url && /* @__PURE__ */ jsxs(
-              "a",
-              {
-                href: order.tracking_url,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                className: "flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-indigo-200",
-                children: [
-                  /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" }) }),
-                  "Track"
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxs(Link, { href: `/orders/${order.uuid}`, className: "flex items-center justify-center gap-2 bg-gray-50 text-gray-900 hover:bg-primary hover:text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all", children: [
-              "Details",
-              /* @__PURE__ */ jsx("svg", { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 5l7 7-7 7" }) })
-            ] })
-          ] })
+      ] }, item.id)) })
+    ] }) }),
+    reviewModalItem && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl", children: [
+      /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold mb-4", children: reviewModalItem.review ? "Edit Review" : "Write a Review" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-4 items-center mb-6 border-b pb-4", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-16 h-20 bg-gray-100 rounded-lg overflow-hidden", children: reviewModalItem.image_url ? /* @__PURE__ */ jsx("img", { src: reviewModalItem.image_url, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center text-[10px] text-gray-400", children: "NA" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex-1", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-bold text-gray-900 leading-tight", children: reviewModalItem.product_name }),
+          reviewModalItem.variant_name && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mt-1", children: reviewModalItem.variant_name })
         ] })
-      ] }, order.uuid)) }),
-      orderMeta && orderMeta.last_page > 1 && /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center gap-2 mt-12", children: Array.from({ length: orderMeta.last_page }, (_, i) => i + 1).map((p) => /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: () => setOrderPage(p),
-          className: `w-10 h-10 rounded-xl text-xs font-bold transition-all ${orderPage === p ? "bg-black text-white" : "bg-white border border-gray-100 text-gray-500 hover:border-gray-300"}`,
-          children: p
-        },
-        p
-      )) })
-    ] }) }) : /* @__PURE__ */ jsx(Fragment, { children: giftCards.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-20 bg-white border border-dashed border-gray-200 rounded-[2.5rem]", children: [
-      /* @__PURE__ */ jsx("div", { className: "w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6", children: /* @__PURE__ */ jsx("svg", { className: "w-10 h-10 text-gray-300", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }) }),
-      /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 mb-2", children: "No Gift Cards" }),
-      /* @__PURE__ */ jsx("p", { className: "text-gray-500 mb-8", children: "You don't have any active gift cards in your wallet." }),
-      /* @__PURE__ */ jsx(Link, { href: "/gift-cards", className: "inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs", children: "Browse Gift Cards" })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-8", children: giftCards.map((card) => /* @__PURE__ */ jsx("div", { className: "relative group perspective", children: /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-br from-gray-900 to-black p-8 rounded-[2.5rem] text-white overflow-hidden shadow-2xl transition-all duration-500 group-hover:rotate-y-12", children: [
-      /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl" }),
-      /* @__PURE__ */ jsx("div", { className: "absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full -ml-16 -mb-16 blur-xl" }),
-      /* @__PURE__ */ jsxs("div", { className: "relative z-10 flex flex-col h-full", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start mb-12", children: [
-          /* @__PURE__ */ jsxs("div", { children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-1", children: "Redemption Code" }),
-            /* @__PURE__ */ jsx("h4", { className: "text-lg font-mono font-bold tracking-wider", children: card.plain_code })
-          ] }),
-          /* @__PURE__ */ jsx("span", { className: `px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${card.status_badge.class}`, children: card.status_badge.label })
+      ] }),
+      /* @__PURE__ */ jsxs("form", { onSubmit: submitReview, children: [
+        /* @__PURE__ */ jsxs("div", { className: "mb-4", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Rating" }),
+          /* @__PURE__ */ jsx("div", { className: "flex gap-2", children: [1, 2, 3, 4, 5].map((star) => /* @__PURE__ */ jsxs("div", { className: "relative w-8 h-8 group transition-transform hover:scale-110", children: [
+            /* @__PURE__ */ jsx(Star, { className: "w-8 h-8 text-gray-300 absolute inset-0 pointer-events-none" }),
+            reviewRating >= star ? /* @__PURE__ */ jsx(Star, { className: "w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : reviewRating >= star - 0.5 ? /* @__PURE__ */ jsx(StarHalf, { className: "w-8 h-8 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : null,
+            /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 flex", children: [
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setReviewRating(star - 0.5), className: "w-1/2 h-full z-10 focus:outline-none cursor-pointer" }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setReviewRating(star), className: "w-1/2 h-full z-10 focus:outline-none cursor-pointer" })
+            ] })
+          ] }, star)) })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "mt-auto", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-end justify-between", children: [
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-widest opacity-40 mb-1", children: "Balance" }),
-              /* @__PURE__ */ jsx("p", { className: "text-3xl font-heading font-black", children: formatPrice(card.remaining_amount) })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "text-right", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[10px] font-black uppercase tracking-widest opacity-40 mb-1", children: "Original Value" }),
-              /* @__PURE__ */ jsx("p", { className: "text-sm font-bold opacity-80", children: formatPrice(card.amount) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "mt-8 pt-6 border-t border-white/10 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest opacity-40", children: [
-            /* @__PURE__ */ jsx("span", { children: card.card_number }),
-            /* @__PURE__ */ jsxs("span", { children: [
-              "Valid until ",
-              card.expires_at ? new Date(card.expires_at).toLocaleDateString() : "Infinite"
-            ] })
-          ] })
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Review Comment (Optional)" }),
+          /* @__PURE__ */ jsx(
+            "textarea",
+            {
+              rows: 4,
+              value: reviewComment,
+              onChange: (e) => setReviewComment(e.target.value),
+              className: "w-full border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm p-3",
+              placeholder: "What did you like or dislike? What did you use this product for?"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-3", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setReviewModalItem(null),
+              className: "px-4 py-2 font-bold text-gray-500 hover:text-black transition-colors",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "submit",
+              disabled: reviewLoading,
+              className: "bg-black text-white px-6 py-2 rounded-xl font-bold text-sm tracking-wide disabled:opacity-50",
+              children: reviewLoading ? "Submitting..." : "Submit Review"
+            }
+          )
         ] })
       ] })
-    ] }) }, card.id)) }) })
-  ] }) });
+    ] }) })
+  ] });
 }
 const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -2215,7 +2479,7 @@ function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
 }
 function LoginPage() {
   const { settings } = usePage().props;
-  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const { openAuthModal } = useUIStore();
   const parse = (val) => {
     if (typeof val === "string") {
       try {
@@ -2231,11 +2495,14 @@ function LoginPage() {
   useEffect(() => {
     if (isModalMode) {
       router.visit("/");
-      openAuthModal2("login");
+      openAuthModal("login");
     }
-  }, [isModalMode, router, openAuthModal2]);
+  }, [isModalMode, router, openAuthModal]);
   if (isModalMode) return null;
-  return /* @__PURE__ */ jsx("div", { className: "min-h-screen", children: /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[420px] w-full", children: /* @__PURE__ */ jsx(LoginForm, { settings }) }) }) });
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen", children: [
+    /* @__PURE__ */ jsx(Head, { title: "Login" }),
+    /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[420px] w-full", children: /* @__PURE__ */ jsx(LoginForm, { settings }) }) })
+  ] });
 }
 const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -2539,7 +2806,7 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
                       placeholder: "555 000 0000",
                       className: "w-full bg-transparent pl-9 pr-4 py-3 text-sm font-medium text-gray-900 focus:outline-none",
                       value: form.phone,
-                      onChange: (e) => setForm({ ...form, phone: e.target.value })
+                      onChange: (e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "") })
                     }
                   )
                 ] })
@@ -2692,7 +2959,7 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
 }
 function RegisterPage() {
   const { settings } = usePage().props;
-  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const { openAuthModal } = useUIStore();
   const parse = (val) => {
     if (typeof val === "string") {
       try {
@@ -2708,11 +2975,14 @@ function RegisterPage() {
   useEffect(() => {
     if (isModalMode) {
       router.visit("/");
-      openAuthModal2("register");
+      openAuthModal("register");
     }
-  }, [isModalMode, router, openAuthModal2]);
+  }, [isModalMode, router, openAuthModal]);
   if (isModalMode) return null;
-  return /* @__PURE__ */ jsx("div", { className: "min-h-screen", children: /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[460px] w-full", children: /* @__PURE__ */ jsx(RegisterForm, { settings }) }) }) });
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-screen", children: [
+    /* @__PURE__ */ jsx(Head, { title: "Register" }),
+    /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[460px] w-full", children: /* @__PURE__ */ jsx(RegisterForm, { settings }) }) })
+  ] });
 }
 const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
@@ -2826,36 +3096,66 @@ const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.def
   default: ResetPassword
 }, Symbol.toStringTag, { value: "Module" }));
 function CartRow$1({ item, update, remove }) {
-  return /* @__PURE__ */ jsxs("div", { className: "flex gap-4 py-5 border-b border-gray-100 last:border-0", children: [
-    /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, className: "relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 block", children: item.image && /* @__PURE__ */ jsx("img", { src: item.image, alt: item.name, className: "w-full h-full object-cover" }) }),
-    /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start gap-2", children: [
-        /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, children: /* @__PURE__ */ jsx("h3", { className: "text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2", children: item.name }) }),
-        /* @__PURE__ */ jsx("button", { onClick: () => remove(item.skuId), className: "text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5", children: /* @__PURE__ */ jsx(Trash2, { size: 15 }) })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [
-        item.colorName && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
-          /* @__PURE__ */ jsx("span", { className: "w-2.5 h-2.5 rounded-full border border-white shadow-sm", style: { backgroundColor: item.colorHex || "#aaa" } }),
-          item.colorName
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col py-5 border-b border-gray-100 last:border-0", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
+      /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, className: "relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 block", children: item.image && /* @__PURE__ */ jsx("img", { src: item.image, alt: item.name, className: "w-full h-full object-cover" }) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start gap-2", children: [
+          /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, children: /* @__PURE__ */ jsx("h3", { className: "text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2", children: item.name }) }),
+          /* @__PURE__ */ jsx("button", { onClick: () => remove(item.skuId), className: "text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5", children: /* @__PURE__ */ jsx(Trash2, { size: 15 }) })
         ] }),
-        item.sizeName && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
-          "Size ",
-          item.sizeName
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [
+          item.colorName && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
+            /* @__PURE__ */ jsx("span", { className: "w-2.5 h-2.5 rounded-full border border-white shadow-sm", style: { backgroundColor: item.colorHex || "#aaa" } }),
+            item.colorName
+          ] }),
+          item.sizeName && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
+            "Size ",
+            item.sizeName
+          ] })
         ] }),
-        item.deliveryDate && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100", children: [
-          "Delivered by: ",
-          item.deliveryDate
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mt-3", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border border-gray-200 rounded-lg", children: [
+            /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, Math.max(1, item.quantity - 1)), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Minus, { size: 12, strokeWidth: 3 }) }),
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 w-7 text-center", children: item.quantity }),
+            /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, item.quantity + 1), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Plus, { size: 12, strokeWidth: 3 }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-900", children: formatPrice(item.price * item.quantity) }),
+            item.mrp && item.mrp > item.price ? /* @__PURE__ */ jsx("p", { className: "text-[10px] text-gray-400 line-through mt-0.5", children: formatPrice(item.mrp * item.quantity) }) : null
+          ] })
         ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mt-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border border-gray-200 rounded-lg", children: [
-          /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, Math.max(1, item.quantity - 1)), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Minus, { size: 12, strokeWidth: 3 }) }),
-          /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 w-7 text-center", children: item.quantity }),
-          /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, item.quantity + 1), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Plus, { size: 12, strokeWidth: 3 }) })
+      ] })
+    ] }),
+    item.deliveryDate && /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx("hr", { className: "mt-4 mb-3 border-gray-100" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-green-600 shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" }) }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            "Delivered by ",
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-900", children: item.deliveryDate })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-900", children: formatPrice(item.price * item.quantity) }),
-          item.mrp && item.mrp > item.price ? /* @__PURE__ */ jsx("p", { className: "text-[10px] text-gray-400 line-through mt-0.5", children: formatPrice(item.mrp * item.quantity) }) : null
+        (item.exchangeDays !== null || item.returnDays !== null) && /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px]", children: [
+          item.exchangeDays !== null && item.exchangeDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsx(RefreshCcw, { size: 12, className: "text-gray-400" }),
+            "Exchange within ",
+            /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
+              item.exchangeDays,
+              " days"
+            ] }),
+            " from the date of delivery"
+          ] }),
+          item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
+            "Return within ",
+            /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
+              item.returnDays,
+              " days"
+            ] }),
+            " from the date of delivery"
+          ] })
         ] })
       ] })
     ] })
@@ -2961,6 +3261,12 @@ function CartPage() {
   const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
   const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
   const discount = cart.appliedCoupon?.discountAmount || 0;
+  let shippingLabel = "Calculated at checkout";
+  if (settings?.shipping_rules?.prepaid) {
+    if (settings.shipping_rules.prepaid.type === "free") shippingLabel = "Free";
+    else if (settings.shipping_rules.prepaid.type === "included") shippingLabel = "Included";
+    else if (settings.shipping_rules.prepaid.type === "flat" && parseFloat(settings.shipping_rules.prepaid.fee) === 0) shippingLabel = "Free";
+  }
   let taxAmount = 0;
   const isTaxEnabled = settings?.is_tax_enabled == "1";
   const taxLabel = settings?.tax_label || "Tax";
@@ -3047,7 +3353,7 @@ function CartPage() {
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
             /* @__PURE__ */ jsx("span", { children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { children: "Calculated at checkout" })
+            /* @__PURE__ */ jsx("span", { children: shippingLabel })
           ] }),
           isTaxEnabled && settings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
             /* @__PURE__ */ jsxs("span", { children: [
@@ -3508,6 +3814,52 @@ function ProductCard({ product, activeCategory, onRemove }) {
     ] })
   ] }) });
 }
+function FaqAccordion({ faqs }) {
+  if (!faqs || faqs.length === 0) return null;
+  const [openIndex, setOpenIndex] = useState(null);
+  const toggleFaq = (index) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "max-w-3xl mx-auto px-4 py-16", children: [
+    /* @__PURE__ */ jsxs("div", { className: "text-center mb-10", children: [
+      /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black uppercase tracking-tight text-gray-900 mb-4", children: "Frequently Asked Questions" }),
+      /* @__PURE__ */ jsx("div", { className: "w-24 h-1 bg-black mx-auto" })
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "space-y-4", children: faqs.map((faq, index) => /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: `border rounded-2xl overflow-hidden transition-all duration-300 ${openIndex === index ? "border-black shadow-md bg-white" : "border-gray-200 bg-gray-50 hover:bg-gray-100"}`,
+        children: [
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              onClick: () => toggleFaq(index),
+              className: "w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none",
+              "aria-expanded": openIndex === index,
+              children: [
+                /* @__PURE__ */ jsx("span", { className: `text-base md:text-lg font-bold pr-8 transition-colors ${openIndex === index ? "text-black" : "text-gray-800"}`, children: faq.question }),
+                /* @__PURE__ */ jsx(
+                  ChevronDown,
+                  {
+                    className: `w-5 h-5 flex-shrink-0 text-gray-500 transition-transform duration-300 ${openIndex === index ? "rotate-180 text-black" : ""}`
+                  }
+                )
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "div",
+            {
+              className: `overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`,
+              children: /* @__PURE__ */ jsx("div", { className: "p-5 md:p-6 pt-0 text-gray-600 prose prose-sm max-w-none border-t border-gray-100/0", children: /* @__PURE__ */ jsx("div", { dangerouslySetInnerHTML: { __html: faq.answer.replace(/\n/g, "<br />") } }) })
+            }
+          )
+        ]
+      },
+      faq.id
+    )) })
+  ] });
+}
 const SORT_OPTIONS = [
   { label: "Newest Arrivals", value: "new" },
   { label: "Featured", value: "featured" },
@@ -3517,7 +3869,7 @@ const SORT_OPTIONS = [
   { label: "A to Z", value: "a_z" },
   { label: "Z to A", value: "z_a" }
 ];
-function ProductListingInner({ title, initialFilters, baseEndpoint = "/api/products", queryKey, queryValue }) {
+function ProductListingInner({ title, subtitle, bannerImage, description, faqs, initialFilters, baseEndpoint = "/api/products", queryKey, queryValue }) {
   const { settings } = usePage().props;
   const { url } = usePage();
   const searchParams = new URLSearchParams(url.substring(url.indexOf("?")));
@@ -3646,9 +3998,21 @@ function ProductListingInner({ title, initialFilters, baseEndpoint = "/api/produ
   const MOCK_COLORS = ["Black", "White", "Red", "Blue", "Green", "Navy"];
   const displayTitle = title ? title : activeQueryValue ? activeQueryValue.split("-").join(" ") : "Products";
   return /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-8 relative", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row items-center justify-between mb-8 gap-4", children: [
-      /* @__PURE__ */ jsx("h1", { className: "text-3xl font-bold capitalize", children: displayTitle }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 w-full md:w-auto", children: [
+    /* @__PURE__ */ jsxs("div", { className: "mb-6 flex flex-col gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-center overflow-hidden relative", children: [
+        bannerImage && /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: "absolute inset-0 bg-cover bg-center z-0",
+            style: { backgroundImage: `url(${bannerImage})` }
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: `relative z-10 flex flex-col gap-2 ${bannerImage ? "bg-gradient-to-r from-white via-white/80 to-transparent p-6 sm:p-8 w-full" : ""}`, children: [
+          /* @__PURE__ */ jsx("h1", { className: "text-3xl font-bold capitalize", children: displayTitle }),
+          subtitle && /* @__PURE__ */ jsx("p", { className: "text-gray-500 font-medium", children: subtitle })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-end items-center gap-3 w-full border-t border-gray-100 pt-4", children: [
         /* @__PURE__ */ jsxs(
           "button",
           {
@@ -3804,7 +4168,11 @@ function ProductListingInner({ title, initialFilters, baseEndpoint = "/api/produ
           /* @__PURE__ */ jsx("div", { className: "w-2 h-2 bg-black rounded-full animate-bounce" })
         ] }) : /* @__PURE__ */ jsx("span", { className: "text-sm font-medium", children: "Scroll to load more" }) })
       ] })
-    ] })
+    ] }),
+    description && description !== "<p><br></p>" || faqs && faqs.length > 0 ? /* @__PURE__ */ jsxs("div", { className: "mt-16 pt-8 border-t border-gray-100", children: [
+      description && description !== "<p><br></p>" && /* @__PURE__ */ jsx("div", { className: "prose prose-sm sm:prose-base max-w-none text-gray-600 mb-12", dangerouslySetInnerHTML: { __html: description } }),
+      faqs && faqs.length > 0 && /* @__PURE__ */ jsx(FaqAccordion, { faqs })
+    ] }) : null
   ] });
 }
 function ProductListing(props) {
@@ -3823,15 +4191,37 @@ function CategoryPage({ category }) {
       "url": `${baseUrl}/category/${category.slug}`
     };
   };
+  const getFaqSchema = () => {
+    if (!category.faqs || category.faqs.length === 0) return null;
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": category.faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+  };
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsxs(Head, { children: [
-      /* @__PURE__ */ jsx("title", { children: category.name }),
-      /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getCategorySchema()) })
+      /* @__PURE__ */ jsx("title", { children: category.meta_title || category.name }),
+      /* @__PURE__ */ jsx("meta", { name: "description", content: category.meta_description || category.description || `Shop the latest ${category.name}` }),
+      category.meta_keywords && /* @__PURE__ */ jsx("meta", { name: "keywords", content: category.meta_keywords }),
+      /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getCategorySchema()) }),
+      category.faqs && category.faqs.length > 0 && /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "faqld", children: JSON.stringify(getFaqSchema()) })
     ] }),
     /* @__PURE__ */ jsx(
       ProductListing,
       {
         title: category.name,
+        subtitle: category.aeo_use_case ? `Ideal for: ${category.aeo_use_case}` : void 0,
+        bannerImage: category.banner_image_url,
+        description: category.description,
+        faqs: category.faqs,
         queryKey: "category",
         queryValue: category.slug
       }
@@ -4010,7 +4400,7 @@ function CheckoutAddress({ selectedId, onChange }) {
               "input",
               {
                 value: form.phone,
-                onChange: (e) => f("phone", e.target.value),
+                onChange: (e) => f("phone", e.target.value.replace(/\D/g, "")),
                 placeholder: "10-digit",
                 className: "flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none"
               }
@@ -4083,36 +4473,66 @@ function CouponModal({ open, onClose, coupons, onApply, applying }) {
   ] });
 }
 function CartRow({ item, update, remove }) {
-  return /* @__PURE__ */ jsxs("div", { className: "flex gap-4 py-5 border-b border-gray-100 last:border-0", children: [
-    /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, className: "relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100", children: item.image && /* @__PURE__ */ jsx("img", { src: item.image, alt: item.name, fill: true, className: "object-cover", unoptimized: true }) }),
-    /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start gap-2", children: [
-        /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, children: /* @__PURE__ */ jsx("h3", { className: "text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2", children: item.name }) }),
-        /* @__PURE__ */ jsx("button", { onClick: () => remove(item.skuId), className: "text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5", children: /* @__PURE__ */ jsx(Trash2, { size: 15 }) })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [
-        item.colorName && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
-          /* @__PURE__ */ jsx("span", { className: "w-2.5 h-2.5 rounded-full border border-white shadow-sm", style: { backgroundColor: item.colorHex || "#aaa" } }),
-          item.colorName
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col py-5 border-b border-gray-100 last:border-0", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
+      /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, className: "relative w-20 h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100", children: item.image && /* @__PURE__ */ jsx("img", { src: item.image, alt: item.name, fill: true, className: "object-cover", unoptimized: true }) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start gap-2", children: [
+          /* @__PURE__ */ jsx(Link, { href: `/product/${item.slug}`, children: /* @__PURE__ */ jsx("h3", { className: "text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors leading-snug line-clamp-2", children: item.name }) }),
+          /* @__PURE__ */ jsx("button", { onClick: () => remove(item.skuId), className: "text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-0.5", children: /* @__PURE__ */ jsx(Trash2, { size: 15 }) })
         ] }),
-        item.sizeName && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
-          "Size ",
-          item.sizeName
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [
+          item.colorName && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
+            /* @__PURE__ */ jsx("span", { className: "w-2.5 h-2.5 rounded-full border border-white shadow-sm", style: { backgroundColor: item.colorHex || "#aaa" } }),
+            item.colorName
+          ] }),
+          item.sizeName && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full", children: [
+            "Size ",
+            item.sizeName
+          ] })
         ] }),
-        item.deliveryDate && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100", children: [
-          "Delivered by: ",
-          item.deliveryDate
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mt-3", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border border-gray-200 rounded-lg", children: [
+            /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, Math.max(1, item.quantity - 1)), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Minus, { size: 12, strokeWidth: 3 }) }),
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 w-7 text-center", children: item.quantity }),
+            /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, item.quantity + 1), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Plus, { size: 12, strokeWidth: 3 }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-900", children: formatPrice(item.price * item.quantity) }),
+            item.mrp && item.mrp > item.price ? /* @__PURE__ */ jsx("p", { className: "text-[10px] text-gray-400 line-through mt-0.5", children: formatPrice(item.mrp * item.quantity) }) : null
+          ] })
         ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mt-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border border-gray-200 rounded-lg", children: [
-          /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, Math.max(1, item.quantity - 1)), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Minus, { size: 12, strokeWidth: 3 }) }),
-          /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 w-7 text-center", children: item.quantity }),
-          /* @__PURE__ */ jsx("button", { onClick: () => update(item.skuId, item.quantity + 1), className: "px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-gray-500", children: /* @__PURE__ */ jsx(Plus, { size: 12, strokeWidth: 3 }) })
+      ] })
+    ] }),
+    item.deliveryDate && /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx("hr", { className: "mt-4 mb-3 border-gray-100" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-green-600 shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" }) }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            "Delivered by ",
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-900", children: item.deliveryDate })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-gray-900", children: formatPrice(item.price * item.quantity) }),
-          item.mrp && item.mrp > item.price ? /* @__PURE__ */ jsx("p", { className: "text-[10px] text-gray-400 line-through mt-0.5", children: formatPrice(item.mrp * item.quantity) }) : null
+        (item.exchangeDays !== null || item.returnDays !== null) && /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px]", children: [
+          item.exchangeDays !== null && item.exchangeDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsx(RefreshCcw, { size: 12, className: "text-gray-400" }),
+            "Exchange within ",
+            /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
+              item.exchangeDays,
+              " days"
+            ] }),
+            " from the date of delivery"
+          ] }),
+          item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
+            "Return within ",
+            /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
+              item.returnDays,
+              " days"
+            ] }),
+            " from the date of delivery"
+          ] })
         ] })
       ] })
     ] })
@@ -4139,6 +4559,7 @@ function CheckoutPage() {
   sharedSettings?.store_name || "Store";
   const cart = useCartStore();
   const { user } = useAuthStore();
+  const { openAuthModal } = useUIStore();
   const [mounted, setMounted] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [publicCoupons, setPublicCoupons] = useState([]);
@@ -4340,14 +4761,15 @@ function CheckoutPage() {
         payment_method: paymentMethod,
         coupon_code: cart.appliedCoupon?.code || null,
         gift_card_code: gcApplied?.code || null,
+        cart_token: cart.cartToken || null,
         items: cart.items.map((i) => ({ sku_id: i.skuId, quantity: i.quantity, image: i.image }))
       });
       if (r.data.success) {
         const orderUUID2 = r.data.order_uuid;
         const upfrontAmount = r.data.upfront_amount || 0;
+        cart.clearCart();
         if (paymentMethod === "cod" && upfrontAmount <= 0 || total <= 0) {
           setOrderUUID(orderUUID2);
-          cart.clearCart();
           window.location.href = `/checkout/thank-you/${orderUUID2}`;
           return;
         }
@@ -4368,10 +4790,9 @@ function CheckoutPage() {
                 });
                 if (verifyRes.data.success) {
                   setOrderUUID(orderUUID2);
-                  cart.clearCart();
                   window.location.href = `/checkout/thank-you/${orderUUID2}`;
                 } else {
-                  setOrderErr("Payment verification failed. Please contact support.");
+                  setOrderErr("Payment verification failed.");
                   try {
                     await api.post("/api/payment/failed", { order_uuid: orderUUID2 });
                   } catch (e) {
@@ -4479,6 +4900,7 @@ function CheckoutPage() {
   const calcShipping = (rule) => {
     if (!rule) return 0;
     if (rule.type === "free") return 0;
+    if (rule.type === "included") return 0;
     if (rule.type === "flat") return parseFloat(rule.fee) || 0;
     if (rule.type === "conditional") {
       return subtotalAfterDiscount >= (parseFloat(rule.threshold) || 0) ? 0 : parseFloat(rule.fee) || 0;
@@ -4503,6 +4925,9 @@ function CheckoutPage() {
     if (activeRule.type === "free") {
       shipping = 0;
       shippingType = "Free";
+    } else if (activeRule.type === "included") {
+      shipping = 0;
+      shippingType = "Included";
     } else if (activeRule.type === "flat") {
       shipping = parseFloat(activeRule.fee) || 0;
       shippingType = shipping === 0 ? "Free" : formatPrice(shipping);
@@ -4577,7 +5002,7 @@ function CheckoutPage() {
     }
     codUpfrontAmount = Math.min(codUpfrontAmount, total);
   }
-  return /* @__PURE__ */ jsxs("div", { className: "max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16", children: [
     /* @__PURE__ */ jsx(Head, { title: "Checkout" }),
     placing && /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4", children: [
       /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-white/80 backdrop-blur-sm" }),
@@ -4791,7 +5216,7 @@ function CheckoutPage() {
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
               /* @__PURE__ */ jsx("span", { children: "Shipping" }),
-              /* @__PURE__ */ jsx("span", { children: shippingType === "Free" ? "Free" : formatPrice(shipping) })
+              /* @__PURE__ */ jsx("span", { children: shippingType === "Free" || shippingType === "Included" ? shippingType : shippingType === "Calculated at next step" ? shippingType : formatPrice(shipping) })
             ] }),
             isTaxEnabled && settings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
               /* @__PURE__ */ jsxs("span", { children: [
@@ -6253,15 +6678,37 @@ function CollectionPage({ collection }) {
       "url": `${baseUrl}/collection/${collection.slug}`
     };
   };
+  const getFaqSchema = () => {
+    if (!collection.faqs || collection.faqs.length === 0) return null;
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": collection.faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+  };
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsxs(Head, { children: [
-      /* @__PURE__ */ jsx("title", { children: collection.name }),
-      /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getCollectionSchema()) })
+      /* @__PURE__ */ jsx("title", { children: collection.social_title || collection.name }),
+      /* @__PURE__ */ jsx("meta", { name: "description", content: collection.social_description || (collection.description ? collection.description.replace(/<[^>]*>?/gm, "") : `Shop the latest ${collection.name}`) }),
+      collection.meta_keywords && /* @__PURE__ */ jsx("meta", { name: "keywords", content: collection.meta_keywords }),
+      /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getCollectionSchema()) }),
+      collection.faqs && collection.faqs.length > 0 && /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "faqld", children: JSON.stringify(getFaqSchema()) })
     ] }),
     /* @__PURE__ */ jsx(
       ProductListing,
       {
         title: collection.name,
+        subtitle: collection.aeo_use_case ? `Ideal for: ${collection.aeo_use_case}` : void 0,
+        bannerImage: collection.banner_image_url,
+        description: collection.description,
+        faqs: collection.faqs,
         queryKey: "collection",
         queryValue: collection.slug
       }
@@ -6410,7 +6857,7 @@ function GiftCardsPage() {
   const { props } = usePage();
   const settings = props.settings;
   const { user } = useAuthStore();
-  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const { openAuthModal } = useUIStore();
   const [mounted, setMounted] = useState(false);
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -6423,7 +6870,7 @@ function GiftCardsPage() {
   }, []);
   const handleBuy = async (card) => {
     if (!user) {
-      openAuthModal2();
+      openAuthModal();
       return;
     }
     setBuying(card.id);
@@ -7672,12 +8119,14 @@ function Dashboard() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerCountryCode, setCustomerCountryCode] = useState("+91");
-  const [cashReceived, setCashReceived] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [cashAmount, setCashAmount] = useState("");
+  const [upiAmount, setUpiAmount] = useState("");
   const [coupons, setCoupons] = useState([]);
   const [selectedCouponCode, setSelectedCouponCode] = useState("");
   const [variantProduct, setVariantProduct] = useState(null);
   const [selectedColor, setSelectedColor] = useState("");
-  const { openAuthModal: openAuthModal2 } = useUIStore();
+  const { openAuthModal } = useUIStore();
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerNameDraft, setCustomerNameDraft] = useState("");
   const [customerPhoneDraft, setCustomerPhoneDraft] = useState("");
@@ -7809,12 +8258,16 @@ function Dashboard() {
   const finalTotal = useMemo(() => processedCart.reduce((sum, item) => sum + item.price * item.qty, 0), [processedCart]);
   const total = Math.round(finalTotal);
   const globalDiscountAmount = subtotal - finalTotal;
-  const changeDue = typeof cashReceived === "number" && cashReceived >= total ? cashReceived - total : 0;
+  const totalTendered = paymentMethod === "split" ? (typeof cashAmount === "number" ? cashAmount : 0) + (typeof upiAmount === "number" ? upiAmount : 0) : paymentMethod === "cash" ? typeof cashAmount === "number" ? cashAmount : 0 : total;
+  const changeDue = totalTendered >= total ? totalTendered - total : 0;
+  const canCheckout = paymentMethod === "upi" || totalTendered >= total;
   const initiateCheckout = () => {
     if (cart.length === 0) return;
     setCustomerName("");
     setCustomerPhone("");
-    setCashReceived("");
+    setPaymentMethod("cash");
+    setCashAmount("");
+    setUpiAmount("");
     setShowCheckoutModal(true);
   };
   const processSale = (shouldPrint = true) => {
@@ -7829,6 +8282,9 @@ function Dashboard() {
       coupon_code: selectedCouponCode,
       customer_name: customerName,
       customer_phone: customerPhone ? `${customerCountryCode}${customerPhone}` : "",
+      payment_method: paymentMethod,
+      amount_cash: paymentMethod === "cash" ? total : paymentMethod === "split" ? total - (typeof upiAmount === "number" ? upiAmount : 0) : 0,
+      amount_upi: paymentMethod === "upi" ? total : paymentMethod === "split" ? typeof upiAmount === "number" ? upiAmount : 0 : 0,
       items: processedCart,
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       send_digital_receipt: !shouldPrint
@@ -7995,84 +8451,161 @@ function Dashboard() {
           }
         ),
         /* @__PURE__ */ jsx("iframe", { ref: printIframeRef, style: { display: "none" }, title: "Receipt Printer" }),
-        showCheckoutModal && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white p-8 rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200", children: [
+        showCheckoutModal && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-200", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-6 border-b border-gray-100 pb-4", children: [
             /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-black uppercase tracking-wider", children: "Complete Sale" }),
-            /* @__PURE__ */ jsx("button", { onClick: () => setShowCheckoutModal(false), className: "text-gray-400 hover:text-black", children: "✕" })
+            /* @__PURE__ */ jsx("button", { onClick: () => setShowCheckoutModal(false), className: "text-gray-400 hover:text-black text-2xl font-bold", children: "✕" })
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: "space-y-5", children: [
-            /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-6", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 uppercase tracking-widest font-bold mb-1", children: "Total Amount Due" }),
-              /* @__PURE__ */ jsxs("p", { className: "text-4xl font-bold text-black", children: [
-                "₹",
-                total
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Phone (Optional)" }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "tel",
-                    placeholder: "Send WhatsApp Receipt",
-                    value: customerPhone,
-                    onChange: (e) => setCustomerPhone(e.target.value),
-                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
-                  }
-                )
+          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-8", children: [
+            /* @__PURE__ */ jsxs("div", { className: "space-y-6 border-r-0 md:border-r border-gray-100 md:pr-8", children: [
+              /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 p-4 rounded-xl border border-gray-200 text-center", children: [
+                /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 uppercase tracking-widest font-bold mb-1", children: "Total Amount Due" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-4xl font-bold text-black", children: [
+                  "₹",
+                  total
+                ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Name (Optional)" }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "text",
-                    placeholder: "For receipt",
-                    value: customerName,
-                    onChange: (e) => setCustomerName(e.target.value),
-                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
-                  }
-                )
+              /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Phone (Optional)" }),
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "tel",
+                      placeholder: "Send WhatsApp Receipt",
+                      value: customerPhone,
+                      onChange: (e) => setCustomerPhone(e.target.value),
+                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Customer Name (Optional)" }),
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "text",
+                      placeholder: "For receipt",
+                      value: customerName,
+                      onChange: (e) => setCustomerName(e.target.value),
+                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                    }
+                  )
+                ] })
               ] })
             ] }),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Cash Received" }),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col space-y-3", children: [
+            /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide", children: "Payment Method" }),
+                /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: () => setPaymentMethod("cash"),
+                      className: `py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === "cash" ? "bg-black text-white border-black shadow-lg" : "bg-white text-gray-600 border-gray-200 hover:border-black"}`,
+                      children: "Cash"
+                    }
+                  ),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: () => setPaymentMethod("upi"),
+                      className: `py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === "upi" ? "bg-black text-white border-black shadow-lg" : "bg-white text-gray-600 border-gray-200 hover:border-black"}`,
+                      children: "UPI"
+                    }
+                  ),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: () => setPaymentMethod("split"),
+                      className: `py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === "split" ? "bg-black text-white border-black shadow-lg" : "bg-white text-gray-600 border-gray-200 hover:border-black"}`,
+                      children: "Split"
+                    }
+                  )
+                ] })
+              ] }),
+              paymentMethod === "cash" && /* @__PURE__ */ jsxs("div", { className: "bg-yellow-50/50 p-4 rounded-xl border border-yellow-100", children: [
+                /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wide", children: "Cash Tendered by Customer" }),
                 /* @__PURE__ */ jsx(
                   "input",
                   {
                     type: "number",
-                    placeholder: "Amount given by customer",
-                    value: cashReceived,
-                    onChange: (e) => setCashReceived(e.target.value ? Number(e.target.value) : ""),
-                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
+                    placeholder: "Enter amount handed to you",
+                    value: cashAmount,
+                    onChange: (e) => setCashAmount(e.target.value ? Number(e.target.value) : ""),
+                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold",
+                    autoFocus: true
                   }
-                ),
-                typeof cashReceived === "number" && cashReceived >= total && /* @__PURE__ */ jsxs("div", { className: "bg-green-100 text-green-800 px-4 py-3 rounded-lg font-bold text-center", children: [
-                  "Change to give: ₹",
+                )
+              ] }),
+              paymentMethod === "upi" && /* @__PURE__ */ jsxs("div", { className: "bg-blue-50/50 p-4 rounded-xl border border-blue-100 text-center", children: [
+                /* @__PURE__ */ jsx("p", { className: "text-gray-600 font-medium mb-1", children: "Collect via UPI" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-2xl font-bold text-black", children: [
+                  "₹",
+                  total
+                ] })
+              ] }),
+              paymentMethod === "split" && /* @__PURE__ */ jsxs("div", { className: "bg-purple-50/50 p-4 rounded-xl border border-purple-100 space-y-4", children: [
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "UPI Amount Paid" }),
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "number",
+                      placeholder: "e.g. 500",
+                      value: upiAmount,
+                      onChange: (e) => setUpiAmount(e.target.value ? Number(e.target.value) : ""),
+                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold text-purple-700",
+                      autoFocus: true
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxs("div", { children: [
+                  /* @__PURE__ */ jsx("label", { className: "block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide", children: "Cash Tendered" }),
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "number",
+                      placeholder: "Amount handed to you",
+                      value: cashAmount,
+                      onChange: (e) => setCashAmount(e.target.value ? Number(e.target.value) : ""),
+                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
+                    }
+                  )
+                ] })
+              ] }),
+              (paymentMethod === "cash" || paymentMethod === "split") && typeof cashAmount === "number" && totalTendered >= total && /* @__PURE__ */ jsxs("div", { className: "bg-green-100 text-green-800 px-4 py-3 rounded-lg font-bold text-center text-lg shadow-sm border border-green-200", children: [
+                "Change to give: ",
+                /* @__PURE__ */ jsxs("span", { className: "text-xl", children: [
+                  "₹",
                   changeDue
                 ] })
+              ] }),
+              (paymentMethod === "cash" || paymentMethod === "split") && totalTendered > 0 && totalTendered < total && /* @__PURE__ */ jsxs("div", { className: "bg-red-50 text-red-600 px-4 py-3 rounded-lg font-bold text-center text-sm border border-red-200", children: [
+                "Amount is short by ₹",
+                total - totalTendered
               ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mt-4", children: [
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: () => processSale(false),
-                  className: "flex-1 bg-white text-black border-2 border-black p-4 rounded-xl font-bold text-[13px] hover:bg-gray-50 transition uppercase tracking-wide",
-                  children: "Proceed & Digital Receipt"
-                }
-              ),
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: () => processSale(true),
-                  className: "flex-1 bg-black text-white p-4 rounded-xl font-bold text-[13px] hover:bg-gray-900 transition shadow-xl shadow-gray-300 uppercase tracking-wide",
-                  children: "Process & Print Bill"
-                }
-              )
             ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-4 mt-8 border-t border-gray-100 pt-6", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                disabled: !canCheckout,
+                onClick: () => processSale(false),
+                className: "flex-1 bg-white text-black border-2 border-black p-4 rounded-xl font-bold text-[13px] hover:bg-gray-50 transition uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed",
+                children: "Proceed & Digital Receipt"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                disabled: !canCheckout,
+                onClick: () => processSale(true),
+                className: "flex-1 bg-black text-white p-4 rounded-xl font-bold text-[13px] hover:bg-gray-900 transition shadow-xl shadow-gray-300 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed",
+                children: "Process & Print Bill"
+              }
+            )
           ] })
         ] }) }),
         !shiftStarted && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 z-50 bg-gray-100/90 backdrop-blur-sm flex items-center justify-center p-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200", children: [
@@ -9109,8 +9642,119 @@ const __vite_glob_0_20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
   __proto__: null,
   default: Returns
 }, Symbol.toStringTag, { value: "Module" }));
+function PriceHistoryModal({ isOpen, onClose, skuId, skuName }) {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { settings } = usePage().props;
+  const bgColor = settings?.price_history_bg_color || "#ffffff";
+  const textColor = settings?.price_history_text_color || "#18181b";
+  const salesColor = settings?.price_history_sales_color || "#10b981";
+  const mrpColor = settings?.price_history_mrp_color || "#ef4444";
+  const showTrend = (settings?.price_history_show_trend ?? "1") === "1";
+  const graphPosition = settings?.price_history_graph_position || "top";
+  useEffect(() => {
+    if (isOpen && skuId) {
+      setLoading(true);
+      axios.get(`/api/skus/${skuId}/price-history`).then((res) => {
+        setHistory(res.data);
+      }).catch((err) => console.error(err)).finally(() => setLoading(false));
+    }
+  }, [isOpen, skuId]);
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+  if (!isOpen) return null;
+  const chartData = history.map((h) => ({
+    date: new Date(h.created_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" }),
+    SalesPrice: parseFloat(h.price),
+    MRP: h.mrp ? parseFloat(h.mrp) : null,
+    fullDate: new Date(h.created_at).toLocaleString()
+  }));
+  const chartNode = /* @__PURE__ */ jsx("div", { className: "h-64 w-full", children: /* @__PURE__ */ jsx(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ jsxs(LineChart, { data: chartData, margin: { top: 5, right: 30, left: 20, bottom: 5 }, children: [
+    /* @__PURE__ */ jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.2, stroke: textColor }),
+    /* @__PURE__ */ jsx(XAxis, { dataKey: "date", tick: { fontSize: 12, fill: textColor } }),
+    /* @__PURE__ */ jsx(YAxis, { tick: { fontSize: 12, fill: textColor }, domain: ["auto", "auto"], tickFormatter: (value) => `₹${value}` }),
+    /* @__PURE__ */ jsx(
+      Tooltip,
+      {
+        formatter: (value) => [`₹${value}`, void 0],
+        labelFormatter: (label, payload) => payload?.[0]?.payload?.fullDate || label,
+        contentStyle: { backgroundColor: bgColor, color: textColor, borderColor: textColor, opacity: 0.9 }
+      }
+    ),
+    /* @__PURE__ */ jsx(Legend, { wrapperStyle: { color: textColor } }),
+    /* @__PURE__ */ jsx(Line, { type: "monotone", dataKey: "SalesPrice", name: "Sales Price", stroke: salesColor, strokeWidth: 2, dot: { r: 4 }, activeDot: { r: 6 } }),
+    /* @__PURE__ */ jsx(Line, { type: "monotone", dataKey: "MRP", name: "MRP", stroke: mrpColor, strokeWidth: 2, dot: { r: 4 }, activeDot: { r: 6 } })
+  ] }) }) });
+  const tableNode = /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-left border-collapse", style: { color: textColor }, children: [
+    /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { style: { borderBottom: `1px solid ${textColor}33` }, children: [
+      /* @__PURE__ */ jsx("th", { className: "p-3 text-sm font-semibold opacity-80", children: "Date" }),
+      /* @__PURE__ */ jsx("th", { className: "p-3 text-sm font-semibold opacity-80 text-right", children: "MRP" }),
+      /* @__PURE__ */ jsx("th", { className: "p-3 text-sm font-semibold opacity-80 text-right", children: "Sales Price" })
+    ] }) }),
+    /* @__PURE__ */ jsx("tbody", { children: history.map((record, index) => {
+      const prevRecord = index > 0 ? history[index - 1] : null;
+      const getTrend = (current, prev) => {
+        if (!showTrend || !prev || !current) return null;
+        const currNum = parseFloat(current);
+        const prevNum = parseFloat(prev);
+        if (currNum > prevNum) return /* @__PURE__ */ jsx(TrendingUp, { className: "w-4 h-4 text-red-500 inline ml-1" });
+        if (currNum < prevNum) return /* @__PURE__ */ jsx(TrendingDown, { className: "w-4 h-4 text-green-500 inline ml-1" });
+        return /* @__PURE__ */ jsx(Minus, { className: "w-4 h-4 opacity-50 inline ml-1" });
+      };
+      return /* @__PURE__ */ jsxs("tr", { className: "transition-colors", style: { borderBottom: `1px solid ${textColor}1A` }, children: [
+        /* @__PURE__ */ jsx("td", { className: "p-3 text-sm opacity-90", children: new Date(record.created_at).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) }),
+        /* @__PURE__ */ jsxs("td", { className: "p-3 text-sm opacity-90 text-right", children: [
+          record.mrp ? `₹${parseFloat(record.mrp).toLocaleString("en-IN")}` : "-",
+          getTrend(record.mrp, prevRecord?.mrp || null)
+        ] }),
+        /* @__PURE__ */ jsxs("td", { className: "p-3 text-sm font-bold text-right", children: [
+          "₹",
+          parseFloat(record.price).toLocaleString("en-IN"),
+          getTrend(record.price, prevRecord?.price || null)
+        ] })
+      ] }, record.id);
+    }) })
+  ] }) });
+  return /* @__PURE__ */ jsx(
+    "div",
+    {
+      className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-all",
+      onClick: onClose,
+      children: /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]",
+          style: { backgroundColor: bgColor, color: textColor },
+          onClick: (e) => e.stopPropagation(),
+          children: [
+            /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-black/10 dark:border-white/10 flex justify-between items-center gap-4", children: [
+              /* @__PURE__ */ jsxs("h3", { className: "text-lg font-bold truncate flex-1", title: `Price History (Last 30 Days) - ${skuName}`, children: [
+                "Price History (Last 30 Days) - ",
+                skuName
+              ] }),
+              /* @__PURE__ */ jsx("button", { onClick: onClose, className: "p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors shrink-0", style: { color: textColor }, children: /* @__PURE__ */ jsx(X, { className: "w-5 h-5" }) })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "p-6 overflow-y-auto custom-scrollbar", children: loading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center py-20", children: /* @__PURE__ */ jsx("div", { className: "animate-spin rounded-full h-8 w-8 border-b-2", style: { borderColor: textColor } }) }) : history.length === 0 ? /* @__PURE__ */ jsx("div", { className: "text-center py-10 opacity-70", children: "No price history available for the last 30 days." }) : /* @__PURE__ */ jsxs("div", { className: clsx$1("flex gap-8", graphPosition === "bottom" ? "flex-col-reverse" : "flex-col"), children: [
+              chartNode,
+              tableNode
+            ] }) })
+          ]
+        }
+      )
+    }
+  );
+}
 function ProductDetailClient({ product, policies = {}, coupons = [] }) {
-  const { openAuthModal: openAuthModal2, openQuickView } = useUIStore();
+  const { openAuthModal, openQuickView } = useUIStore();
   const { auth, settings } = usePage().props;
   const megaDealBgFrom = settings?.mega_deal_bg_from || "#2c2c2c";
   const megaDealBgTo = settings?.mega_deal_bg_to || "#2c2c2c";
@@ -9120,6 +9764,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   const megaDealBadge = settings?.mega_deal_badge || "Get at";
   const wishlist = useWishlistStore();
   const wishlisted = wishlist.isInWishlist(product.id);
+  const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
   useEffect(() => {
     trackViewContent(product);
   }, [product.id]);
@@ -9311,7 +9956,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   }
   function handleWishlistToggle() {
     if (!auth?.user) {
-      openAuthModal2("login");
+      openAuthModal("login");
       return;
     }
     if (wishlisted) {
@@ -9441,7 +10086,13 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
             /* @__PURE__ */ jsx("button", { onClick: handleShare, className: "p-2 sm:p-2.5 mt-1 sm:mt-0 shrink-0 border border-gray-200 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors", title: "Share this product", children: /* @__PURE__ */ jsx(Share2, { className: "w-4 h-4 sm:w-5 sm:h-5 text-gray-700" }) })
           ] }),
           product.reviews_summary && product.reviews_summary.total_reviews > 0 && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex text-black", children: [1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ jsx(Star, { className: `w-4 h-4 ${product.reviews_summary.average_rating >= i ? "fill-current" : "text-gray-300 fill-current"}` }, i)) }),
+            /* @__PURE__ */ jsx("div", { className: "flex gap-0.5", children: [1, 2, 3, 4, 5].map((i) => {
+              const rating = product.reviews_summary?.average_rating || 0;
+              return /* @__PURE__ */ jsxs("div", { className: "relative w-4 h-4", children: [
+                /* @__PURE__ */ jsx(Star, { className: "w-4 h-4 text-gray-300 absolute inset-0" }),
+                rating >= i ? /* @__PURE__ */ jsx(Star, { className: "w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : rating >= i - 0.5 ? /* @__PURE__ */ jsx(StarHalf, { className: "w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : null
+              ] }, i);
+            }) }),
             /* @__PURE__ */ jsxs(
               "span",
               {
@@ -9486,7 +10137,17 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                 product.discount_percentage,
                 "% OFF"
               ] })
-            ] })
+            ] }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsPriceHistoryOpen(true),
+                title: "View Price History",
+                className: "pb-1 text-zinc-400 hover:text-black transition-colors",
+                children: /* @__PURE__ */ jsx(BarChart2, { className: "w-5 h-5" })
+              }
+            )
           ] }),
           /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mt-3 font-semibold tracking-wide uppercase", children: "Inclusive of all taxes and shipping" }),
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-3 mt-3", children: [
@@ -9827,7 +10488,13 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
         /* @__PURE__ */ jsxs("div", { children: [
           /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold font-heading mb-2", children: "Customer Reviews" }),
           product.reviews_summary && product.reviews_summary.total_reviews > 0 ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex text-yellow-400", children: [1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ jsx(Star, { className: `w-5 h-5 ${product.reviews_summary.average_rating >= i ? "fill-current" : "text-gray-200 fill-current"}` }, i)) }),
+            /* @__PURE__ */ jsx("div", { className: "flex gap-1", children: [1, 2, 3, 4, 5].map((i) => {
+              const rating = product.reviews_summary?.average_rating || 0;
+              return /* @__PURE__ */ jsxs("div", { className: "relative w-5 h-5", children: [
+                /* @__PURE__ */ jsx(Star, { className: "w-5 h-5 text-gray-200 absolute inset-0" }),
+                rating >= i ? /* @__PURE__ */ jsx(Star, { className: "w-5 h-5 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : rating >= i - 0.5 ? /* @__PURE__ */ jsx(StarHalf, { className: "w-5 h-5 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : null
+              ] }, i);
+            }) }),
             /* @__PURE__ */ jsxs("span", { className: "font-bold text-gray-900 text-lg", children: [
               product.reviews_summary.average_rating,
               " out of 5"
@@ -9857,7 +10524,13 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
               /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-400", children: review.created_at })
             ] })
           ] }),
-          /* @__PURE__ */ jsx("div", { className: "flex text-yellow-400", children: [1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ jsx(Star, { className: `w-4 h-4 ${review.rating >= i ? "fill-current" : "text-gray-200 fill-current"}` }, i)) })
+          /* @__PURE__ */ jsx("div", { className: "flex gap-0.5", children: [1, 2, 3, 4, 5].map((i) => {
+            const rating = review.rating || 0;
+            return /* @__PURE__ */ jsxs("div", { className: "relative w-4 h-4", children: [
+              /* @__PURE__ */ jsx(Star, { className: "w-4 h-4 text-gray-200 absolute inset-0" }),
+              rating >= i ? /* @__PURE__ */ jsx(Star, { className: "w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : rating >= i - 0.5 ? /* @__PURE__ */ jsx(StarHalf, { className: "w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" }) : null
+            ] }, i);
+          }) })
         ] }),
         review.comment && /* @__PURE__ */ jsx("p", { className: "text-gray-700 text-sm leading-relaxed mt-4", children: review.comment }),
         review.images && review.images.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 mt-4", children: review.images.map((img) => /* @__PURE__ */ jsx("a", { href: img.url, target: "_blank", children: /* @__PURE__ */ jsx("img", { src: img.url, className: "w-20 h-20 rounded-lg object-cover border border-gray-200 hover:opacity-80 transition-opacity" }) }, img.id)) }),
@@ -10023,6 +10696,152 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
           "Wishlist"
         ] })
       ] })
+    ] }),
+    /* @__PURE__ */ jsx(
+      PriceHistoryModal,
+      {
+        isOpen: isPriceHistoryOpen,
+        onClose: () => setIsPriceHistoryOpen(false),
+        skuId: currentVariant?.id || product.variants?.[0]?.id,
+        skuName: product.name
+      }
+    ),
+    /* @__PURE__ */ jsx(
+      ReviewFormModal,
+      {
+        isOpen: showReviewModal,
+        onClose: () => setShowReviewModal(false),
+        product
+      }
+    )
+  ] });
+}
+function ReviewFormModal({ isOpen, onClose, product }) {
+  const { data, setData, post, processing, errors, reset } = useForm({
+    rating: 5,
+    comment: "",
+    images: []
+  });
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const { flash } = usePage().props;
+  useEffect(() => {
+    if (!isOpen) {
+      reset();
+      setPreviewUrls([]);
+    }
+  }, [isOpen]);
+  useEffect(() => {
+    if (isOpen && flash?.success) {
+      onClose();
+    }
+  }, [flash, isOpen]);
+  const handleImageChange = (e) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setData("images", [...data.images, ...files]);
+      const newPreviews = files.map((file) => URL.createObjectURL(file));
+      setPreviewUrls([...previewUrls, ...newPreviews]);
+    }
+  };
+  const removeImage = (index) => {
+    const newImages = [...data.images];
+    newImages.splice(index, 1);
+    setData("images", newImages);
+    const newPreviews = [...previewUrls];
+    URL.revokeObjectURL(newPreviews[index]);
+    newPreviews.splice(index, 1);
+    setPreviewUrls(newPreviews);
+  };
+  const submit = (e) => {
+    e.preventDefault();
+    post(`/products/${product.id}/reviews`, {
+      preserveScroll: true,
+      onSuccess: () => {
+      }
+    });
+  };
+  if (!isOpen) return null;
+  return /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-[100] flex items-center justify-center p-4", children: [
+    /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 backdrop-blur-sm", onClick: onClose }),
+    /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh]", children: [
+      /* @__PURE__ */ jsxs("div", { className: "p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50", children: [
+        /* @__PURE__ */ jsx("h2", { className: "text-xl font-bold text-gray-900 font-heading", children: "Write a Review" }),
+        /* @__PURE__ */ jsx("button", { onClick: onClose, className: "p-2 hover:bg-gray-100 rounded-full transition-colors", children: /* @__PURE__ */ jsx(X, { className: "w-5 h-5" }) })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "p-6 overflow-y-auto", children: [
+        flash?.error && /* @__PURE__ */ jsx("div", { className: "bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium border border-red-100", children: flash.error }),
+        /* @__PURE__ */ jsxs("form", { onSubmit: submit, className: "space-y-6", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 uppercase tracking-widest mb-3", children: "Rating" }),
+            /* @__PURE__ */ jsx("div", { className: "flex gap-2", children: [1, 2, 3, 4, 5].map((num) => /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setData("rating", num),
+                className: "focus:outline-none transition-transform hover:scale-110",
+                children: /* @__PURE__ */ jsx(Star, { className: `w-8 h-8 ${data.rating >= num ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}` })
+              },
+              num
+            )) }),
+            errors.rating && /* @__PURE__ */ jsx("p", { className: "text-red-500 text-xs mt-1", children: errors.rating })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 uppercase tracking-widest mb-2", children: "Review (Optional)" }),
+            /* @__PURE__ */ jsx(
+              "textarea",
+              {
+                value: data.comment,
+                onChange: (e) => setData("comment", e.target.value),
+                rows: 4,
+                className: "w-full border border-gray-300 rounded-xl focus:ring-black focus:border-black text-sm p-4 bg-gray-50",
+                placeholder: "What did you like or dislike?"
+              }
+            ),
+            errors.comment && /* @__PURE__ */ jsx("p", { className: "text-red-500 text-xs mt-1", children: errors.comment })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-900 uppercase tracking-widest mb-2", children: "Add Photos (Optional)" }),
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-3", children: [
+              previewUrls.map((url, i) => /* @__PURE__ */ jsxs("div", { className: "relative w-20 h-20 group", children: [
+                /* @__PURE__ */ jsx("img", { src: url, className: "w-full h-full object-cover rounded-xl border border-gray-200" }),
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => removeImage(i),
+                    className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                    children: /* @__PURE__ */ jsx(X, { className: "w-3 h-3" })
+                  }
+                )
+              ] }, i)),
+              previewUrls.length < 5 && /* @__PURE__ */ jsxs("label", { className: "w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-black transition-colors text-gray-500 hover:text-black", children: [
+                /* @__PURE__ */ jsx(Camera, { className: "w-6 h-6 mb-1" }),
+                /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold", children: "UPLOAD" }),
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "file",
+                    multiple: true,
+                    accept: "image/*",
+                    className: "hidden",
+                    onChange: handleImageChange
+                  }
+                )
+              ] })
+            ] }),
+            errors["images"] && /* @__PURE__ */ jsx("p", { className: "text-red-500 text-xs mt-1", children: errors["images"] })
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "pt-4 border-t border-gray-100", children: /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "submit",
+              disabled: processing,
+              className: "w-full bg-black text-white font-bold uppercase tracking-widest text-sm py-4 rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50",
+              children: processing ? "Submitting..." : "Submit Review"
+            }
+          ) })
+        ] })
+      ] })
     ] })
   ] });
 }
@@ -10036,9 +10855,64 @@ function ProductPage({ product }) {
   if (!product) {
     return /* @__PURE__ */ jsx("div", { className: "flex min-h-screen flex-col items-center justify-center p-24 text-center", children: /* @__PURE__ */ jsx("h1", { className: "text-3xl font-bold mb-4", children: "Product Not Found" }) });
   }
+  const getProductSchema = () => {
+    const primaryImage = product.images?.length > 0 ? product.images[0].url : product.image || "https://dopestyle.in/logo.png";
+    const price = product.variants?.length > 0 ? product.variants[0].price : product.price || 0;
+    const inStock = product.variants?.length > 0 ? product.variants[0].stock > 0 : true;
+    const schema = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": product.name,
+      "image": primaryImage,
+      "description": product.short_description?.replace(/<[^>]*>?/gm, "") || product.name,
+      "sku": product.variants?.length > 0 ? product.variants[0].code || "SKU-01" : "SKU-01",
+      "brand": {
+        "@type": "Brand",
+        "name": product.brand || "Dope Style"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": typeof window !== "undefined" ? window.location.href : `https://dopestyle.in/product/${product.slug}`,
+        "priceCurrency": "INR",
+        "price": price,
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+      }
+    };
+    if (product.reviews_summary?.total_reviews > 0) {
+      schema.aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": product.reviews_summary.average_rating,
+        "reviewCount": product.reviews_summary.total_reviews
+      };
+    }
+    return schema;
+  };
+  const getFaqSchema = () => {
+    if (!product.faqs || product.faqs.length === 0) return null;
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": product.faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+  };
   return /* @__PURE__ */ jsxs("div", { className: "w-full pb-12", children: [
-    /* @__PURE__ */ jsx(Head, { children: /* @__PURE__ */ jsx("title", { children: product.name }) }),
-    /* @__PURE__ */ jsx(ProductDetailClient, { product, policies, coupons })
+    /* @__PURE__ */ jsxs(Head, { children: [
+      /* @__PURE__ */ jsx("title", { children: product.seo?.title || product.name }),
+      /* @__PURE__ */ jsx("meta", { name: "description", content: product.seo?.description || product.short_description?.replace(/<[^>]*>?/gm, "") || product.name }),
+      product.seo?.keywords && /* @__PURE__ */ jsx("meta", { name: "keywords", content: product.seo.keywords }),
+      /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getProductSchema()) }),
+      product.faqs && product.faqs.length > 0 && /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "faqld", children: JSON.stringify(getFaqSchema()) })
+    ] }),
+    /* @__PURE__ */ jsx(ProductDetailClient, { product, policies, coupons }),
+    /* @__PURE__ */ jsx(FaqAccordion, { faqs: product.faqs })
   ] });
 }
 const __vite_glob_0_21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -10397,7 +11271,7 @@ const SearchModalContent = ({ closeSearch }) => {
 function Navbar({ settings }) {
   const cart = useCartStore();
   const { user, logout } = useAuthStore();
-  const { openAuthModal: openAuthModal2, isSearchOpen, openSearch, closeSearch } = useUIStore();
+  const { openAuthModal, isSearchOpen, openSearch, closeSearch } = useUIStore();
   const { items: wishlistItems } = useWishlistStore();
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -10505,7 +11379,7 @@ function Navbar({ settings }) {
     ] }) : isModalMode ? /* @__PURE__ */ jsxs(
       "button",
       {
-        onClick: () => openAuthModal2("login"),
+        onClick: () => openAuthModal("login"),
         className: "text-sm font-medium hover:text-gray-600 flex items-center gap-1",
         children: [
           /* @__PURE__ */ jsx(User, { className: "w-4 h-4" }),
@@ -10524,7 +11398,7 @@ function Navbar({ settings }) {
         onClick: (e) => {
           if (!user) {
             e.preventDefault();
-            openAuthModal2();
+            openAuthModal();
           }
         },
         className: "relative text-gray-900 hover:text-gray-600 transition-colors",
@@ -10618,7 +11492,7 @@ function Navbar({ settings }) {
       user ? /* @__PURE__ */ jsxs(Link, { href: "/account", className: "flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black", children: [
         /* @__PURE__ */ jsx(User, { className: "w-5 h-5" }),
         /* @__PURE__ */ jsx("span", { className: "text-[9px] font-medium tracking-wide", children: "User" })
-      ] }) : isModalMode ? /* @__PURE__ */ jsxs("button", { onClick: () => openAuthModal2("login"), className: "flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black", children: [
+      ] }) : isModalMode ? /* @__PURE__ */ jsxs("button", { onClick: () => openAuthModal("login"), className: "flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black", children: [
         /* @__PURE__ */ jsx(User, { className: "w-5 h-5" }),
         /* @__PURE__ */ jsx("span", { className: "text-[9px] font-medium tracking-wide", children: "User" })
       ] }) : /* @__PURE__ */ jsxs(Link, { href: "/login", className: "flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black", children: [
@@ -10636,7 +11510,7 @@ function Navbar({ settings }) {
           onClick: (e) => {
             if (!user) {
               e.preventDefault();
-              openAuthModal2();
+              openAuthModal();
             }
           },
           className: "flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black relative",

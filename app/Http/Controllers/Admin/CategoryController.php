@@ -68,45 +68,49 @@ class CategoryController extends Controller
     {
         $request->strictValidate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'slug' => 'required|string|max:255|unique:categories',
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image',
+            'banner_image' => 'nullable|image',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:5000',
+            'meta_keywords' => 'nullable|string|max:1000',
+            'aeo_use_case' => 'nullable|string|max:255',
             'social_image' => 'nullable|image',
             'is_active' => 'boolean',
+            'faqs' => 'nullable|array',
+            'faqs.*.question' => 'required_with:faqs|string|max:1000',
+            'faqs.*.answer' => 'required_with:faqs|string',
         ]);
 
-        $data = $request->all();
+        $data = $request->except('faqs');
 
         if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $fileName = time().'_'.$file->getClientOriginalName();
-            $relativePath = 'storage/categories';
-            $destinationPath = public_path($relativePath);
-            if (! file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $file->move($destinationPath, $fileName);
-            $data['image'] = "{$relativePath}/{$fileName}";
+            $data['image'] = $this->uploadImageAsWebp($request->file('image'), 'img', 'storage/categories');
         }
 
         if ($request->hasFile('social_image')) {
-            $file = $request->file('social_image');
-            $fileName = time().'_social_'.$file->getClientOriginalName();
-            $relativePath = 'storage/categories';
-            $destinationPath = public_path($relativePath);
-            if (! file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $file->move($destinationPath, $fileName);
-            $data['social_image'] = "{$relativePath}/{$fileName}";
+            $data['social_image'] = $this->uploadImageAsWebp($request->file('social_image'), 'social', 'storage/categories');
         }
 
-        Category::create($data);
 
+        if ($request->hasFile('banner_image')) {
+            $data['banner_image'] = $this->uploadImageAsWebp($request->file('banner_image'), 'banner', 'storage/categories');
+        }
+        $category = Category::create($data);
+
+        if ($request->has('faqs') && is_array($request->faqs)) {
+            foreach ($request->faqs as $index => $faqData) {
+                if (!empty($faqData['question']) && !empty($faqData['answer'])) {
+                    $category->faqs()->create([
+                        'question' => $faqData['question'],
+                        'answer' => $faqData['answer'],
+                        'sort_order' => $index
+                    ]);
+                }
+            }
+        }
         return redirect()->route('admin.categories.index')->with('success', 'Category created successfully.');
     }
 
@@ -121,60 +125,98 @@ class CategoryController extends Controller
     {
         $request->strictValidate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'slug' => 'required|string|max:255|unique:categories,slug,'.$category->id,
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image',
+            'banner_image' => 'nullable|image',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:5000',
+            'meta_keywords' => 'nullable|string|max:1000',
+            'aeo_use_case' => 'nullable|string|max:255',
             'social_image' => 'nullable|image',
             'is_active' => 'boolean',
+            'faqs' => 'nullable|array',
+            'faqs.*.question' => 'required_with:faqs|string|max:1000',
+            'faqs.*.answer' => 'required_with:faqs|string',
         ]);
 
-        $data = $request->all();
+        $data = $request->except('faqs');
+        if (!$request->hasFile('image')) {
+            if ($request->remove_image == 1) {
+                if ($category->image) {
+                    $oldPath = public_path("/{$category->image}");
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
+                $data['image'] = null;
+            } else {
+                unset($data['image']);
+            }
+        }
+        if (!$request->hasFile('social_image')) {
+            if ($request->remove_social_image == 1) {
+                if ($category->social_image) {
+                    $oldPath = public_path("/{$category->social_image}");
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
+                $data['social_image'] = null;
+            } else {
+                unset($data['social_image']);
+            }
+        }
+        if (!$request->hasFile('banner_image')) {
+            if ($request->remove_banner_image == 1) {
+                if ($category->banner_image) {
+                    $oldPath = public_path("/{$category->banner_image}");
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
+                $data['banner_image'] = null;
+            } else {
+                unset($data['banner_image']);
+            }
+        }
+
 
         if ($request->hasFile('image')) {
-            // Delete old image if exists
             if ($category->image) {
                 $oldPath = public_path("/{$category->image}");
-                if (file_exists($oldPath)) {
-                    @unlink($oldPath);
-                }
+                if (file_exists($oldPath)) @unlink($oldPath);
             }
-
-            $file = $request->file('image');
-            $fileName = time().'_'.$file->getClientOriginalName();
-            $relativePath = 'storage/categories';
-            $destinationPath = public_path($relativePath);
-            if (! file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $file->move($destinationPath, $fileName);
-            $data['image'] = "{$relativePath}/{$fileName}";
+            $data['image'] = $this->uploadImageAsWebp($request->file('image'), 'img', 'storage/categories');
         }
 
         if ($request->hasFile('social_image')) {
             if ($category->social_image) {
                 $oldPath = public_path("/{$category->social_image}");
-                if (file_exists($oldPath)) {
-                    @unlink($oldPath);
-                }
+                if (file_exists($oldPath)) @unlink($oldPath);
             }
-
-            $file = $request->file('social_image');
-            $fileName = time().'_social_'.$file->getClientOriginalName();
-            $relativePath = 'storage/categories';
-            $destinationPath = public_path($relativePath);
-            if (! file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $file->move($destinationPath, $fileName);
-            $data['social_image'] = "{$relativePath}/{$fileName}";
+            $data['social_image'] = $this->uploadImageAsWebp($request->file('social_image'), 'social', 'storage/categories');
         }
 
+
+        if ($request->hasFile('banner_image')) {
+            if ($category->banner_image) {
+                $oldPath = public_path("/{$category->banner_image}");
+                if (file_exists($oldPath)) @unlink($oldPath);
+            }
+            $data['banner_image'] = $this->uploadImageAsWebp($request->file('banner_image'), 'banner', 'storage/categories');
+        }
         $category->update($data);
 
+        if ($request->has('faqs')) {
+            $category->faqs()->delete();
+            if (is_array($request->faqs)) {
+                foreach ($request->faqs as $index => $faqData) {
+                    if (!empty($faqData['question']) && !empty($faqData['answer'])) {
+                        $category->faqs()->create([
+                            'question' => $faqData['question'],
+                            'answer' => $faqData['answer'],
+                            'sort_order' => $index
+                        ]);
+                    }
+                }
+            }
+        }
         return redirect()->route('admin.categories.index')->with('success', 'Category updated successfully.');
     }
 
@@ -183,5 +225,19 @@ class CategoryController extends Controller
         $category->delete();
 
         return redirect()->route('admin.categories.index')->with('success', 'Category deleted successfully.');
+    }
+
+    protected function uploadImageAsWebp($file, $prefix, $relativePath)
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $fileName = time() . '_' . $prefix . '_' . \Illuminate\Support\Str::slug($originalName) . '.webp';
+        $destinationPath = public_path($relativePath);
+        if (! file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+        
+        \Intervention\Image\Laravel\Facades\Image::read($file)->toWebp(80)->save($destinationPath . '/' . $fileName);
+        
+        return $relativePath . '/' . $fileName;
     }
 }

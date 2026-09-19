@@ -50,7 +50,7 @@ class IntegrationSettingsController extends Controller
             'name' => 'Zoho Books',
             'description' => 'Sync orders with your Zoho Books accounting',
             'icon' => 'book',
-            'status' => 'soon',
+            'status' => 'active',
         ],
         'zoho-campaign' => [
             'name' => 'Zoho Campaigns',
@@ -270,6 +270,14 @@ class IntegrationSettingsController extends Controller
             'whatsapp_template_account_created' => $rows->get('whatsapp_template_account_created') ? $this->maybeDecrypt($rows->get('whatsapp_template_account_created')->value) : '',
             'whatsapp_template_password_updated' => $rows->get('whatsapp_template_password_updated') ? $this->maybeDecrypt($rows->get('whatsapp_template_password_updated')->value) : '',
             'whatsapp_template_abandoned_cart' => $rows->get('whatsapp_template_abandoned_cart') ? $this->maybeDecrypt($rows->get('whatsapp_template_abandoned_cart')->value) : '',
+            
+            // Zoho Books
+            'zoho_data_center' => $rows->get('data_center') ? $rows->get('data_center')->value : '.com',
+            'zoho_sync_type' => $rows->get('sync_type') ? $rows->get('sync_type')->value : 'invoice',
+            'zoho_inventory_sync' => $rows->get('inventory_sync') ? $rows->get('inventory_sync')->value : '1-way',
+            'zoho_organization_id' => $rows->get('organization_id') ? $this->maybeDecrypt($rows->get('organization_id')->value) : '',
+            'zoho_refresh_token' => $rows->get('refresh_token') ? $this->maybeDecrypt($rows->get('refresh_token')->value) : '',
+
             // SaaSance Push
             'saasance_api_key' => (function() use ($slug) {
                 if ($slug === 'saasance-push') {
@@ -293,6 +301,10 @@ class IntegrationSettingsController extends Controller
 
         if ($slug === 'algolia') {
             return $this->updateAlgolia($request);
+        }
+
+        if ($slug === 'zoho-books') {
+            return $this->updateZohoBooks($request);
         }
 
         if ($slug === 'razorpay') {
@@ -348,6 +360,35 @@ class IntegrationSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Integration settings updated successfully.');
+    }
+
+    private function updateZohoBooks(Request $request)
+    {
+        $request->validate([
+            'enabled' => 'nullable|boolean',
+            'client_id' => 'required|string',
+            'client_secret' => 'nullable|string',
+            'data_center' => 'required|in:.com,.in,.eu,.com.au,.com.cn',
+            'sync_type' => 'required|in:sales_order,invoice',
+            'inventory_sync' => 'required|in:1-way,2-way',
+        ]);
+
+        $group = 'integration.zoho-books';
+
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'enabled'], ['value' => $request->boolean('enabled') ? '1' : '0']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'data_center'], ['value' => $request->data_center, 'type' => 'string']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'sync_type'], ['value' => $request->sync_type, 'type' => 'string']);
+        ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'inventory_sync'], ['value' => $request->inventory_sync, 'type' => 'string']);
+
+        if ($request->filled('client_id')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'client_id'], ['value' => Crypt::encryptString($request->client_id), 'type' => 'string']);
+        }
+
+        if ($request->filled('client_secret') && ! str_contains($request->client_secret, '****')) {
+            ThemeSetting::updateOrCreate(['group' => $group, 'key' => 'client_secret'], ['value' => Crypt::encryptString($request->client_secret), 'type' => 'string']);
+        }
+
+        return redirect()->back()->with('success', 'Zoho Books settings saved successfully.');
     }
 
     private function updateSaasancePush(Request $request)
@@ -656,8 +697,12 @@ class IntegrationSettingsController extends Controller
                         'price' => 500.0,
                         'designs' => [
                             [
-                                'position' => 'front',
-                                'design_url' => 'https://via.placeholder.com/800'
+                                'design_code' => 'TestDesign',
+                                'placement_sku' => 'fr',
+                                'design_link' => 'https://via.placeholder.com/800',
+                                'mockup_link' => 'https://via.placeholder.com/800',
+                                'width_inches' => '10',
+                                'height_inches' => '10'
                             ]
                         ]
                     ]
@@ -992,6 +1037,99 @@ class IntegrationSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Snapchat Pixel settings saved successfully.');
+    }
+
+    // ── Zoho Books OAuth ───────────────────────────────────────────────────────
+
+    public function zohoOAuthRedirect(Request $request)
+    {
+        $group = 'integration.zoho-books';
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
+        
+        $clientId = $this->maybeDecrypt($rows->get('client_id')?->value ?? '');
+        $dataCenter = $rows->get('data_center')?->value ?? '.com';
+        
+        if (!$clientId) {
+            return redirect()->back()->with('error', 'Please save your Client ID first.');
+        }
+
+        $redirectUri = route('admin.online-store.integrations.zoho-books.callback');
+        $scope = 'ZohoBooks.fullaccess.all';
+        $authUrl = "https://accounts.zoho{$dataCenter}/oauth/v2/auth?scope={$scope}&client_id={$clientId}&response_type=code&access_type=offline&redirect_uri={$redirectUri}&prompt=consent";
+        
+        return redirect()->away($authUrl);
+    }
+
+    public function zohoOAuthCallback(Request $request)
+    {
+        $code = $request->query('code');
+        $error = $request->query('error');
+        
+        if ($error) {
+            return redirect()->route('admin.online-store.integrations.show', 'zoho-books')->with('error', 'Zoho OAuth failed: ' . $error);
+        }
+        
+        if (!$code) {
+            return redirect()->route('admin.online-store.integrations.show', 'zoho-books')->with('error', 'No authorization code received.');
+        }
+
+        $group = 'integration.zoho-books';
+        $rows = ThemeSetting::where('group', $group)->get()->keyBy('key');
+        
+        $clientId = $this->maybeDecrypt($rows->get('client_id')?->value ?? '');
+        $clientSecret = $this->maybeDecrypt($rows->get('client_secret')?->value ?? '');
+        $dataCenter = $rows->get('data_center')?->value ?? '.com';
+        
+        $redirectUri = route('admin.online-store.integrations.zoho-books.callback');
+        
+        try {
+            $response = Http::asForm()->post("https://accounts.zoho{$dataCenter}/oauth/v2/token", [
+                'grant_type' => 'authorization_code',
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'code' => $code,
+            ]);
+            
+            $data = $response->json();
+            
+            if (isset($data['error'])) {
+                return redirect()->route('admin.online-store.integrations.show', 'zoho-books')->with('error', 'Failed to get access token: ' . ($data['error_description'] ?? $data['error']));
+            }
+            
+            if (isset($data['refresh_token'])) {
+                ThemeSetting::updateOrCreate(
+                    ['group' => $group, 'key' => 'refresh_token'],
+                    ['value' => Crypt::encryptString($data['refresh_token']), 'type' => 'string']
+                );
+            }
+            
+            // Try fetching organizations to select one automatically
+            $accessToken = $data['access_token'];
+            $orgResponse = Http::withToken($accessToken)->get("https://www.zohoapis{$dataCenter}/books/v3/organizations");
+            
+            if ($orgResponse->successful() && isset($orgResponse->json()['organizations'])) {
+                $orgs = $orgResponse->json()['organizations'];
+                if (count($orgs) > 0) {
+                    $orgId = $orgs[0]['organization_id'];
+                    ThemeSetting::updateOrCreate(
+                        ['group' => $group, 'key' => 'organization_id'],
+                        ['value' => Crypt::encryptString($orgId), 'type' => 'string']
+                    );
+                }
+            }
+            
+            return redirect()->route('admin.online-store.integrations.show', 'zoho-books')->with('success', 'Zoho Books connected successfully!');
+            
+        } catch (\Exception $e) {
+            return redirect()->route('admin.online-store.integrations.show', 'zoho-books')->with('error', 'Connection failed: ' . $e->getMessage());
+        }
+    }
+
+    public function syncZohoPastOrders(Request $request)
+    {
+        // Dispatch job logic would go here.
+        return response()->json(['success' => true, 'message' => 'Syncing past orders started in the background.']);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

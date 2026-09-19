@@ -113,6 +113,9 @@ class CartController extends Controller
                     $variantName .= $variantName ? ' - ' . $sName : $sName;
                 }
                 
+                $deliveryTimeline = $item->sku->product->deliveryTimeline;
+                $deliveryDateObj = $deliveryTimeline ? now()->addDays($deliveryTimeline->max_days) : null;
+
                 $formattedItems[] = [
                     'skuId' => $item->sku->id,
                     'productId' => $item->sku->product->id,
@@ -125,7 +128,9 @@ class CartController extends Controller
                     'quantity' => $item->quantity,
                     'colorName' => $cName,
                     'sizeName' => $sName,
-                    'deliveryDate' => $item->sku->product->deliveryTimeline ? now()->addDays($item->sku->product->deliveryTimeline->max_days)->format('jS F') : null,
+                    'deliveryDate' => $deliveryDateObj ? $deliveryDateObj->format('jS F') : null,
+                    'exchangeDays' => $item->sku->product->is_exchangeable ? ($item->sku->product->exchange_days ?? 7) : null,
+                    'returnDays' => $item->sku->product->is_returnable ? ($item->sku->product->return_days ?? 7) : null,
                 ];
             }
         }
@@ -157,6 +162,9 @@ class CartController extends Controller
                     $variantName .= $variantName ? ' - ' . $sName : $sName;
                 }
                 
+                $deliveryTimeline = $item->sku->product->deliveryTimeline;
+                $deliveryDateObj = $deliveryTimeline ? now()->addDays($deliveryTimeline->max_days) : null;
+
                 $formattedItems[] = [
                     'skuId' => $item->sku->id,
                     'productId' => $item->sku->product->id,
@@ -169,7 +177,9 @@ class CartController extends Controller
                     'quantity' => $item->quantity,
                     'colorName' => $cName,
                     'sizeName' => $sName,
-                    'deliveryDate' => $item->sku->product->deliveryTimeline ? now()->addDays($item->sku->product->deliveryTimeline->max_days)->format('jS F') : null,
+                    'deliveryDate' => $deliveryDateObj ? $deliveryDateObj->format('jS F') : null,
+                    'exchangeDays' => $item->sku->product->is_exchangeable ? ($item->sku->product->exchange_days ?? 7) : null,
+                    'returnDays' => $item->sku->product->is_returnable ? ($item->sku->product->return_days ?? 7) : null,
                 ];
             }
         }

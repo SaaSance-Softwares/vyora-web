@@ -8,7 +8,8 @@ import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
 import { useUIStore } from "@/store/ui";
 import { usePage, router, useForm } from '@inertiajs/react';
-import { Star, Heart, ShoppingBag, Truck, ShieldCheck, ChevronDown, ChevronUp, X, Ruler, Zap, Camera, Share2 } from "lucide-react";
+import { Star, StarHalf, Heart, ShoppingBag, Truck, ShieldCheck, ChevronDown, ChevronUp, X, Ruler, Zap, Camera, Share2, BarChart2 } from "lucide-react";
+import PriceHistoryModal from "./PriceHistoryModal";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -53,6 +54,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     
     const wishlist = useWishlistStore();
     const wishlisted = wishlist.isInWishlist(product.id);
+    const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
 
     // Track ViewContent on mount
     useEffect(() => {
@@ -456,10 +458,20 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             </div>
                             {(product as any).reviews_summary && (product as any).reviews_summary.total_reviews > 0 && (
                                 <div className="flex items-center gap-2">
-                                    <div className="flex text-black">
-                                        {[1, 2, 3, 4, 5].map(i => (
-                                            <Star key={i} className={`w-4 h-4 ${(product as any).reviews_summary.average_rating >= i ? 'fill-current' : 'text-gray-300 fill-current'}`} />
-                                        ))}
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(i => {
+                                            const rating = (product as any).reviews_summary?.average_rating || 0;
+                                            return (
+                                                <div key={i} className="relative w-4 h-4">
+                                                    <Star className="w-4 h-4 text-gray-300 absolute inset-0" />
+                                                    {rating >= i ? (
+                                                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                    ) : rating >= i - 0.5 ? (
+                                                        <StarHalf className="w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                     <span 
                                         className="text-sm font-medium text-gray-500 underline cursor-pointer hover:text-gray-900 decoration-1 underline-offset-4"
@@ -523,6 +535,14 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                         </span>
                                     </div>
                                 )}
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsPriceHistoryOpen(true)}
+                                    title="View Price History"
+                                    className="pb-1 text-zinc-400 hover:text-black transition-colors"
+                                >
+                                    <BarChart2 className="w-5 h-5" />
+                                </button>
                             </div>
                             <p className="text-xs text-gray-500 mt-3 font-semibold tracking-wide uppercase">Inclusive of all taxes and shipping</p>
                             
@@ -923,10 +943,20 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                         <h2 className="text-2xl font-bold font-heading mb-2">Customer Reviews</h2>
                         {(product as any).reviews_summary && (product as any).reviews_summary.total_reviews > 0 ? (
                             <div className="flex items-center gap-3">
-                                <div className="flex text-yellow-400">
-                                    {[1, 2, 3, 4, 5].map(i => (
-                                        <Star key={i} className={`w-5 h-5 ${(product as any).reviews_summary.average_rating >= i ? 'fill-current' : 'text-gray-200 fill-current'}`} />
-                                    ))}
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map(i => {
+                                        const rating = (product as any).reviews_summary?.average_rating || 0;
+                                        return (
+                                            <div key={i} className="relative w-5 h-5">
+                                                <Star className="w-5 h-5 text-gray-200 absolute inset-0" />
+                                                {rating >= i ? (
+                                                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                ) : rating >= i - 0.5 ? (
+                                                    <StarHalf className="w-5 h-5 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <span className="font-bold text-gray-900 text-lg">{(product as any).reviews_summary.average_rating} out of 5</span>
                                 <span className="text-gray-500 text-sm">({(product as any).reviews_summary.total_reviews} reviews)</span>
@@ -958,10 +988,20 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                         <p className="text-xs text-gray-400">{review.created_at}</p>
                                     </div>
                                 </div>
-                                <div className="flex text-yellow-400">
-                                    {[1, 2, 3, 4, 5].map(i => (
-                                        <Star key={i} className={`w-4 h-4 ${review.rating >= i ? 'fill-current' : 'text-gray-200 fill-current'}`} />
-                                    ))}
+                                <div className="flex gap-0.5">
+                                    {[1, 2, 3, 4, 5].map(i => {
+                                        const rating = review.rating || 0;
+                                        return (
+                                            <div key={i} className="relative w-4 h-4">
+                                                <Star className="w-4 h-4 text-gray-200 absolute inset-0" />
+                                                {rating >= i ? (
+                                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                ) : rating >= i - 0.5 ? (
+                                                    <StarHalf className="w-4 h-4 fill-yellow-400 text-yellow-400 absolute inset-0 pointer-events-none" />
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                             {review.comment && (
@@ -1177,6 +1217,18 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                 </div>
             </div>
             {/* ──────────────────────────────────────────────────────────── */}
+            <PriceHistoryModal
+                isOpen={isPriceHistoryOpen}
+                onClose={() => setIsPriceHistoryOpen(false)}
+                skuId={currentVariant?.id || product.variants?.[0]?.id}
+                skuName={product.name}
+            />
+            
+            <ReviewFormModal
+                isOpen={showReviewModal}
+                onClose={() => setShowReviewModal(false)}
+                product={product}
+            />
         </>
     );
 }
@@ -1277,7 +1329,7 @@ function ReviewFormModal({ isOpen, onClose, product }: { isOpen: boolean, onClos
                                 value={data.comment}
                                 onChange={e => setData('comment', e.target.value)}
                                 rows={4}
-                                className="w-full border-gray-300 rounded-xl focus:ring-black focus:border-black text-sm p-4 bg-gray-50"
+                                className="w-full border border-gray-300 rounded-xl focus:ring-black focus:border-black text-sm p-4 bg-gray-50"
                                 placeholder="What did you like or dislike?"
                             />
                             {errors.comment && <p className="text-red-500 text-xs mt-1">{errors.comment}</p>}

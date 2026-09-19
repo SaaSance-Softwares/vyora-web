@@ -13,6 +13,26 @@ use Illuminate\Support\Str;
 
 class ReviewController extends Controller
 {
+    public function update(Request $request, Review $review)
+    {
+        if (! Auth::check() || $review->user_id !== Auth::id()) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $request->strictValidate([
+            'rating' => 'required|numeric|min:0.5|max:5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        $review->update([
+            'rating' => $request->rating,
+            'comment' => $request->comment,
+            'is_approved' => false, // Re-request approval after edit
+        ]);
+
+        return back()->with('success', 'Your review has been updated and is pending approval.');
+    }
+
     public function store(Request $request, Product $product)
     {
         if (! Auth::check()) {
@@ -44,7 +64,7 @@ class ReviewController extends Controller
         }
 
         $request->strictValidate([
-            'rating' => 'required|integer|min:1|max:5',
+            'rating' => 'required|numeric|min:0.5|max:5',
             'comment' => 'nullable|string|max:1000',
             'images' => 'nullable|array|max:5',
             'images.*' => 'nullable|image|max:5120', // Max 5MB per image
@@ -76,6 +96,6 @@ class ReviewController extends Controller
             }
         }
 
-        return back()->with('success', 'Your review has been submitted successfully.');
+        return back()->with('success', 'Your review has been submitted and is pending approval.');
     }
 }

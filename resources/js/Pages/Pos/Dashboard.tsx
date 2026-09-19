@@ -33,7 +33,9 @@ export default function Dashboard() {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerCountryCode, setCustomerCountryCode] = useState('+91');
-    const [cashReceived, setCashReceived] = useState<number | ''>('');
+    const [paymentMethod, setPaymentMethod] = useState<'cash'|'upi'|'split'>('cash');
+    const [cashAmount, setCashAmount] = useState<number | ''>('');
+    const [upiAmount, setUpiAmount] = useState<number | ''>('');
 
     // Discount & Coupon States
     const [coupons, setCoupons] = useState<any[]>([]);
@@ -219,7 +221,11 @@ export default function Dashboard() {
     const total = Math.round(finalTotal);
     const globalDiscountAmount = subtotal - finalTotal;
     
-    const changeDue = (typeof cashReceived === 'number' && cashReceived >= total) ? (cashReceived - total) : 0;
+    const totalTendered = paymentMethod === 'split' 
+        ? ((typeof cashAmount === 'number' ? cashAmount : 0) + (typeof upiAmount === 'number' ? upiAmount : 0))
+        : (paymentMethod === 'cash' ? (typeof cashAmount === 'number' ? cashAmount : 0) : total);
+    const changeDue = totalTendered >= total ? totalTendered - total : 0;
+    const canCheckout = paymentMethod === 'upi' || totalTendered >= total;
 
     // -------------------------------------------------------------
     // Offline Order Sync Engine (Phase 3 & 4)
@@ -228,7 +234,9 @@ export default function Dashboard() {
         if (cart.length === 0) return;
         setCustomerName('');
         setCustomerPhone('');
-        setCashReceived('');
+        setPaymentMethod('cash');
+        setCashAmount('');
+        setUpiAmount('');
         setShowCheckoutModal(true);
     };
 
@@ -246,6 +254,9 @@ export default function Dashboard() {
             coupon_code: selectedCouponCode,
             customer_name: customerName,
             customer_phone: customerPhone ? `${customerCountryCode}${customerPhone}` : '',
+            payment_method: paymentMethod,
+            amount_cash: paymentMethod === 'cash' ? total : (paymentMethod === 'split' ? (total - (typeof upiAmount === 'number' ? upiAmount : 0)) : 0),
+            amount_upi: paymentMethod === 'upi' ? total : (paymentMethod === 'split' ? (typeof upiAmount === 'number' ? upiAmount : 0) : 0),
             items: processedCart,
             created_at: new Date().toISOString(),
             send_digital_receipt: !shouldPrint // if shouldPrint is false, we definitely want digital receipt. If true, we still send it as per our earlier logic (default true in backend). Let's just pass true or rely on backend.
@@ -440,73 +451,147 @@ export default function Dashboard() {
             {/* CHECKOUT MODAL */}
             {showCheckoutModal && (
                 <div className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200">
+                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-200">
                         <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                             <h2 className="text-2xl font-bold text-black uppercase tracking-wider">Complete Sale</h2>
-                            <button onClick={() => setShowCheckoutModal(false)} className="text-gray-400 hover:text-black">✕</button>
+                            <button onClick={() => setShowCheckoutModal(false)} className="text-gray-400 hover:text-black text-2xl font-bold">✕</button>
                         </div>
                         
-                        <div className="space-y-5">
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-6">
-                                <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mb-1">Total Amount Due</p>
-                                <p className="text-4xl font-bold text-black">₹{total}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            {/* Left Side: Summary & Customer */}
+                            <div className="space-y-6 border-r-0 md:border-r border-gray-100 md:pr-8">
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center">
+                                    <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mb-1">Total Amount Due</p>
+                                    <p className="text-4xl font-bold text-black">₹{total}</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Customer Phone (Optional)</label>
+                                        <input 
+                                            type="tel" 
+                                            placeholder="Send WhatsApp Receipt"
+                                            value={customerPhone}
+                                            onChange={(e) => setCustomerPhone(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Customer Name (Optional)</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="For receipt"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Right Side: Payment Details */}
+                            <div className="space-y-6">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Customer Phone (Optional)</label>
-                                    <input 
-                                        type="tel" 
-                                        placeholder="Send WhatsApp Receipt"
-                                        value={customerPhone}
-                                        onChange={(e) => setCustomerPhone(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
-                                    />
+                                    <label className="block text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide">Payment Method</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button 
+                                            onClick={() => setPaymentMethod('cash')}
+                                            className={`py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === 'cash' ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:border-black'}`}
+                                        >
+                                            Cash
+                                        </button>
+                                        <button 
+                                            onClick={() => setPaymentMethod('upi')}
+                                            className={`py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === 'upi' ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:border-black'}`}
+                                        >
+                                            UPI
+                                        </button>
+                                        <button 
+                                            onClick={() => setPaymentMethod('split')}
+                                            className={`py-3 rounded-lg font-bold text-sm transition-colors border-2 ${paymentMethod === 'split' ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:border-black'}`}
+                                        >
+                                            Split
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Customer Name (Optional)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="For receipt"
-                                        value={customerName}
-                                        onChange={(e) => setCustomerName(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
-                                    />
-                                </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Cash Received</label>
-                                <div className="flex flex-col space-y-3">
-                                    <input 
-                                        type="number" 
-                                        placeholder="Amount given by customer"
-                                        value={cashReceived}
-                                        onChange={(e) => setCashReceived(e.target.value ? Number(e.target.value) : '')}
-                                        className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
-                                    />
-                                    {typeof cashReceived === 'number' && cashReceived >= total && (
-                                        <div className="bg-green-100 text-green-800 px-4 py-3 rounded-lg font-bold text-center">
-                                            Change to give: ₹{changeDue}
+                                {paymentMethod === 'cash' && (
+                                    <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                                        <label className="block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wide">Cash Tendered by Customer</label>
+                                        <input 
+                                            type="number" 
+                                            placeholder="Enter amount handed to you"
+                                            value={cashAmount}
+                                            onChange={(e) => setCashAmount(e.target.value ? Number(e.target.value) : '')}
+                                            className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+
+                                {paymentMethod === 'upi' && (
+                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 text-center">
+                                        <p className="text-gray-600 font-medium mb-1">Collect via UPI</p>
+                                        <p className="text-2xl font-bold text-black">₹{total}</p>
+                                    </div>
+                                )}
+
+                                {paymentMethod === 'split' && (
+                                    <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">UPI Amount Paid</label>
+                                            <input 
+                                                type="number" 
+                                                placeholder="e.g. 500"
+                                                value={upiAmount}
+                                                onChange={(e) => setUpiAmount(e.target.value ? Number(e.target.value) : '')}
+                                                className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold text-purple-700"
+                                                autoFocus
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Cash Tendered</label>
+                                            <input 
+                                                type="number" 
+                                                placeholder="Amount handed to you"
+                                                value={cashAmount}
+                                                onChange={(e) => setCashAmount(e.target.value ? Number(e.target.value) : '')}
+                                                className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
-                            <div className="flex gap-3 mt-4">
-                                <button 
-                                    onClick={() => processSale(false)}
-                                    className="flex-1 bg-white text-black border-2 border-black p-4 rounded-xl font-bold text-[13px] hover:bg-gray-50 transition uppercase tracking-wide"
-                                >
-                                    Proceed & Digital Receipt
-                                </button>
-                                <button 
-                                    onClick={() => processSale(true)}
-                                    className="flex-1 bg-black text-white p-4 rounded-xl font-bold text-[13px] hover:bg-gray-900 transition shadow-xl shadow-gray-300 uppercase tracking-wide"
-                                >
-                                    Process & Print Bill
-                                </button>
+                                {(paymentMethod === 'cash' || paymentMethod === 'split') && typeof cashAmount === 'number' && totalTendered >= total && (
+                                    <div className="bg-green-100 text-green-800 px-4 py-3 rounded-lg font-bold text-center text-lg shadow-sm border border-green-200">
+                                        Change to give: <span className="text-xl">₹{changeDue}</span>
+                                    </div>
+                                )}
+
+                                {(paymentMethod === 'cash' || paymentMethod === 'split') && totalTendered > 0 && totalTendered < total && (
+                                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg font-bold text-center text-sm border border-red-200">
+                                        Amount is short by ₹{total - totalTendered}
+                                    </div>
+                                )}
                             </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-8 border-t border-gray-100 pt-6">
+                            <button 
+                                disabled={!canCheckout}
+                                onClick={() => processSale(false)}
+                                className="flex-1 bg-white text-black border-2 border-black p-4 rounded-xl font-bold text-[13px] hover:bg-gray-50 transition uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Proceed & Digital Receipt
+                            </button>
+                            <button 
+                                disabled={!canCheckout}
+                                onClick={() => processSale(true)}
+                                className="flex-1 bg-black text-white p-4 rounded-xl font-bold text-[13px] hover:bg-gray-900 transition shadow-xl shadow-gray-300 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Process & Print Bill
+                            </button>
                         </div>
                     </div>
                 </div>

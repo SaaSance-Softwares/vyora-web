@@ -1,6 +1,6 @@
 
 import { useUIStore } from '@/store/ui';
-import { router, usePage } from '@inertiajs/react';
+import { router, usePage, Head } from '@inertiajs/react';
 import { useEffect } from 'react';
 import RegisterForm from '@/components/auth/RegisterForm';
 
@@ -31,6 +31,7 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen">
+            <Head title="Register" />
             <div className="max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center">
                 <div className="max-w-[460px] w-full">
                     <RegisterForm settings={settings} />

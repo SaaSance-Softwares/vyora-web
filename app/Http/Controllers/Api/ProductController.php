@@ -219,4 +219,14 @@ class ProductController extends Controller
 
         return new ProductResource($product);
     }
+
+    public function priceHistory($id)
+    {
+        $history = \App\Models\SkuPriceHistory::where('sku_id', $id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json($history);
+    }
 }

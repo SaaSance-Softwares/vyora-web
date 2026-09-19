@@ -13,9 +13,10 @@
             <div class="sticky top-0 z-30 bg-gray-50/80 backdrop-blur-md border-b border-gray-200 -mx-4 px-4 py-2 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
                 <nav class="flex space-x-6" aria-label="Tabs">
                     <button type="button" class="tab-button border-b-2 border-black text-black py-3 px-1 text-sm font-bold transition-all" data-tab="info">Product Info</button>
-                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="organization">Organization</button>
-                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="skus">SKUs & Variants</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="seo">SEO and AEO</button>
                     <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="media">Media Gallery</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="skus">SKUs & Variants</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="organization">Organization</button>
                 </nav>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('admin.products.index') }}" class="text-xs font-bold text-gray-500 hover:text-black">Cancel</a>
@@ -24,7 +25,7 @@
             </div>
 
             <!-- Tab Content: Product Info -->
-            <div id="tab-info" class="tab-content space-y-6">
+            <div id="tab-info" class="tab-content flex flex-col gap-6">
                 <!-- Basic Info -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
@@ -122,10 +123,28 @@
                 </label>
             </div>
 
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-gray-700">Returnable</span>
-                <input type="checkbox" name="is_returnable" value="1" {{ old('is_returnable') ? 'checked' : '' }}
-                    class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded">
+            <div class="mb-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-700">Returnable</span>
+                    <input type="checkbox" name="is_returnable" id="is_returnable" value="1" {{ old('is_returnable') ? 'checked' : '' }}
+                        class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" onchange="toggleDays('return_days_container', this.checked)">
+                </div>
+                <div id="return_days_container" class="{{ old('is_returnable') ? '' : 'hidden' }} mt-2 ml-4">
+                    <label class="text-xs text-gray-500 block mb-1">Return window (days)</label>
+                    <input type="number" name="return_days" value="{{ old('return_days', 7) }}" class="w-24 border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm p-1">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-700">Exchangeable</span>
+                    <input type="checkbox" name="is_exchangeable" id="is_exchangeable" value="1" {{ old('is_exchangeable') ? 'checked' : '' }}
+                        class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" onchange="toggleDays('exchange_days_container', this.checked)">
+                </div>
+                <div id="exchange_days_container" class="{{ old('is_exchangeable') ? '' : 'hidden' }} mt-2 ml-4">
+                    <label class="text-xs text-gray-500 block mb-1">Exchange window (days)</label>
+                    <input type="number" name="exchange_days" value="{{ old('exchange_days', 7) }}" class="w-24 border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm p-1">
+                </div>
             </div>
 
             <div class="flex items-center justify-between mb-4">
@@ -133,6 +152,19 @@
                 <input type="checkbox" name="on_sale" value="1" {{ old('on_sale') ? 'checked' : '' }}
                     class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded">
             </div>
+
+            <script>
+                function toggleDays(containerId, isChecked) {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        if (isChecked) {
+                            container.classList.remove('hidden');
+                        } else {
+                            container.classList.add('hidden');
+                        }
+                    }
+                }
+            </script>
 
             @if(\App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') == '1')
             <div class="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -150,6 +182,10 @@
 
 
 
+    </div>
+
+    <!-- Tab Content: SEO and AEO -->
+    <div id="tab-seo" class="tab-content hidden flex flex-col gap-6">
         <!-- SEO -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-4">SEO & AEO</h3>
@@ -182,10 +218,9 @@
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">{{ old('seo_keywords') }}</textarea>
                     <p class="text-xs text-gray-500 mt-1">Separate keywords with commas. Recommended: 5-10 keywords</p>
                 </div>
-
                 <div>
                     <div class="flex justify-between items-center mb-1">
-                        <label class="block text-sm font-medium text-gray-700">AEO Use Case <span class="text-gray-400 font-normal">(For AI Generative Engines)</span></label>
+                        <label class="block text-sm font-medium text-gray-700">AEO Use Case <span class="text-gray-400 font-normal">(Add natural phrases shoppers ask AI: e.g. "best outfits for the gym", "comfortable streetwear")</span></label>
                     </div>
                     <input type="text" name="use_case" id="use_case"
                         value="{{ old('use_case') }}" 
@@ -195,7 +230,8 @@
                 </div>
             </div>
         </div>
-    </div>
+        
+        @include('admin.partials.faqs-editor')
     </div>
     <!-- End Tab Content: Product Info -->
 

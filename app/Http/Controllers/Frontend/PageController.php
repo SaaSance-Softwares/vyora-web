@@ -152,7 +152,7 @@ class PageController extends Controller
     public function product($slug)
     {
         $product = Product::where('slug', $slug)
-            ->with(['images', 'skus.color', 'skus.size', 'sizeChart', 'categories', 'productType', 'reviews.user', 'reviews.images', 'deliveryTimeline'])
+            ->with(['images', 'skus.color', 'skus.size', 'sizeChart', 'categories', 'productType', 'reviews' => function($q) { $q->where('is_approved', true); }, 'reviews.user', 'reviews.images', 'deliveryTimeline', 'faqs'])
             ->firstOrFail();
 
         $product->increment('view_count');
@@ -175,6 +175,19 @@ class PageController extends Controller
                 $botHtml .= "<li>" . ($sku->color ? $sku->color->name : '') . " " . ($sku->size ? $sku->size->name : '') . " - ₹" . $sku->price . "</li>";
             }
             $botHtml .= "</ul>";
+        }
+        
+        if (!empty($productData['reviews'])) {
+            $botHtml .= "<h2>Customer Reviews</h2>";
+            foreach ($productData['reviews'] as $r) {
+                $botHtml .= "<div>";
+                $botHtml .= "<p><strong>Rating:</strong> " . ($r['rating'] ?? 5) . " / 5</p>";
+                $botHtml .= "<p><strong>By:</strong> " . ($r['user']['name'] ?? 'Customer') . "</p>";
+                if (!empty($r['comment'])) {
+                    $botHtml .= "<p>" . strip_tags($r['comment']) . "</p>";
+                }
+                $botHtml .= "</div>";
+            }
         }
         
         $jsonLd = [
@@ -227,8 +240,9 @@ class PageController extends Controller
         return Inertia::render('Product/Show', [
             'product' => $productResource,
         ])->withViewData([
-            'og_title' => $productData['name'] ?? $product->name,
-            'og_description' => strip_tags($productData['short_description'] ?? $productData['name'] ?? ''),
+            'og_title' => $productData['seo']['title'] ?? $productData['name'] ?? $product->name,
+            'og_description' => $productData['seo']['description'] ?? strip_tags($productData['short_description'] ?? $productData['name'] ?? ''),
+            'meta_keywords' => $productData['seo']['keywords'] ?? '',
             'og_image' => !empty($productData['image']) ? $productData['image'] : $this->getDefaultOgImage(),
             'og_url' => url()->current(),
             'json_ld' => $jsonLd,
@@ -238,17 +252,21 @@ class PageController extends Controller
 
     public function category($slug)
     {
-        $category = Category::where('slug', $slug)->firstOrFail();
+        $category = Category::with('faqs')->where('slug', $slug)->firstOrFail();
         $products = Product::whereHas('categories', function ($q) use ($category) {
             $q->where('category_id', $category->id);
         })->where('is_active', true)->paginate(12);
+
+        $category->meta_title = html_entity_decode((string) $category->meta_title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $category->meta_description = html_entity_decode((string) $category->meta_description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         return Inertia::render('Category/Show', [
             'category' => $category,
             'products' => $products,
         ])->withViewData([
             'og_title' => $category->meta_title ?: $category->name,
-            'og_description' => $category->meta_description ?: ($category->description ? strip_tags($category->description) : "Shop {$category->name} at our store."),
+            'og_description' => html_entity_decode($category->meta_description ?: ($category->description ? strip_tags($category->description) : "Shop {$category->name} at our store."), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'meta_keywords' => $category->meta_keywords ?? '',
             'og_image' => $category->social_image ? url($category->social_image) : $this->getDefaultOgImage(),
             'og_url' => url()->current(),
         ]);
@@ -256,10 +274,14 @@ class PageController extends Controller
 
     public function collection($slug)
     {
-        $collection = Collection::where('slug', $slug)->firstOrFail();
+        $collection = Collection::with('faqs')->where('slug', $slug)->firstOrFail();
         $products = Product::whereHas('collections', function ($q) use ($collection) {
             $q->where('collection_id', $collection->id);
         })->where('is_active', true)->paginate(12);
+
+        $collection->social_title = html_entity_decode($collection->social_title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $collection->social_description = html_entity_decode($collection->social_description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $collection->name = html_entity_decode($collection->name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         return Inertia::render('Collection/Show', [
             'collection' => $collection,
@@ -269,6 +291,7 @@ class PageController extends Controller
             'og_description' => $collection->social_description ?: ($collection->description ? strip_tags($collection->description) : "Shop the {$collection->name} collection."),
             'og_image' => $collection->social_image ? url($collection->social_image) : $this->getDefaultOgImage(),
             'og_url' => url()->current(),
+            'meta_keywords' => $collection->meta_keywords,
         ]);
     }
 
