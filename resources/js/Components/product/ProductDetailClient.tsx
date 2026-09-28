@@ -218,6 +218,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     const [showSizeChart, setShowSizeChart] = useState(false);
     const [sizeChartTab, setSizeChartTab] = useState<'chart' | 'measure'>('chart');
     const [showReviewModal, setShowReviewModal] = useState(false);
+    const [selectedReviewImage, setSelectedReviewImage] = useState<string | null>(null);
 
     // For the size chart drawer: get the active color image
     const activeColorImage = useMemo(() => {
@@ -680,7 +681,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                     <img src={matchingImg.url} alt={color.value} className="w-full h-full absolute inset-0 object-cover" />
                                                 )}
                                                 {/* Hover Tooltip Overlay mapped over visually */}
-                                                <span className="absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider opacity-0 group-hover:opacity-100 transition-opacity uppercase z-10 text-center leading-none">
+                                                <span className="absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-opacity uppercase z-10 text-center leading-none">
                                                     {color.value}
                                                 </span>
                                             </button>
@@ -1009,11 +1010,33 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                             )}
                             {review.images && review.images.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-4">
-                                    {review.images.map((img: any) => (
-                                        <a href={img.url} target="_blank" key={img.id}>
-                                            <img src={img.url} className="w-20 h-20 rounded-lg object-cover border border-gray-200 hover:opacity-80 transition-opacity" />
-                                        </a>
-                                    ))}
+                                    {review.images.map((img: any) => {
+                                        const isHeic = img.url.toLowerCase().endsWith('.heic') || img.url.toLowerCase().endsWith('.heif');
+                                        return (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setSelectedReviewImage(img.url)} 
+                                                key={img.id}
+                                                className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity relative group"
+                                            >
+                                                {isHeic ? (
+                                                    <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400">
+                                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                        <span className="text-[10px] font-bold mt-0.5">HEIC</span>
+                                                    </div>
+                                                ) : (
+                                                    <img 
+                                                        src={img.url} 
+                                                        className="w-full h-full object-cover" 
+                                                        onError={(e) => {
+                                                            e.currentTarget.onerror = null;
+                                                            e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[10px] font-bold mt-0.5">IMG</span></div>';
+                                                        }} 
+                                                    />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                             {review.admin_reply && (
@@ -1169,7 +1192,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                     style={{ backgroundColor: color.meta || '#ccc' }}
                                                 />
                                             </button>
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20">
                                                 {color.value}
                                             </div>
                                         </div>
@@ -1229,6 +1252,43 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                 onClose={() => setShowReviewModal(false)}
                 product={product}
             />
+
+            {/* Review Image Lightbox Modal */}
+            {selectedReviewImage && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm" onClick={() => setSelectedReviewImage(null)}>
+                    <button 
+                        className="absolute top-4 right-4 md:top-8 md:right-8 text-white/70 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setSelectedReviewImage(null); }}
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+                    <div 
+                        className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {selectedReviewImage.toLowerCase().endsWith('.heic') || selectedReviewImage.toLowerCase().endsWith('.heif') ? (
+                            <div className="w-full max-w-md aspect-square bg-white rounded-2xl flex flex-col items-center justify-center text-gray-400 p-8 shadow-2xl">
+                                <svg className="w-24 h-24 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <h3 className="text-2xl font-black text-gray-900 mb-2">HEIC Image</h3>
+                                <p className="text-center text-gray-500 mb-6">Your browser cannot preview Apple HEIC images natively.</p>
+                                <a href={selectedReviewImage} target="_blank" className="px-6 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">
+                                    Download to View
+                                </a>
+                            </div>
+                        ) : (
+                            <img 
+                                src={selectedReviewImage} 
+                                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+                                alt="Review photo"
+                                onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full max-w-md aspect-square bg-white rounded-2xl flex flex-col items-center justify-center text-gray-400 p-8 shadow-2xl"><h3 class="text-xl font-bold text-gray-900">Image not available</h3></div>';
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     );
 }
@@ -1345,7 +1405,7 @@ function ReviewFormModal({ isOpen, onClose, product }: { isOpen: boolean, onClos
                                         <button 
                                             type="button" 
                                             onClick={() => removeImage(i)}
-                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 transition-opacity"
                                         >
                                             <X className="w-3 h-3" />
                                         </button>

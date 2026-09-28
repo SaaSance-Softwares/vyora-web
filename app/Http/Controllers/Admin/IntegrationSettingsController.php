@@ -1128,8 +1128,14 @@ class IntegrationSettingsController extends Controller
 
     public function syncZohoPastOrders(Request $request)
     {
-        // Dispatch job logic would go here.
-        return response()->json(['success' => true, 'message' => 'Syncing past orders started in the background.']);
+        $count = \App\Models\Order::whereIn('status', ['processing', 'shipped', 'delivered', 'completed'])
+            ->update([
+                'zoho_books_id' => null,
+                'zoho_sync_attempts' => 0,
+                'zoho_sync_error' => null
+            ]);
+        
+        return response()->json(['success' => true, 'message' => "Successfully queued {$count} past orders. The cron job will sync them shortly."]);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

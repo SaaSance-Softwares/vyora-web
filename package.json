@@ -21,6 +21,7 @@
         "@zxing/library": "^0.23.0",
         "clsx": "^2.1.1",
         "framer-motion": "^13.0.0",
+        "heic2any": "^0.0.4",
         "html5-qrcode": "^2.3.8",
         "lucide-react": "^1.16.0",
         "react": "^19.2.6",

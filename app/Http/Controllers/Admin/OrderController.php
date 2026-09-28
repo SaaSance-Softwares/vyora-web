@@ -164,7 +164,7 @@ class OrderController extends Controller
         $order->update($updateData);
 
         // Fire notifications for any status change
-        if ($newStatusId !== $previousStatusId) {
+        if ($newStatusId != $previousStatusId) {
             
             // Handle dynamic Email Template
             if ($newStatus->emailTemplate) {

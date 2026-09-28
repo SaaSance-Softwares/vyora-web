@@ -247,6 +247,7 @@ class ProductController extends Controller
                         'code' => $newSku['code'],
                         'price' => $newSku['price'] ?: 0,
                         'mrp' => ! empty($newSku['mrp']) ? $newSku['mrp'] : null,
+                        'purchase_price' => ! empty($newSku['purchase_price']) ? $newSku['purchase_price'] : null,
                         'stock' => $newSku['stock'],
                         'color_id' => $newSku['color_id'] ?: null,
                         'size_id' => $sizeId,
@@ -492,6 +493,9 @@ class ProductController extends Controller
                     if (array_key_exists('mrp', $skuData)) {
                         $skuDataToUpdate['mrp'] = $skuData['mrp'] !== null && $skuData['mrp'] !== '' ? $skuData['mrp'] : null;
                     }
+                    if (array_key_exists('purchase_price', $skuData)) {
+                        $skuDataToUpdate['purchase_price'] = $skuData['purchase_price'] !== null && $skuData['purchase_price'] !== '' ? $skuData['purchase_price'] : null;
+                    }
                     $sku->update($skuDataToUpdate);
                 }
             }
@@ -516,6 +520,7 @@ class ProductController extends Controller
                         'code' => $newSku['code'],
                         'price' => $newSku['price'] ?: 0,
                         'mrp' => ! empty($newSku['mrp']) ? $newSku['mrp'] : null,
+                        'purchase_price' => ! empty($newSku['purchase_price']) ? $newSku['purchase_price'] : null,
                         'stock' => $newSku['stock'],
                         'color_id' => $newSku['color_id'] ?: null,
                         'size_id' => $sizeId,
@@ -554,37 +559,130 @@ class ProductController extends Controller
 
     public function export()
     {
-        $products = Product::with('skus')->withCount('orderItems as purchase_count')->latest()->get();
+        $products = Product::with(['skus', 'productType'])->latest()->get();
+
+        $taxRows = \App\Models\ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
+        $taxes = json_decode($taxRows->get('taxes')?->value ?? '[]', true);
+        $taxesCollection = collect($taxes);
 
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="products_export_' . date('Y-m-d') . '.csv"',
         ];
 
-        $callback = function () use ($products) {
+        $callback = function () use ($products, $taxesCollection) {
             $file = fopen('php://output', 'w');
             
             // Add CSV headers
             fputcsv($file, [
-                'ID', 'Name', 'Slug', 'Brand', 'Status', 
-                'Total Stock', 'Min Price', 'Max Price', 
-                'Views', 'Purchases', 'Created At'
+                'Product Name', 
+                'Available SKUs', 
+                'HSN', 
+                'Short Description', 
+                'Price', 
+                'GST Rate'
             ]);
 
             foreach ($products as $product) {
+                $skus = $product->skus->pluck('code')->filter()->join(', ');
+                $hsn = $product->productType ? $product->productType->hsn_code : '';
+                
+                $price = '';
+                if ($product->skus->isNotEmpty()) {
+                    $minPrice = $product->skus->min('price');
+                    $maxPrice = $product->skus->max('price');
+                    $price = $minPrice == $maxPrice ? $minPrice : $minPrice . ' - ' . $maxPrice;
+                }
+
+                $gstRate = '';
+                if ($product->tax_class) {
+                    $tax = $taxesCollection->firstWhere('id', $product->tax_class);
+                    if ($tax) {
+                        $gstRate = $tax['rate'] . '%';
+                    }
+                }
+
                 fputcsv($file, [
-                    $product->id,
                     $product->name,
-                    $product->slug,
-                    $product->brand_name,
-                    $product->is_active ? 'Active' : 'Draft',
-                    $product->skus->sum('stock'),
-                    $product->skus->isNotEmpty() ? $product->skus->min('price') : 0,
-                    $product->skus->isNotEmpty() ? $product->skus->max('price') : 0,
-                    $product->view_count,
-                    $product->purchase_count,
-                    $product->created_at->format('Y-m-d H:i:s')
+                    $skus,
+                    $hsn,
+                    $product->short_description,
+                    $price,
+                    $gstRate
                 ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportZohoBooks()
+    {
+        $products = Product::with(['skus.size', 'skus.color', 'productType'])->latest()->get();
+
+        $taxRows = \App\Models\ThemeSetting::where('group', 'tax_shipping')->get()->keyBy('key');
+        $taxes = json_decode($taxRows->get('taxes')?->value ?? '[]', true);
+        $taxesCollection = collect($taxes);
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="zoho_books_items_' . date('Y-m-d') . '.csv"',
+        ];
+
+        $callback = function () use ($products, $taxesCollection) {
+            $file = fopen('php://output', 'w');
+            
+            // Standard columns for Zoho Books Items
+            fputcsv($file, [
+                'Item Name', 
+                'SKU', 
+                'HSN/SAC', 
+                'Description', 
+                'Rate', 
+                'Product Type',
+                'Account',
+                'Usage unit',
+                'Purchase Rate',
+                'Item Type',
+                'Purchase Account',
+                'Status'
+            ]);
+
+            foreach ($products as $product) {
+                $hsn = $product->productType ? $product->productType->hsn_code : '';
+                
+                // Description without HTML tags
+                $description = strip_tags($product->short_description ?? $product->long_description ?? '');
+                // Clean up excessive whitespace/newlines just in case
+                $description = preg_replace('/\s+/', ' ', $description);
+
+                foreach ($product->skus as $sku) {
+                    $itemName = $product->name;
+                    $sizeName = $sku->size ? $sku->size->name : '';
+                    $colorName = $sku->color ? $sku->color->name : '';
+                    
+                    $attributes = array_filter([$sizeName, $colorName]);
+                    if (!empty($attributes)) {
+                        $itemName .= ' - ' . implode(' - ', $attributes);
+                    }
+
+                    fputcsv($file, [
+                        $itemName,                   // Item Name
+                        $sku->code,                  // SKU
+                        $hsn,                        // HSN/SAC
+                        trim($description),          // Description (without HTML tags)
+                        $sku->price,                 // Rate (Price)
+                        'goods',                     // Product Type
+                        'Sales',                     // Account
+                        'pcs',                       // Usage unit
+                        $sku->purchase_price ?? '',  // Purchase Rate
+                        'Sales and Purchases',       // Item Type
+                        'Cost of Goods Sold',        // Purchase Account
+                        'Active'                     // Status
+                    ]);
+                }
             }
             
             fclose($file);

@@ -341,10 +341,11 @@
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Variants & Pricing (SKUs)</h3>
                         <div class="flex gap-2">
-                            <button type="button" onclick="copyToAll('sku-price')" class="text-xs bg-gray-100 px-3 py-1 rounded">Sync Price</button>
-                            <button type="button" onclick="copyToAll('sku-mrp')" class="text-xs bg-gray-100 px-3 py-1 rounded">Sync MRP</button>
-                            <button type="button" onclick="copyToAll('sku-stock')" class="text-xs bg-gray-100 px-3 py-1 rounded">Sync Stock</button>
-                            <button type="button" onclick="syncDimensions()" class="text-xs bg-gray-100 px-3 py-1 rounded">Sync Dims</button>
+                            <button type="button" onclick="copyToAll('sku-price')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync Price</button>
+                            <button type="button" onclick="copyToAll('sku-mrp')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync MRP</button>
+                            <button type="button" onclick="copyToAll('sku-purchase')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors text-blue-600 font-medium">Sync Purchase</button>
+                            <button type="button" onclick="copyToAll('sku-stock')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync Stock</button>
+                            <button type="button" onclick="syncDimensions()" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync Dims</button>
                         </div>
                     </div>
 
@@ -357,7 +358,9 @@
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Design SKU</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product SKU</th>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price/MRP</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MRP</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dims (W/H/L/Kg)</th>
                                 </tr>
@@ -386,10 +389,13 @@
                                             <input type="text" name="skus[{{ $sku->id }}][product_sku]" value="{{ $sku->product_sku }}" class="block w-full border-gray-300 rounded-md sm:text-xs font-mono" placeholder="Product SKU">
                                         </td>
                                         <td class="px-3 py-4">
-                                            <div class="flex flex-col gap-1">
-                                                <input type="number" step="0.01" name="skus[{{ $sku->id }}][price]" value="{{ $sku->price }}" class="sku-price block w-full border-gray-300 rounded-md sm:text-xs" placeholder="Price">
-                                                <input type="number" step="0.01" name="skus[{{ $sku->id }}][mrp]" value="{{ $sku->mrp }}" class="sku-mrp block w-full border-gray-300 rounded-md sm:text-[10px] text-gray-500" placeholder="MRP">
-                                            </div>
+                                            <input type="number" step="0.01" name="skus[{{ $sku->id }}][price]" value="{{ $sku->price }}" class="sku-price block w-full border-gray-300 rounded-md sm:text-xs" placeholder="Price">
+                                        </td>
+                                        <td class="px-3 py-4">
+                                            <input type="number" step="0.01" name="skus[{{ $sku->id }}][mrp]" value="{{ $sku->mrp }}" class="sku-mrp block w-full border-gray-300 rounded-md sm:text-xs text-gray-500" placeholder="MRP">
+                                        </td>
+                                        <td class="px-3 py-4">
+                                            <input type="number" step="0.01" name="skus[{{ $sku->id }}][purchase_price]" value="{{ $sku->purchase_price }}" class="sku-purchase block w-full border-gray-300 rounded-md sm:text-xs text-blue-500" placeholder="0.00">
                                         </td>
                                         <td class="px-3 py-4">
                                             <input type="number" name="skus[{{ $sku->id }}][stock]" value="{{ $sku->stock }}" class="sku-stock block w-full border-gray-300 rounded-md sm:text-xs">
@@ -726,14 +732,19 @@
             <div class="col-span-1">
                 <input type="text" name="new_skus[INDEX][product_sku]" placeholder="PRODUCT SKU" class="w-full border-gray-200 rounded-lg text-xs p-2 font-mono">
             </div>
-            <div class="col-span-2 flex flex-col gap-1">
-                <input type="number" step="0.01" name="new_skus[INDEX][price]" placeholder="SP" class="sku-price w-full border-gray-200 rounded-lg text-xs p-2 font-bold">
+            <div class="col-span-1">
+                <input type="number" step="0.01" name="new_skus[INDEX][price]" placeholder="SP" class="sku-price w-full border-gray-200 rounded-lg text-[10px] p-2 font-bold">
+            </div>
+            <div class="col-span-1">
                 <input type="number" step="0.01" name="new_skus[INDEX][mrp]" placeholder="MRP" class="sku-mrp w-full border-gray-200 rounded-lg text-[10px] p-2 text-gray-500">
             </div>
-            <div class="col-span-2">
+            <div class="col-span-1">
+                <input type="number" step="0.01" name="new_skus[INDEX][purchase_price]" placeholder="Purch" class="sku-purchase w-full border-gray-200 rounded-lg text-[10px] p-2 text-blue-500">
+            </div>
+            <div class="col-span-1">
                 <input type="number" name="new_skus[INDEX][stock]" placeholder="QTY" class="sku-stock w-full border-gray-200 rounded-lg text-xs p-2 font-bold">
             </div>
-            <div class="col-span-2 text-right">
+            <div class="col-span-1 text-right">
                 <button type="button" onclick="this.closest('.new-variant-row').remove()" class="p-2 text-red-300 hover:text-red-500 rounded-lg transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>

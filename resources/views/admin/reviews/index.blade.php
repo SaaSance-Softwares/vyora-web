@@ -71,13 +71,34 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-gray-700 italic max-w-xs truncate" title="{{ $review->comment }}">"{{ $review->comment ?? 'No comment' }}"</p>
+                                <button onclick="openReplyModal({{ $review->id }}, `{{ htmlspecialchars($review->admin_reply) }}`, `{{ htmlspecialchars($review->user->name ?? 'Guest') }}`, {{ $review->rating }}, `{{ htmlspecialchars($review->comment) }}`)" class="text-left group w-full">
+                                    <p class="text-gray-700 italic max-w-xs truncate group-hover:text-black group-hover:underline">"{{ $review->comment ?? 'No comment' }}"</p>
+                                    <span class="text-[10px] text-gray-400 font-semibold uppercase">Read full</span>
+                                </button>
                                 @if($review->images->count() > 0)
-                                    <div class="flex gap-2 mt-2">
+                                    <div class="flex flex-wrap gap-2 mt-2">
                                         @foreach($review->images as $image)
-                                            <a href="{{ asset($image->image_path) }}" target="_blank">
-                                                <img src="{{ asset($image->image_path) }}" class="w-8 h-8 rounded object-cover border">
-                                            </a>
+                                            <div class="relative group inline-block">
+                                                <a href="{{ asset($image->image_path) }}" target="_blank" class="block">
+                                                    @php
+                                                        $ext = strtolower(pathinfo($image->image_path, PATHINFO_EXTENSION));
+                                                        $isHeic = in_array($ext, ['heic', 'heif']);
+                                                    @endphp
+                                                    @if($isHeic)
+                                                        <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-500 border border-gray-200">
+                                                            HEIC
+                                                        </div>
+                                                    @else
+                                                        <img src="{{ asset($image->image_path) }}" class="w-10 h-10 rounded object-cover border" onerror="this.onerror=null; this.outerHTML='<div class=\'w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-500 border border-gray-200\'>IMG</div>';">
+                                                    @endif
+                                                </a>
+                                                <form action="{{ route('admin.reviews.images.destroy', $image->id) }}" method="POST" class="absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10" onsubmit="return confirm('Delete this image?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="bg-red-500 text-white rounded-full p-0.5 shadow hover:bg-red-600">
+                                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @endforeach
                                     </div>
                                 @endif
@@ -90,8 +111,19 @@
                             <td class="px-6 py-4 text-gray-500 text-xs">{{ $review->created_at->format('M d, Y') }}</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex justify-end gap-2">
-                                    <button onclick="openReplyModal({{ $review->id }}, `{{ htmlspecialchars($review->admin_reply) }}`)" class="px-3 py-1 bg-black text-white rounded text-[10px] font-bold uppercase hover:bg-gray-800">
-                                        {{ $review->admin_reply ? 'Edit Reply' : 'Reply' }}
+                                    <form action="{{ route('admin.reviews.bulk') }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="selected_ids[]" value="{{ $review->id }}">
+                                        @if($review->is_approved)
+                                            <input type="hidden" name="action" value="reject">
+                                            <button type="submit" class="px-3 py-1 bg-yellow-50 text-yellow-700 rounded text-[10px] font-bold uppercase hover:bg-yellow-100">Hide</button>
+                                        @else
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="px-3 py-1 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase hover:bg-green-100">Approve</button>
+                                        @endif
+                                    </form>
+                                    <button onclick="openReplyModal({{ $review->id }}, `{{ htmlspecialchars($review->admin_reply) }}`, `{{ htmlspecialchars($review->user->name ?? 'Guest') }}`, {{ $review->rating }}, `{{ htmlspecialchars($review->comment) }}`)" class="px-3 py-1 bg-black text-white rounded text-[10px] font-bold uppercase hover:bg-gray-800">
+                                        View/Reply
                                     </button>
                                     <form action="{{ route('admin.reviews.destroy', $review) }}" method="POST" onsubmit="return confirm('Delete this review completely?');">
                                         @csrf @method('DELETE')
@@ -117,9 +149,25 @@
 </div>
 
 <!-- Reply Modal -->
-<div id="replyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold mb-4">Reply to Review</h3>
+<div id="replyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-4">
+            <h3 class="text-lg font-bold">Review Details</h3>
+            <button onclick="closeReplyModal()" class="text-gray-400 hover:text-black">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span id="modalCustomerName" class="font-bold text-sm text-gray-900">Customer</span>
+                <div class="flex text-yellow-400" id="modalStars">
+                    <!-- Stars injected via JS -->
+                </div>
+            </div>
+            <p id="modalComment" class="text-sm text-gray-700 italic whitespace-pre-wrap">"Comment"</p>
+        </div>
+
         <form id="replyForm" method="POST" action="">
             @csrf
             <div class="mb-4">
@@ -139,10 +187,26 @@
 
 @push('scripts')
 <script>
-    function openReplyModal(reviewId, currentReply) {
+    function openReplyModal(reviewId, currentReply, customerName, rating, comment) {
         document.getElementById('replyModal').classList.remove('hidden');
         document.getElementById('replyForm').action = `{{ url(config('app.admin_path', 'admin').'/reviews') }}/${reviewId}/reply`;
         document.getElementById('admin_reply_input').value = currentReply || '';
+        
+        document.getElementById('modalCustomerName').textContent = customerName;
+        document.getElementById('modalComment').textContent = comment ? '"' + comment + '"' : 'No text provided.';
+        
+        // Generate stars
+        let starsHtml = '';
+        for(let i=1; i<=5; i++) {
+            if (i <= rating) {
+                starsHtml += '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+            } else if (i - 0.5 <= rating) {
+                starsHtml += '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/></svg>';
+            } else {
+                starsHtml += '<svg class="w-4 h-4 text-gray-300 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+            }
+        }
+        document.getElementById('modalStars').innerHTML = starsHtml;
     }
 
     function closeReplyModal() {

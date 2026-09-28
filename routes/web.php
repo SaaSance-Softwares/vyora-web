@@ -346,6 +346,7 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
         // Products Management Group
         Route::prefix('products')->name('products.')->group(function () {
             Route::get('/export', [ProductController::class, 'export'])->name('export');
+            Route::get('/export-zoho', [ProductController::class, 'exportZohoBooks'])->name('export.zoho');
             Route::post('/bulk-update', [ProductController::class, 'bulkUpdate'])->name('bulk-update');
             Route::get('/search', [ProductController::class, 'search'])->name('search');
             Route::get('/', [ProductController::class, 'index'])->name('index');
@@ -596,6 +597,8 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
         Route::post('/reviews/bulk', [App\Http\Controllers\Admin\ReviewController::class, 'bulkAction'])->name('reviews.bulk');
         Route::post('/reviews/{review}/reply', [App\Http\Controllers\Admin\ReviewController::class, 'reply'])->name('reviews.reply');
         Route::post('/reviews/{review}/toggle-approval', [App\Http\Controllers\Admin\ReviewController::class, 'toggleApproval'])->name('reviews.toggle-approval');
+        Route::delete('/reviews/images/{image}', [App\Http\Controllers\Admin\ReviewController::class, 'destroyImage'])->name('reviews.images.destroy');
+
         Route::delete('/reviews/{review}', [App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('reviews.destroy');
 
         // DPDP Mandate / Legal Pages

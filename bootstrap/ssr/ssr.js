@@ -1180,9 +1180,21 @@ function OrderDetailsPage({ uuid }) {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewImages, setReviewImages] = useState([]);
+  const [reviewImageError, setReviewImageError] = useState("");
+  const [existingImages, setExistingImages] = useState([]);
+  const [deletedImages, setDeletedImages] = useState([]);
+  const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const openReviewModal = (item) => {
     setReviewModalItem(item);
+    setReviewImages([]);
+    setReviewImageError("");
+    setExistingImages([]);
+    setDeletedImages([]);
     if (item.review) {
+      if (item.review.images) {
+        setExistingImages(item.review.images);
+      }
       setReviewRating(item.review.rating);
       setReviewComment(item.review.comment || "");
     } else {
@@ -1190,47 +1202,103 @@ function OrderDetailsPage({ uuid }) {
       setReviewComment("");
     }
   };
+  const handleImageSelection = async (e) => {
+    setReviewImageError("");
+    if (e.target.files) {
+      let files = Array.from(e.target.files);
+      const hasHeic = files.some((f) => f.name.toLowerCase().endsWith(".heic") || f.name.toLowerCase().endsWith(".heif"));
+      if (hasHeic) {
+        setIsConvertingHeic(true);
+        try {
+          files = await Promise.all(files.map(async (file) => {
+            if (file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif")) {
+              const heicModule = await import("https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm");
+              const convertFn = typeof heicModule.default === "function" ? heicModule.default : heicModule;
+              try {
+                const convertedBlob = await convertFn({
+                  blob: new Blob([file], { type: file.type || "image/heic" }),
+                  toType: "image/webp",
+                  quality: 0.8
+                });
+                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                return new File([blob], file.name.replace(/\.heic|\.heif/i, ".webp"), {
+                  type: "image/webp"
+                });
+              } catch (err) {
+                console.warn("Local HEIC conversion failed, falling back to server conversion:", err);
+                return file;
+              }
+            }
+            return file;
+          }));
+        } catch (error) {
+          console.error("Unexpected HEIC error:", error);
+        }
+        setIsConvertingHeic(false);
+      }
+      if (existingImages.length + reviewImages.length + files.length > 5) {
+        setReviewImageError("Maximum 5 images allowed per review.");
+        return;
+      }
+      const oversized = files.find((f) => f.size > 8388608);
+      if (oversized) {
+        setReviewImageError("One or more images exceed the 8MB maximum file size limit.");
+        return;
+      }
+      setReviewImages((prev) => [...prev, ...files]);
+    }
+  };
+  const removeExistingImage = (id) => {
+    setExistingImages((prev) => prev.filter((img) => img.id !== id));
+    setDeletedImages((prev) => [...prev, id]);
+  };
+  const removeImage = (index) => {
+    setReviewImages((prev) => prev.filter((_, i) => i !== index));
+  };
   const submitReview = async (e) => {
     e.preventDefault();
     if (!reviewModalItem) return;
     setReviewLoading(true);
+    setReviewImageError("");
     try {
-      if (reviewModalItem.review) {
-        router.put(`/reviews/${reviewModalItem.review.id}`, {
-          rating: reviewRating,
-          comment: reviewComment
-        }, {
-          onSuccess: () => {
-            setReviewModalItem(null);
-            fetchOrder();
-          }
-        });
-      } else {
-        router.post(`/products/${reviewModalItem.product_id}/reviews`, {
-          rating: reviewRating,
-          comment: reviewComment
-        }, {
-          onSuccess: () => {
-            setReviewModalItem(null);
-            fetchOrder();
-          }
-        });
+      const formData = new FormData();
+      formData.append("rating", reviewRating.toString());
+      if (reviewComment) formData.append("comment", reviewComment);
+      if (reviewModalItem.order_id) formData.append("order_id", reviewModalItem.order_id.toString());
+      if (reviewImages.length > 0) {
+        reviewImages.forEach((img, i) => formData.append(`images[${i}]`, img));
       }
-    } catch (e2) {
-      console.error(e2);
+      let endpoint = "";
+      if (reviewModalItem.review) {
+        formData.append("_method", "put");
+        if (deletedImages.length > 0) {
+          deletedImages.forEach((imgId, i) => formData.append(`deleted_images[${i}]`, imgId.toString()));
+        }
+        endpoint = `/api/reviews/${reviewModalItem.review.id}`;
+      } else {
+        endpoint = `/api/products/${reviewModalItem.product_id}/reviews`;
+      }
+      await api.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setReviewModalItem(null);
+      if (typeof fetchOrder2 === "function") fetchOrder2();
+      if (typeof fetchData === "function") fetchData();
+    } catch (err) {
+      console.error("Review API Error:", err);
+      let errMsg = "Error submitting review. Please try again.";
+      if (err.response?.data?.error) {
+        errMsg = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      } else if (err.response?.data?.errors) {
+        const firstError = Object.values(err.response.data.errors)[0];
+        if (firstError) errMsg = String(firstError);
+      }
+      setReviewImageError(errMsg);
     } finally {
       setReviewLoading(false);
     }
-  };
-  const getActionFee = (action) => {
-    const method = order?.payment_method === "cod" ? "cod" : "prepaid";
-    const rules = settings?.shipping_rules?.[method];
-    if (rules && rules[`${action}_fee`]) {
-      const percent = parseFloat(rules[`${action}_fee`]);
-      const baseValue = order?.items.reduce((acc, item) => acc + parseFloat(item.price || "0") * item.quantity, 0) || 0;
-      return percent / 100 * baseValue;
-    }
-    return 0;
   };
   const handleActionSubmit = async () => {
     if (!actionModal || !order) return;
@@ -1238,7 +1306,7 @@ function OrderDetailsPage({ uuid }) {
     try {
       await api.post(`/api/my-orders/${order.uuid}/${actionModal}`);
       setActionModal(null);
-      fetchOrder();
+      fetchOrder2();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to process request.");
     } finally {
@@ -1250,9 +1318,9 @@ function OrderDetailsPage({ uuid }) {
       router.visit("/login");
       return;
     }
-    fetchOrder();
+    fetchOrder2();
   }, [user, uuid]);
-  const fetchOrder = async () => {
+  const fetchOrder2 = async () => {
     try {
       const res = await api.get(`/api/my-orders/${uuid}`);
       setOrder(res.data);
@@ -1307,7 +1375,14 @@ function OrderDetailsPage({ uuid }) {
               new Date(order.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
             ] })
           ] }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx("span", { className: `inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusStyle(order.status)} shadow-sm`, children: order.status }) })
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("span", { className: `inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusStyle(order.status)} shadow-sm`, children: [
+            order.status,
+            order.status === "delivered" && /* @__PURE__ */ jsxs("span", { className: "ml-1 opacity-80 font-medium", children: [
+              "(On ",
+              new Date(order.updated_at || order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+              ")"
+            ] })
+          ] }) })
         ] })
       ] }),
       (order.status === "shipped" || order.status === "delivered" && order.tracking_number) && /* @__PURE__ */ jsxs("div", { className: "mb-8 bg-gradient-to-r from-gray-900 to-black rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden", children: [
@@ -1470,7 +1545,7 @@ function OrderDetailsPage({ uuid }) {
             /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Shipping Address" }),
-                /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
+                order.shipping_address ? /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
                   /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: order.shipping_address.name }),
                   order.shipping_address.address_line1,
                   /* @__PURE__ */ jsx("br", {}),
@@ -1483,11 +1558,11 @@ function OrderDetailsPage({ uuid }) {
                   order.shipping_address.state,
                   " ",
                   order.shipping_address.zip_code
-                ] })
+                ] }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 italic", children: "No shipping address provided." })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx("h3", { className: "text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3", children: "Contact Details" }),
-                /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-800 font-medium space-y-1.5", children: [
+                order.shipping_address ? /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-800 font-medium space-y-1.5", children: [
                   /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" }) }),
                     order.shipping_address.email
@@ -1496,7 +1571,7 @@ function OrderDetailsPage({ uuid }) {
                     /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }) }),
                     order.shipping_address.phone
                   ] })
-                ] })
+                ] }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 italic", children: "No contact details provided." })
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 pt-6 border-t border-gray-100", children: [
                 /* @__PURE__ */ jsxs("div", { children: [
@@ -1606,6 +1681,36 @@ function OrderDetailsPage({ uuid }) {
             }
           )
         ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Photos (Max 5, up to 8MB each, supports HEIC)" }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-3 mb-3", children: [
+            existingImages.map((img) => /* @__PURE__ */ jsxs("div", { className: "relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group", children: [
+              img.image_path.toLowerCase().endsWith(".heic") || img.image_path.toLowerCase().endsWith(".heif") ? /* @__PURE__ */ jsxs("div", { className: "w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-[8px] font-bold mt-0.5", children: "HEIC" })
+              ] }) : /* @__PURE__ */ jsx("img", { src: `/${img.image_path}`, className: "w-full h-full object-cover rounded-lg", onError: (e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+              } }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => removeExistingImage(img.id), className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10", children: /* @__PURE__ */ jsx("svg", { className: "w-3 h-3 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" }) }) })
+            ] }, `existing-${img.id}`)),
+            reviewImages.map((file, i) => /* @__PURE__ */ jsxs("div", { className: "relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group", children: [
+              file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif") ? /* @__PURE__ */ jsxs("div", { className: "w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-[8px] font-bold mt-0.5", children: "HEIC" })
+              ] }) : /* @__PURE__ */ jsx("img", { src: URL.createObjectURL(file), className: "w-full h-full object-cover rounded-lg", onError: (e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+              } }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => removeImage(i), className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10", children: /* @__PURE__ */ jsx("svg", { className: "w-3 h-3 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" }) }) })
+            ] }, `new-${i}`)),
+            existingImages.length + reviewImages.length < 5 && /* @__PURE__ */ jsx("label", { className: "w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition-colors cursor-pointer bg-gray-50 relative", children: isConvertingHeic ? /* @__PURE__ */ jsx("div", { className: "w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("svg", { className: "w-6 h-6 mb-1", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 4v16m8-8H4" }) }),
+              /* @__PURE__ */ jsx("input", { type: "file", accept: "image/*,.heic,.heif,image/heic,image/heif", multiple: true, onChange: handleImageSelection, className: "hidden", disabled: isConvertingHeic })
+            ] }) })
+          ] }),
+          reviewImageError && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold", children: reviewImageError })
+        ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-3", children: [
           /* @__PURE__ */ jsx(
             "button",
@@ -1648,6 +1753,11 @@ function MyOrdersPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewImages, setReviewImages] = useState([]);
+  const [reviewImageError, setReviewImageError] = useState("");
+  const [existingImages, setExistingImages] = useState([]);
+  const [deletedImages, setDeletedImages] = useState([]);
+  const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const handleReviewClick = (order, e) => {
     e.preventDefault();
     if (order.items && order.items.length === 1) {
@@ -1659,7 +1769,14 @@ function MyOrdersPage() {
   const openReviewModal = (item) => {
     setReviewOrder(null);
     setReviewModalItem(item);
+    setReviewImages([]);
+    setReviewImageError("");
+    setExistingImages([]);
+    setDeletedImages([]);
     if (item.review) {
+      if (item.review.images) {
+        setExistingImages(item.review.images);
+      }
       setReviewRating(item.review.rating);
       setReviewComment(item.review.comment || "");
     } else {
@@ -1667,48 +1784,112 @@ function MyOrdersPage() {
       setReviewComment("");
     }
   };
+  const handleImageSelection = async (e) => {
+    setReviewImageError("");
+    if (e.target.files) {
+      let files = Array.from(e.target.files);
+      const hasHeic = files.some((f) => f.name.toLowerCase().endsWith(".heic") || f.name.toLowerCase().endsWith(".heif"));
+      if (hasHeic) {
+        setIsConvertingHeic(true);
+        try {
+          files = await Promise.all(files.map(async (file) => {
+            if (file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif")) {
+              const heicModule = await import("https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm");
+              const convertFn = typeof heicModule.default === "function" ? heicModule.default : heicModule;
+              try {
+                const convertedBlob = await convertFn({
+                  blob: new Blob([file], { type: file.type || "image/heic" }),
+                  toType: "image/webp",
+                  quality: 0.8
+                });
+                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                return new File([blob], file.name.replace(/\.heic|\.heif/i, ".webp"), {
+                  type: "image/webp"
+                });
+              } catch (err) {
+                console.warn("Local HEIC conversion failed, falling back to server conversion:", err);
+                return file;
+              }
+            }
+            return file;
+          }));
+        } catch (error) {
+          console.error("Unexpected HEIC error:", error);
+        }
+        setIsConvertingHeic(false);
+      }
+      if (existingImages.length + reviewImages.length + files.length > 5) {
+        setReviewImageError("Maximum 5 images allowed per review.");
+        return;
+      }
+      const oversized = files.find((f) => f.size > 8388608);
+      if (oversized) {
+        setReviewImageError("One or more images exceed the 8MB maximum file size limit.");
+        return;
+      }
+      setReviewImages((prev) => [...prev, ...files]);
+    }
+  };
+  const removeExistingImage = (id) => {
+    setExistingImages((prev) => prev.filter((img) => img.id !== id));
+    setDeletedImages((prev) => [...prev, id]);
+  };
+  const removeImage = (index) => {
+    setReviewImages((prev) => prev.filter((_, i) => i !== index));
+  };
   const submitReview = async (e) => {
     e.preventDefault();
     if (!reviewModalItem) return;
     setReviewLoading(true);
+    setReviewImageError("");
     try {
-      if (reviewModalItem.review) {
-        router.put(`/reviews/${reviewModalItem.review.id}`, {
-          rating: reviewRating,
-          comment: reviewComment
-        }, {
-          preserveScroll: true,
-          onSuccess: () => {
-            setReviewModalItem(null);
-            fetchData();
-          }
-        });
-      } else {
-        router.post(`/products/${reviewModalItem.product_id}/reviews`, {
-          rating: reviewRating,
-          comment: reviewComment
-        }, {
-          preserveScroll: true,
-          onSuccess: () => {
-            setReviewModalItem(null);
-            fetchData();
-          }
-        });
+      const formData = new FormData();
+      formData.append("rating", reviewRating.toString());
+      if (reviewComment) formData.append("comment", reviewComment);
+      if (reviewModalItem.order_id) formData.append("order_id", reviewModalItem.order_id.toString());
+      if (reviewImages.length > 0) {
+        reviewImages.forEach((img, i) => formData.append(`images[${i}]`, img));
       }
-    } catch (e2) {
-      console.error(e2);
+      let endpoint = "";
+      if (reviewModalItem.review) {
+        formData.append("_method", "put");
+        if (deletedImages.length > 0) {
+          deletedImages.forEach((imgId, i) => formData.append(`deleted_images[${i}]`, imgId.toString()));
+        }
+        endpoint = `/api/reviews/${reviewModalItem.review.id}`;
+      } else {
+        endpoint = `/api/products/${reviewModalItem.product_id}/reviews`;
+      }
+      await api.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setReviewModalItem(null);
+      if (typeof fetchOrder === "function") fetchOrder();
+      if (typeof fetchData2 === "function") fetchData2();
+    } catch (err) {
+      console.error("Review API Error:", err);
+      let errMsg = "Error submitting review. Please try again.";
+      if (err.response?.data?.error) {
+        errMsg = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      } else if (err.response?.data?.errors) {
+        const firstError = Object.values(err.response.data.errors)[0];
+        if (firstError) errMsg = String(firstError);
+      }
+      setReviewImageError(errMsg);
     } finally {
       setReviewLoading(false);
     }
   };
   useEffect(() => {
     if (user) {
-      fetchData();
+      fetchData2();
     } else {
       setLoading(false);
     }
   }, [user, orderPage]);
-  const fetchData = async () => {
+  const fetchData2 = async () => {
     setLoading(true);
     try {
       const [ordersRes, gcRes] = await Promise.all([
@@ -1815,7 +1996,14 @@ function MyOrdersPage() {
           /* @__PURE__ */ jsxs("div", { className: "relative z-10 flex flex-col lg:flex-row gap-8 items-start lg:items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full lg:w-auto", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between lg:justify-start gap-4 mb-4", children: [
-                /* @__PURE__ */ jsx("span", { className: `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`, children: order.status }),
+                /* @__PURE__ */ jsxs("span", { className: `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`, children: [
+                  order.status,
+                  order.status === "delivered" && /* @__PURE__ */ jsxs("span", { className: "ml-1 opacity-80 font-medium", children: [
+                    "(On ",
+                    new Date(order.updated_at || order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+                    ")"
+                  ] })
+                ] }),
                 /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-400 font-medium", children: new Date(order.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) })
               ] }),
               /* @__PURE__ */ jsxs("h3", { className: "text-xl font-heading font-black text-gray-900 mb-1 group-hover:text-primary transition-colors", children: [
@@ -1964,6 +2152,36 @@ function MyOrdersPage() {
               placeholder: "What did you like or dislike? What did you use this product for?"
             }
           )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsx("label", { className: "block text-sm font-bold text-gray-700 mb-2", children: "Photos (Max 5, up to 8MB each, supports HEIC)" }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-3 mb-3", children: [
+            existingImages.map((img) => /* @__PURE__ */ jsxs("div", { className: "relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group", children: [
+              img.image_path.toLowerCase().endsWith(".heic") || img.image_path.toLowerCase().endsWith(".heif") ? /* @__PURE__ */ jsxs("div", { className: "w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-[8px] font-bold mt-0.5", children: "HEIC" })
+              ] }) : /* @__PURE__ */ jsx("img", { src: `/${img.image_path}`, className: "w-full h-full object-cover rounded-lg", onError: (e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+              } }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => removeExistingImage(img.id), className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10", children: /* @__PURE__ */ jsx("svg", { className: "w-3 h-3 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" }) }) })
+            ] }, `existing-${img.id}`)),
+            reviewImages.map((file, i) => /* @__PURE__ */ jsxs("div", { className: "relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group", children: [
+              file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif") ? /* @__PURE__ */ jsxs("div", { className: "w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-[8px] font-bold mt-0.5", children: "HEIC" })
+              ] }) : /* @__PURE__ */ jsx("img", { src: URL.createObjectURL(file), className: "w-full h-full object-cover rounded-lg", onError: (e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+              } }),
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => removeImage(i), className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10", children: /* @__PURE__ */ jsx("svg", { className: "w-3 h-3 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" }) }) })
+            ] }, `new-${i}`)),
+            existingImages.length + reviewImages.length < 5 && /* @__PURE__ */ jsx("label", { className: "w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition-colors cursor-pointer bg-gray-50 relative", children: isConvertingHeic ? /* @__PURE__ */ jsx("div", { className: "w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("svg", { className: "w-6 h-6 mb-1", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 4v16m8-8H4" }) }),
+              /* @__PURE__ */ jsx("input", { type: "file", accept: "image/*,.heic,.heif,image/heic,image/heif", multiple: true, onChange: handleImageSelection, className: "hidden", disabled: isConvertingHeic })
+            ] }) })
+          ] }),
+          reviewImageError && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold", children: reviewImageError })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-3", children: [
           /* @__PURE__ */ jsx(
@@ -3127,10 +3345,10 @@ function CartRow$1({ item, update, remove }) {
         ] })
       ] })
     ] }),
-    item.deliveryDate && /* @__PURE__ */ jsxs(Fragment, { children: [
+    (item.deliveryDate || item.exchangeDays !== null || item.returnDays !== null) && /* @__PURE__ */ jsxs(Fragment, { children: [
       /* @__PURE__ */ jsx("hr", { className: "mt-4 mb-3 border-gray-100" }),
       /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+        item.deliveryDate && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
           /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-green-600 shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" }) }),
           /* @__PURE__ */ jsxs("span", { children: [
             "Delivered by ",
@@ -3144,8 +3362,7 @@ function CartRow$1({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.exchangeDays,
               " days"
-            ] }),
-            " from the date of delivery"
+            ] })
           ] }),
           item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
             /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
@@ -3153,8 +3370,7 @@ function CartRow$1({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.returnDays,
               " days"
-            ] }),
-            " from the date of delivery"
+            ] })
           ] })
         ] })
       ] })
@@ -4504,10 +4720,10 @@ function CartRow({ item, update, remove }) {
         ] })
       ] })
     ] }),
-    item.deliveryDate && /* @__PURE__ */ jsxs(Fragment, { children: [
+    (item.deliveryDate || item.exchangeDays !== null || item.returnDays !== null) && /* @__PURE__ */ jsxs(Fragment, { children: [
       /* @__PURE__ */ jsx("hr", { className: "mt-4 mb-3 border-gray-100" }),
       /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+        item.deliveryDate && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
           /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-green-600 shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" }) }),
           /* @__PURE__ */ jsxs("span", { children: [
             "Delivered by ",
@@ -4521,8 +4737,7 @@ function CartRow({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.exchangeDays,
               " days"
-            ] }),
-            " from the date of delivery"
+            ] })
           ] }),
           item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
             /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
@@ -4530,8 +4745,7 @@ function CartRow({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.returnDays,
               " days"
-            ] }),
-            " from the date of delivery"
+            ] })
           ] })
         ] })
       ] })
@@ -8533,8 +8747,7 @@ function Dashboard() {
                     placeholder: "Enter amount handed to you",
                     value: cashAmount,
                     onChange: (e) => setCashAmount(e.target.value ? Number(e.target.value) : ""),
-                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold",
-                    autoFocus: true
+                    className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
                   }
                 )
               ] }),
@@ -8555,8 +8768,7 @@ function Dashboard() {
                       placeholder: "e.g. 500",
                       value: upiAmount,
                       onChange: (e) => setUpiAmount(e.target.value ? Number(e.target.value) : ""),
-                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold text-purple-700",
-                      autoFocus: true
+                      className: "w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold text-purple-700"
                     }
                   )
                 ] }),
@@ -9885,6 +10097,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [sizeChartTab, setSizeChartTab] = useState("chart");
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedReviewImage, setSelectedReviewImage] = useState(null);
   const activeColorImage = useMemo(() => {
     if (!selectedColor) return displayedImages[0] || null;
     const colorObj = colors.find((c) => c.value === selectedColor);
@@ -10257,7 +10470,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                   ),
                   children: [
                     matchingImg.url.match(/\.(mp4|webm|mov|qt)$/i) ? /* @__PURE__ */ jsx("video", { src: matchingImg.url, className: "w-full h-full object-cover absolute inset-0", autoPlay: true, loop: true, muted: true, playsInline: true }) : /* @__PURE__ */ jsx("img", { src: matchingImg.url, alt: color.value, className: "w-full h-full absolute inset-0 object-cover" }),
-                    /* @__PURE__ */ jsx("span", { className: "absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider opacity-0 group-hover:opacity-100 transition-opacity uppercase z-10 text-center leading-none", children: color.value })
+                    /* @__PURE__ */ jsx("span", { className: "absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-opacity uppercase z-10 text-center leading-none", children: color.value })
                   ]
                 },
                 color.value
@@ -10533,7 +10746,32 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
           }) })
         ] }),
         review.comment && /* @__PURE__ */ jsx("p", { className: "text-gray-700 text-sm leading-relaxed mt-4", children: review.comment }),
-        review.images && review.images.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 mt-4", children: review.images.map((img) => /* @__PURE__ */ jsx("a", { href: img.url, target: "_blank", children: /* @__PURE__ */ jsx("img", { src: img.url, className: "w-20 h-20 rounded-lg object-cover border border-gray-200 hover:opacity-80 transition-opacity" }) }, img.id)) }),
+        review.images && review.images.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 mt-4", children: review.images.map((img) => {
+          const isHeic = img.url.toLowerCase().endsWith(".heic") || img.url.toLowerCase().endsWith(".heif");
+          return /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setSelectedReviewImage(img.url),
+              className: "w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity relative group",
+              children: isHeic ? /* @__PURE__ */ jsxs("div", { className: "w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400", children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold mt-0.5", children: "HEIC" })
+              ] }) : /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: img.url,
+                  className: "w-full h-full object-cover",
+                  onError: (e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[10px] font-bold mt-0.5">IMG</span></div>';
+                  }
+                }
+              )
+            },
+            img.id
+          );
+        }) }),
         review.admin_reply && /* @__PURE__ */ jsxs("div", { className: "mt-4 bg-gray-50 p-4 rounded-xl border-l-4 border-black", children: [
           /* @__PURE__ */ jsx("p", { className: "text-xs font-bold uppercase tracking-widest text-gray-900 mb-1", children: "Store Reply" }),
           /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-700", children: review.admin_reply })
@@ -10657,7 +10895,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                 )
               }
             ),
-            /* @__PURE__ */ jsx("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20", children: color.value })
+            /* @__PURE__ */ jsx("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20", children: color.value })
           ] }, color.value)) })
         ] })
       ] }) : /* @__PURE__ */ jsxs("div", { className: "p-6 space-y-6 text-sm text-gray-600 leading-relaxed", children: [
@@ -10713,7 +10951,44 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
         onClose: () => setShowReviewModal(false),
         product
       }
-    )
+    ),
+    selectedReviewImage && /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm", onClick: () => setSelectedReviewImage(null), children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: "absolute top-4 right-4 md:top-8 md:right-8 text-white/70 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors",
+          onClick: (e) => {
+            e.stopPropagation();
+            setSelectedReviewImage(null);
+          },
+          children: /* @__PURE__ */ jsx(X, { className: "w-8 h-8" })
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center",
+          onClick: (e) => e.stopPropagation(),
+          children: selectedReviewImage.toLowerCase().endsWith(".heic") || selectedReviewImage.toLowerCase().endsWith(".heif") ? /* @__PURE__ */ jsxs("div", { className: "w-full max-w-md aspect-square bg-white rounded-2xl flex flex-col items-center justify-center text-gray-400 p-8 shadow-2xl", children: [
+            /* @__PURE__ */ jsx("svg", { className: "w-24 h-24 mb-4 text-gray-300", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }),
+            /* @__PURE__ */ jsx("h3", { className: "text-2xl font-black text-gray-900 mb-2", children: "HEIC Image" }),
+            /* @__PURE__ */ jsx("p", { className: "text-center text-gray-500 mb-6", children: "Your browser cannot preview Apple HEIC images natively." }),
+            /* @__PURE__ */ jsx("a", { href: selectedReviewImage, target: "_blank", className: "px-6 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors", children: "Download to View" })
+          ] }) : /* @__PURE__ */ jsx(
+            "img",
+            {
+              src: selectedReviewImage,
+              className: "max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl",
+              alt: "Review photo",
+              onError: (e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.parentElement.innerHTML = '<div class="w-full max-w-md aspect-square bg-white rounded-2xl flex flex-col items-center justify-center text-gray-400 p-8 shadow-2xl"><h3 class="text-xl font-bold text-gray-900">Image not available</h3></div>';
+              }
+            }
+          )
+        }
+      )
+    ] })
   ] });
 }
 function ReviewFormModal({ isOpen, onClose, product }) {
@@ -10809,7 +11084,7 @@ function ReviewFormModal({ isOpen, onClose, product }) {
                   {
                     type: "button",
                     onClick: () => removeImage(i),
-                    className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                    className: "absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 transition-opacity",
                     children: /* @__PURE__ */ jsx(X, { className: "w-3 h-3" })
                   }
                 )

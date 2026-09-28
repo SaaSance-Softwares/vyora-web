@@ -54,7 +54,7 @@ class OrderController extends Controller
                 }
 
                 // Attach review if exists
-            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->first();
+            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->with('images')->first();
             $item->review = $review;
             
             if ($liveImageUrl) {
@@ -521,7 +521,7 @@ class OrderController extends Controller
             }
 
             // Attach review if exists
-            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->first();
+            $review = \App\Models\Review::where('order_id', $order->id)->where('product_id', $item->product_id)->with('images')->first();
             $item->review = $review;
             
             if ($liveImageUrl) {

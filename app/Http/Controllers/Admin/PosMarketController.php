@@ -136,6 +136,30 @@ class PosMarketController extends Controller
             $imagePath = $request->file('store_image')->store('pos_locations', 'public');
         }
 
+        $tagMainLogo = $location->tag_main_logo ?? null;
+        if ($request->hasFile('tag_main_logo')) {
+            if ($tagMainLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($tagMainLogo)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($tagMainLogo);
+            }
+            $tagMainLogo = $request->file('tag_main_logo')->store('pos_tags', 'public');
+        }
+
+        $tagIcon = $location->tag_icon ?? null;
+        if ($request->hasFile('tag_icon')) {
+            if ($tagIcon && \Illuminate\Support\Facades\Storage::disk('public')->exists($tagIcon)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($tagIcon);
+            }
+            $tagIcon = $request->file('tag_icon')->store('pos_tags', 'public');
+        }
+
+        $tagWashing = $location->tag_washing_instruction ?? null;
+        if ($request->hasFile('tag_washing_instruction')) {
+            if ($tagWashing && \Illuminate\Support\Facades\Storage::disk('public')->exists($tagWashing)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($tagWashing);
+            }
+            $tagWashing = $request->file('tag_washing_instruction')->store('pos_tags', 'public');
+        }
+
         DB::table('pos_locations')->where('slug', $slug)->update([
             'name' => $request->name,
             'slug' => \Illuminate\Support\Str::slug($request->slug ?? $request->name),
@@ -162,9 +186,20 @@ class PosMarketController extends Controller
             'receipt_footer' => $request->receipt_footer,
             'receipt_printer_size' => $request->receipt_printer_size ?? '80mm',
             'receipt_barcode_type' => $request->receipt_barcode_type ?? 'QR',
+            'tag_printer_size' => $request->tag_printer_size ?? '48x72',
+            'tag_custom_size_w' => $request->tag_custom_size_w,
+            'tag_custom_size_h' => $request->tag_custom_size_h,
+            'tag_margin_top' => $request->tag_margin_top ?? '0',
+            'tag_margin_bottom' => $request->tag_margin_bottom ?? '0',
+            'tag_hole_top_margin' => $request->tag_hole_top_margin ?? '8',
+            'tag_barcode_type' => $request->tag_barcode_type ?? 'QR',
+            'tag_template' => $request->tag_template ?? 'default',
+            'tag_main_logo' => $tagMainLogo,
+            'tag_icon' => $tagIcon,
+            'tag_washing_instruction' => $tagWashing,
             'updated_at' => now(),
         ]);
-        return redirect()->route('admin.pos-markets.index')->with('success', 'Store updated successfully.');
+        return back()->with('success', 'Store updated successfully.');
     }
 
     public function show($slug)
@@ -176,6 +211,7 @@ class PosMarketController extends Controller
         $assignedSkus = DB::table('pos_market_pricing')
             ->join('skus', 'pos_market_pricing.sku_id', '=', 'skus.id')
             ->join('products', 'skus.product_id', '=', 'products.id')
+            ->leftJoin('fabrics', 'products.fabric_id', '=', 'fabrics.id')
             ->leftJoin('colors', 'skus.color_id', '=', 'colors.id')
             ->leftJoin('sizes', 'skus.size_id', '=', 'sizes.id')
             ->where('pos_market_pricing.pos_location_id', $id)
@@ -185,9 +221,10 @@ class PosMarketController extends Controller
                 'skus.id as sku_id',
                 'skus.code as barcode',
                 'skus.short_code',
-                'skus.price as original_price',
+                DB::raw('COALESCE(skus.mrp, skus.price) as original_price'),
                 'products.name',
                 'products.preview_image',
+                'fabrics.name as fabric_name',
                 'skus.product_id',
                 'skus.color_id',
                 'colors.name as color_name',
@@ -214,6 +251,48 @@ class PosMarketController extends Controller
                 }
             } else {
                 $sku->image_url = null;
+            }
+
+            // Extract Chest and Length from Size Chart
+            $sku->chest = '--';
+            $sku->length = '--';
+            $sku->chest_label = 'Chest';
+            $sku->length_label = 'Length';
+            
+            $productSizeChart = DB::table('product_size_chart')->where('product_id', $sku->product_id)->first();
+            if ($productSizeChart) {
+                $chartData = DB::table('size_chart_data')->where('size_chart_id', $productSizeChart->size_chart_id)->first();
+                if ($chartData && $chartData->table_data) {
+                    $data = is_string($chartData->table_data) ? json_decode($chartData->table_data, true) : $chartData->table_data;
+                    if (is_string($data)) $data = json_decode($data, true);
+                    
+                    $m_labels = [];
+                    if (is_array($data) && isset($data['headers']) && is_array($data['headers'])) {
+                        foreach ($data['headers'] as $header) {
+                            $m_labels[] = $header;
+                        }
+                        if (count($m_labels) >= 1) $sku->chest_label = $m_labels[0];
+                        if (count($m_labels) >= 2) $sku->length_label = $m_labels[1];
+                    }
+                    
+                    if (is_array($data) && isset($data['rows']) && is_array($data['rows'])) {
+                        foreach ($data['rows'] as $row) {
+                            if (isset($row['size_code']) && strtolower(trim($row['size_code'])) === strtolower(trim($sku->size_name))) {
+                                $measurements = array_change_key_case($row['measurements'] ?? [], CASE_LOWER);
+                                
+                                if (count($m_labels) >= 1) {
+                                    $k1 = strtolower($m_labels[0]);
+                                    $sku->chest = $measurements[$k1] ?? '--';
+                                }
+                                if (count($m_labels) >= 2) {
+                                    $k2 = strtolower($m_labels[1]);
+                                    $sku->length = $measurements[$k2] ?? '--';
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -299,6 +378,16 @@ class PosMarketController extends Controller
         ]);
 
         foreach($request->variants as $variant) {
+            // Ensure the SKU has a short_code (backfill for imported products)
+            $skuModel = \App\Models\Sku::find($variant['sku_id']);
+            if ($skuModel && empty($skuModel->short_code)) {
+                do {
+                    $short = 'SKU-' . mt_rand(10000000, 99999999);
+                } while (\App\Models\Sku::where('short_code', $short)->exists());
+                $skuModel->short_code = $short;
+                $skuModel->save();
+            }
+
             DB::table('pos_market_pricing')->updateOrInsert(
                 [
                     'pos_location_id' => $id,

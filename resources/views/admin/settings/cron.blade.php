@@ -33,9 +33,9 @@
 
     {{-- Required Cron Jobs --}}
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
-            <h2 class="text-base font-bold text-gray-900">Required Cron Jobs</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Vyora requires these 3 background tasks to be running on your server.</p>
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <h2 class="text-base font-bold text-gray-900">Required Background Tasks</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Vyora requires these 4 background tasks to be running on your server.</p>
         </div>
         <div class="divide-y divide-gray-100">
             <div class="px-6 py-4 flex items-start gap-4">
@@ -73,10 +73,24 @@
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-4 mb-1">
                         <div class="font-semibold text-gray-900 text-sm">Qikink — Sync Order Status</div>
-                        <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">Every hour</span>
+                        <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">Every 10 minutes</span>
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Pulls updated tracking and fulfillment status from Qikink back into your orders. Only needed if you use Qikink.</p>
                     <code class="block text-xs bg-gray-900 text-green-400 rounded-lg px-3 py-2 font-mono break-all select-all">{{ $projectPath }}/artisan qikink:sync-orders</code>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 flex items-start gap-4">
+                <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-4 mb-1">
+                        <div class="font-semibold text-gray-900 text-sm">Zoho Books — Push Orders</div>
+                        <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">Every minute</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Pushes new and un-synced orders to your connected Zoho Books account automatically.</p>
+                    <code class="block text-xs bg-gray-900 text-green-400 rounded-lg px-3 py-2 font-mono break-all select-all">{{ $projectPath }}/artisan zoho-books:push-orders</code>
                 </div>
             </div>
         </div>
@@ -110,7 +124,7 @@
             </div>
         </div>
         <div class="p-6 space-y-5">
-            <p class="text-sm text-gray-600">Go to your hosting panel → <strong>Cron Jobs</strong> and add the following <strong>3 separate entries</strong>. Replace <code class="bg-gray-100 px-1 rounded text-xs">/usr/bin/php</code> with the path your host uses (check with your host if unsure).</p>
+            <p class="text-sm text-gray-600">Go to your hosting panel → <strong>Cron Jobs</strong> and add the following <strong>4 separate entries</strong>. Replace <code class="bg-gray-100 px-1 rounded text-xs">/usr/bin/php</code> with the path your host uses (check with your host if unsure).</p>
 
             <ol class="space-y-4">
                 <li class="flex items-start gap-3">
@@ -122,8 +136,12 @@
                     <code class="block text-xs bg-gray-900 text-green-400 rounded-lg px-3 py-2 font-mono break-all select-all flex-1">/usr/bin/php {{ $projectPath }}/artisan qikink:push-orders</code>
                 </li>
                 <li class="flex items-start gap-3">
-                    <span class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded mt-0.5 shrink-0">Every hour</span>
+                    <span class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded mt-0.5 shrink-0">Every 10 min</span>
                     <code class="block text-xs bg-gray-900 text-green-400 rounded-lg px-3 py-2 font-mono break-all select-all flex-1">/usr/bin/php {{ $projectPath }}/artisan qikink:sync-orders</code>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded mt-0.5 shrink-0">Every minute</span>
+                    <code class="block text-xs bg-gray-900 text-green-400 rounded-lg px-3 py-2 font-mono break-all select-all flex-1">/usr/bin/php {{ $projectPath }}/artisan zoho-books:push-orders</code>
                 </li>
             </ol>
         </div>

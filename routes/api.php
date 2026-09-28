@@ -65,6 +65,9 @@ Route::middleware([
 });
 
 Route::middleware(['auth:sanctum', 'throttle:authenticated_api'])->group(function () {
+    // Reviews API
+    Route::post('/products/{product}/reviews', [\App\Http\Controllers\Frontend\ReviewController::class, 'store']);
+    Route::put('/reviews/{review}', [\App\Http\Controllers\Frontend\ReviewController::class, 'update']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/cart', [\App\Http\Controllers\Api\CartController::class, 'get']);

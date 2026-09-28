@@ -30,6 +30,17 @@ class ReviewController extends Controller
         return back()->with('success', 'Reply updated successfully.');
     }
 
+    public function destroyImage($id)
+    {
+        $image = \App\Models\ReviewImage::findOrFail($id);
+        $path = public_path($image->image_path);
+        if (file_exists($path)) {
+            @unlink($path);
+        }
+        $image->delete();
+        return back()->with('success', 'Image deleted successfully.');
+    }
+
     public function destroy(Review $review)
     {
         // Delete images from storage first

@@ -22,11 +22,31 @@ class SearchController extends Controller
                         ->orWhere('short_description', 'like', "%{$query}%")
                         ->orWhere('brand_name', 'like', "%{$query}%")
                         ->orWhere('tags', 'like', "%{$query}%")
+                        ->orWhere('seo_title', 'like', "%{$query}%")
+                        ->orWhere('seo_description', 'like', "%{$query}%")
+                        ->orWhere('seo_keywords', 'like', "%{$query}%")
+                        ->orWhere('use_case', 'like', "%{$query}%")
                         ->orWhereHas('categories', function ($cq) use ($query) {
                             $cq->where('name', 'like', "%{$query}%");
                         })
                         ->orWhereHas('collections', function ($cq) use ($query) {
                             $cq->where('name', 'like', "%{$query}%");
+                        })
+                        ->orWhereHas('skus', function ($sq) use ($query) {
+                            $sq->where('code', 'like', "%{$query}%");
+                        })
+                        ->orWhereHas('fabric', function ($fq) use ($query) {
+                            $fq->where('name', 'like', "%{$query}%");
+                        })
+                        ->orWhereHas('fit', function ($fq) use ($query) {
+                            $fq->where('name', 'like', "%{$query}%");
+                        })
+                        ->orWhereHas('sizeChart', function ($sq) use ($query) {
+                            $sq->where('name', 'like', "%{$query}%");
+                        })
+                        ->orWhereHas('faqs', function ($fq) use ($query) {
+                            $fq->where('question', 'like', "%{$query}%")
+                               ->orWhere('answer', 'like', "%{$query}%");
                         });
                 });
 

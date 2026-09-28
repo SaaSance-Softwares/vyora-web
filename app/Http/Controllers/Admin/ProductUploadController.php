@@ -45,6 +45,7 @@ class ProductUploadController extends Controller
             'Attribute Color',
             'Selling price',
             'Label price',
+            'Purchase Price',
             'SKU',
             'Stock per sku',
             'Minimum order',
@@ -79,6 +80,7 @@ class ProductUploadController extends Controller
                 'Red',
                 '1500',
                 '2000',
+                '1000',
                 'HOOD-RED-L',
                 '50',
                 '1',
@@ -112,12 +114,12 @@ class ProductUploadController extends Controller
             'Pragma' => 'no-cache',
         ];
 
-        $columns = ['Item name', 'Variant', 'Product SKU', 'Design SKU', 'Store SKU', 'Selling price', 'Product price'];
+        $columns = ['Item name', 'Variant', 'Product SKU', 'Design SKU', 'Store SKU', 'Purchase Price', 'Selling price', 'Product price'];
 
         $callback = function () use ($columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
-            fputcsv($file, ['Dope T-Shirt', 'Black - S', 'PROD-123', 'DES-123', 'SKU-BLK-S', '999', '400']);
+            fputcsv($file, ['Dope T-Shirt', 'Black - S', 'PROD-123', 'DES-123', 'SKU-BLK-S', '350', '999', '1299']);
             fclose($file);
         };
 

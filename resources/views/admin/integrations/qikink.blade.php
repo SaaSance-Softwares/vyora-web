@@ -173,7 +173,7 @@
                         <li class="flex items-start gap-3 mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
                             <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <span class="text-xs text-amber-900 leading-relaxed font-medium">
-                                <b>Required:</b> For this integration to work automatically, you must configure your server's Cron Job. <a href="/occ/settings/cron" class="text-emerald-600 hover:underline font-bold">View Cron Setup Instructions &rarr;</a>
+                                <b>Required:</b> For this integration to work automatically, you must configure your server's Cron Job. <a href="{{ route('admin.settings.cron') }}" class="text-emerald-600 hover:underline font-bold">View Cron Setup Instructions &rarr;</a>
                             </span>
                         </li>
                     </ol>

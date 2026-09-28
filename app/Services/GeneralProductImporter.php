@@ -145,6 +145,7 @@ class GeneralProductImporter
                     'product_id' => $product->id,
                     'price' => $this->parsePrice($sellingPrice),
                     'mrp' => $this->parsePrice($labelPrice),
+                    'purchase_price' => !empty($row['Purchase Price']) ? $this->parsePrice($row['Purchase Price']) : null,
                     'stock' => intval($row['Stock per sku'] ?? 0),
                     'min_order_quantity' => intval($row['Minimum order'] ?? 1),
                     'max_order_quantity' => $row['Maximum order'] ? intval($row['Maximum order']) : null,

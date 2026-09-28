@@ -266,11 +266,24 @@ class PosApiController extends Controller
                             }
                         }
                     } else if (!empty($posOrder['customer_phone'])) {
-                        // Fallback to hardcoded event if no status configured
-                        app(\App\Services\WhatsAppService::class)->sendEventWhatsApp('confirmed', $orderModel);
+                        // Attempt fallback status 1
+                        $fallbackStatus = \App\Models\OrderStatus::with(['whatsappTemplate', 'smsTemplate', 'emailTemplate'])->find(1);
+                        if ($fallbackStatus) {
+                            if ($fallbackStatus->whatsappTemplate) {
+                                \App\Services\WhatsAppService::sendOrderStatusNotification($orderModel, $fallbackStatus->whatsappTemplate);
+                            }
+                            if ($fallbackStatus->smsTemplate) {
+                                \App\Services\SmsService::sendSms($posOrder['customer_phone'], $fallbackStatus->smsTemplate->content);
+                            }
+                        }
+                    }
+                    
+                    // Dispatch Zoho Books Sync if enabled
+                    if (\App\Models\ThemeSetting::where('group', 'integration.zohobooks')->where('key', 'enabled')->value('value') == '1') {
+                        \App\Jobs\SyncZohoBooksJob::dispatch($orderModel);
                     }
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("POS Notification Error: " . $e->getMessage());
+                    \Log::error("POS Sync error for UUID {$posOrder['uuid']}: " . $e->getMessage());
                 }
 
                 $processedCount++;

@@ -379,7 +379,7 @@ $shipping = $order->shippingAddress;
     {{-- STATUS UPDATE --}}
     <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
       <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Update Order</h2>
-      <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" id="statusForm">
+      <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" id="statusForm" x-data="{ saving: false }" @submit="saving = true">
         @csrf @method('PATCH')
         <div class="space-y-3">
           <div>
@@ -413,8 +413,15 @@ $shipping = $order->shippingAddress;
             <p class="text-[10px] text-gray-400">Customer will receive Email, SMS & WhatsApp with the tracking link.</p>
           </div>
 
-          <button type="submit" class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors">
-            Save Changes
+          <button type="submit" 
+                  x-bind:disabled="saving"
+                  x-bind:class="{ 'opacity-75 cursor-not-allowed': saving }"
+                  class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+            <svg x-show="saving" style="display: none;" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span x-text="saving ? 'Saving...' : 'Save Changes'">Save Changes</span>
           </button>
         </div>
       </form>
@@ -423,7 +430,7 @@ $shipping = $order->shippingAddress;
     {{-- PAYMENT STATUS UPDATE --}}
     <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
       <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Update Payment</h2>
-      <form action="{{ route('admin.orders.updatePayment', $order) }}" method="POST">
+      <form action="{{ route('admin.orders.updatePayment', $order) }}" method="POST" x-data="{ saving: false }" @submit="saving = true">
         @csrf @method('PATCH')
         <div class="space-y-3">
           <div>
@@ -444,8 +451,15 @@ $shipping = $order->shippingAddress;
             <input type="text" name="payment_received_by" value="{{ $order->payment_received_by }}" placeholder="e.g. Collected by Delivery Agent"
               class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
           </div>
-          <button type="submit" class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors mt-2">
-            Save Payment Info
+          <button type="submit" 
+                  x-bind:disabled="saving"
+                  x-bind:class="{ 'opacity-75 cursor-not-allowed': saving }"
+                  class="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors mt-2 flex items-center justify-center gap-2">
+            <svg x-show="saving" style="display: none;" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span x-text="saving ? 'Saving...' : 'Save Payment Info'">Save Payment Info</span>
           </button>
         </div>
       </form>

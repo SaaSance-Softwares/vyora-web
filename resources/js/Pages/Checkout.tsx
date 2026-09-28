@@ -106,27 +106,29 @@ function CartRow({ item, update, remove }: {
                     </div>
                 </div>
             </div>
-            {item.deliveryDate && (
+            {(item.deliveryDate || item.exchangeDays !== null || item.returnDays !== null) && (
                 <>
                     <hr className="mt-4 mb-3 border-gray-100" />
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600 bg-gray-50/50 py-2 px-3 rounded-lg border border-gray-100/50">
-                        <div className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                            <span>Delivered by <span className="font-semibold text-gray-900">{item.deliveryDate}</span></span>
-                        </div>
+                        {item.deliveryDate && (
+                            <div className="flex items-center gap-1.5">
+                                <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                <span>Delivered by <span className="font-semibold text-gray-900">{item.deliveryDate}</span></span>
+                            </div>
+                        )}
                         
                         {(item.exchangeDays !== null || item.returnDays !== null) && (
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[11px]">
                                 {item.exchangeDays !== null && item.exchangeDays !== undefined && (
                                     <span className="flex items-center gap-1">
                                         <RefreshCcw size={12} className="text-gray-400" />
-                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span> from the date of delivery
+                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span>
                                     </span>
                                 )}
                                 {item.returnDays !== null && item.returnDays !== undefined && (
                                     <span className="flex items-center gap-1">
                                         <RotateCcw size={12} className="text-gray-400" />
-                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span> from the date of delivery
+                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span>
                                     </span>
                                 )}
                             </div>

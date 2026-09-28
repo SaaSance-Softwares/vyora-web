@@ -17,6 +17,8 @@ class Product extends Model
 
     public function toSearchableArray()
     {
+        $this->loadMissing(['faqs', 'fabric', 'fit', 'sizeChart', 'skus']);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -24,6 +26,17 @@ class Product extends Model
             'short_description' => $this->short_description,
             'brand_name' => $this->brand_name,
             'tags' => $this->tags,
+            'seo_title' => $this->seo_title,
+            'seo_description' => $this->seo_description,
+            'seo_keywords' => $this->seo_keywords,
+            'use_case' => $this->use_case,
+            'fabric' => $this->fabric ? $this->fabric->name : null,
+            'fit' => $this->fit ? $this->fit->name : null,
+            'size_chart' => $this->sizeChart->pluck('name')->join(', '),
+            'skus' => $this->skus->pluck('code')->join(', '),
+            'faqs' => $this->faqs->map(function ($faq) {
+                return $faq->question . ' ' . $faq->answer;
+            })->join(' '),
         ];
     }
 

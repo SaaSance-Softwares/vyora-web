@@ -667,10 +667,19 @@ class WhatsAppService
             $firstItem = $cart->items->first();
             $imageUrl = null;
             
-            if ($firstItem && $firstItem->sku && $firstItem->sku->product) {
-                $imageObj = $firstItem->sku->product->categoryMasterImages->first();
-                if ($imageObj) {
-                    $imageUrl = $imageObj->image_url;
+            if ($firstItem) {
+                if (!empty($firstItem->image)) {
+                    // Use the specific image context captured when the user added to cart (e.g. from a specific category)
+                    $imageUrl = $firstItem->image;
+                    // Ensure it's a full URL
+                    if (!str_starts_with($imageUrl, 'http')) {
+                        $imageUrl = asset($imageUrl);
+                    }
+                } else if ($firstItem->sku && $firstItem->sku->product) {
+                    $imageObj = $firstItem->sku->product->categoryMasterImages->first();
+                    if ($imageObj) {
+                        $imageUrl = $imageObj->image_url;
+                    }
                 }
             }
             

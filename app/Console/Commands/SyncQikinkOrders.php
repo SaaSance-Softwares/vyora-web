@@ -78,8 +78,8 @@ class SyncQikinkOrders extends Command
 
         foreach ($orders as $order) {
             $this->syncOrder($order, $accessToken, $clientId, $baseUrl);
-            // Optional: small delay to avoid hitting the 30 requests/min rate limit if processing many orders
-            usleep(500000); // 0.5 seconds
+            // Sleep for 2 seconds to ensure we NEVER exceed QikInk's 30 requests/minute rate limit
+            usleep(2000000); // 2.0 seconds
         }
 
         $this->info('Qikink order sync complete.');
@@ -122,8 +122,17 @@ class SyncQikinkOrders extends Command
                 $oldStatusId = $order->order_status_id;
                 $newStatusId = null;
 
-                if (!empty($qikinkOrder['status'])) {
-                    $qStatus = strtolower(trim($qikinkOrder['status']));
+                $qikinkData = $qikinkOrder['order'] ?? $qikinkOrder; // Handle potential nested 'order' wrapper
+                if (is_array($qikinkData) && array_key_exists(0, $qikinkData)) {
+                    $qikinkData = $qikinkData[0]; // QikInk sometimes returns an array of objects
+                }
+                $statusString = $qikinkData['status'] ?? '';
+                if (!empty($qikinkData['shipping']['status'])) {
+                    $statusString .= ' ' . $qikinkData['shipping']['status'];
+                }
+                
+                if (!empty($statusString)) {
+                    $qStatus = strtolower(trim($statusString));
                     $mappedName = null;
 
                     // Shipping/Tracking mapped to OMS Status Names
@@ -133,10 +142,12 @@ class SyncQikinkOrders extends Command
                         $mappedName = 'Shipped';
                     } elseif (str_contains($qStatus, 'out for delivery')) {
                         $mappedName = 'Out for Delivery';
-                    } elseif (str_contains($qStatus, 'delivered')) {
+                    } elseif (str_contains($qStatus, 'delivered') || str_contains($qStatus, 'delivery successful')) {
                         $mappedName = 'Delivered';
                     } elseif (str_contains($qStatus, 'exception') || str_contains($qStatus, 'undelivered')) {
                         $mappedName = 'Delivery Failed';
+                    } elseif (str_contains($qStatus, 'rescheduled')) {
+                        $mappedName = 'Delivery Rescheduled';
                     } elseif (str_contains($qStatus, 'rto') || str_contains($qStatus, 'returned')) {
                         $mappedName = 'Returned';
                     } elseif (str_contains($qStatus, 'cancel')) {
@@ -144,14 +155,19 @@ class SyncQikinkOrders extends Command
                     }
 
                     if ($mappedName) {
-                        $statusModel = \App\Models\OrderStatus::where('name', $mappedName)->first();
+                        $statusModel = \App\Models\OrderStatus::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($mappedName)])->first();
                         
                         if ($statusModel) {
-                            $updateData['order_status_id'] = $statusModel->id;
-                            $updateData['status'] = strtolower($statusModel->name);
-                            $newStatusId = $statusModel->id;
+                            // Only update if it actually changed!
+                            if ($order->order_status_id !== $statusModel->id) {
+                                $updateData['order_status_id'] = $statusModel->id;
+                                $updateData['status'] = strtolower($statusModel->name);
+                                $newStatusId = $statusModel->id;
+                            }
                         } else {
-                            $updateData['status'] = strtolower($mappedName); // Fallback string
+                            if (strtolower($order->status) !== strtolower($mappedName)) {
+                                $updateData['status'] = strtolower($mappedName); // Fallback string
+                            }
                         }
 
                         if ($mappedName === 'Shipped' && !$order->shipped_at) {
@@ -160,12 +176,17 @@ class SyncQikinkOrders extends Command
                         if ($mappedName === 'Delivered' && !$order->delivered_at) {
                             $updateData['delivered_at'] = now();
                         }
+                    } else {
+                        \Log::warning("Qikink Sync: Could not map status for {$order->order_number}", [
+                            'raw_status_string' => $statusString,
+                            'qikink_order' => $qikinkOrder
+                        ]);
                     }
                 }
 
                 // 2. Update Shipping Details
-                if (!empty($qikinkOrder['shipping'])) {
-                    $shipping = $qikinkOrder['shipping'];
+                if (!empty($qikinkData['shipping'])) {
+                    $shipping = $qikinkData['shipping'];
                     if (!empty($shipping['awb']) && !$order->tracking_number) {
                         $updateData['tracking_number'] = $shipping['awb'];
                     }
@@ -174,8 +195,8 @@ class SyncQikinkOrders extends Command
                     }
                 }
 
-                if (!empty($qikinkOrder['shipping_type']) && !$order->courier_partner) {
-                    $updateData['courier_partner'] = $qikinkOrder['shipping_type'];
+                if (!empty($qikinkData['shipping_type']) && !$order->courier_partner) {
+                    $updateData['courier_partner'] = $qikinkData['shipping_type'];
                 }
 
                 if (!empty($updateData)) {

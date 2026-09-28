@@ -78,11 +78,23 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     const [reviewModalItem, setReviewModalItem] = useState<OrderItem | null>(null);
     const [reviewRating, setReviewRating] = useState(5);
     const [reviewComment, setReviewComment] = useState('');
-    const [reviewLoading, setReviewLoading] = useState(false);
+        const [reviewLoading, setReviewLoading] = useState(false);
+    const [reviewImages, setReviewImages] = useState<File[]>([]);
+    const [reviewImageError, setReviewImageError] = useState<string>('');
+    const [existingImages, setExistingImages] = useState<any[]>([]);
+    const [deletedImages, setDeletedImages] = useState<number[]>([]);
+    const [isConvertingHeic, setIsConvertingHeic] = useState(false);
 
     const openReviewModal = (item: OrderItem) => {
         setReviewModalItem(item);
+        setReviewImages([]);
+        setReviewImageError('');
+        setExistingImages([]);
+        setDeletedImages([]);
         if (item.review) {
+            if (item.review.images) {
+                setExistingImages(item.review.images);
+            }
             setReviewRating(item.review.rating);
             setReviewComment(item.review.comment || '');
         } else {
@@ -91,51 +103,127 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
         }
     };
 
-    const submitReview = async (e: any) => {
+    const handleImageSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        setReviewImageError('');
+        if (e.target.files) {
+            let files = Array.from(e.target.files);
+            
+            // Handle HEIC/HEIF conversion
+            const hasHeic = files.some(f => f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif'));
+            if (hasHeic) {
+                setIsConvertingHeic(true);
+                try {
+                    files = await Promise.all(files.map(async (file) => {
+                        if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                                                        // Dynamically import from CDN to bypass Vite worker mangling
+                            const heicModule = await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm');
+                            const convertFn = typeof heicModule.default === 'function' ? heicModule.default : heicModule;
+                            
+                            try {
+                                const convertedBlob = await convertFn({
+                                    blob: new Blob([file], { type: file.type || 'image/heic' }),
+                                    toType: "image/webp",
+                                    quality: 0.8
+                                });
+                                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                                return new File([blob], file.name.replace(/\.heic|\.heif/i, '.webp'), {
+                                    type: 'image/webp'
+                                });
+                            } catch (err) {
+                                console.warn("Local HEIC conversion failed, falling back to server conversion:", err);
+                                // Return the raw file UNMODIFIED so the server knows it's a real HEIC
+                                return file; 
+                            }
+                        }
+                        return file;
+                    }));
+                } catch (error) {
+                    console.error("Unexpected HEIC error:", error);
+                }
+                setIsConvertingHeic(false);
+            }
+
+            // Check count
+            if (existingImages.length + reviewImages.length + files.length > 5) {
+                setReviewImageError('Maximum 5 images allowed per review.');
+                return;
+            }
+            
+            // Check size (8MB = 8 * 1024 * 1024 = 8388608 bytes)
+            const oversized = files.find(f => f.size > 8388608);
+            if (oversized) {
+                setReviewImageError('One or more images exceed the 8MB maximum file size limit.');
+                return;
+            }
+            
+            setReviewImages(prev => [...prev, ...files]);
+        }
+    };
+    
+    const removeExistingImage = (id: number) => {
+        setExistingImages(prev => prev.filter(img => img.id !== id));
+        setDeletedImages(prev => [...prev, id]);
+    };
+    
+    const removeImage = (index: number) => {
+        setReviewImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+        const submitReview = async (e: any) => {
         e.preventDefault();
         if (!reviewModalItem) return;
+        
         setReviewLoading(true);
+        setReviewImageError('');
+        
         try {
+            const formData = new FormData();
+            formData.append('rating', reviewRating.toString());
+            if (reviewComment) formData.append('comment', reviewComment);
+            if (reviewModalItem.order_id) formData.append('order_id', reviewModalItem.order_id.toString());
+            
+            if (reviewImages.length > 0) {
+                reviewImages.forEach((img, i) => formData.append(`images[${i}]`, img));
+            }
+
+            let endpoint = '';
+
             if (reviewModalItem.review) {
                 // Update
-                router.put(`/reviews/${reviewModalItem.review.id}`, {
-                    rating: reviewRating,
-                    comment: reviewComment
-                }, {
-                    onSuccess: () => {
-                        setReviewModalItem(null);
-                        fetchOrder();
-                    }
-                });
+                formData.append('_method', 'put');
+                if (deletedImages.length > 0) {
+                    deletedImages.forEach((imgId, i) => formData.append(`deleted_images[${i}]`, imgId.toString()));
+                }
+                endpoint = `/api/reviews/${reviewModalItem.review.id}`;
             } else {
                 // Store
-                router.post(`/products/${reviewModalItem.product_id}/reviews`, {
-                    rating: reviewRating,
-                    comment: reviewComment
-                }, {
-                    onSuccess: () => {
-                        setReviewModalItem(null);
-                        fetchOrder();
-                    }
-                });
+                endpoint = `/api/products/${reviewModalItem.product_id}/reviews`;
             }
-        } catch (e) {
-            console.error(e);
+
+            await api.post(endpoint, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            setReviewModalItem(null);
+            if (typeof fetchOrder === 'function') fetchOrder();
+            if (typeof fetchData === 'function') fetchData();
+            
+        } catch (err: any) {
+            console.error("Review API Error:", err);
+            // Handle validation errors (422) or custom errors (403)
+            let errMsg = "Error submitting review. Please try again.";
+            if (err.response?.data?.error) {
+                errMsg = err.response.data.error;
+            } else if (err.response?.data?.message) {
+                errMsg = err.response.data.message;
+            } else if (err.response?.data?.errors) {
+                const firstError = Object.values(err.response.data.errors)[0];
+                if (firstError) errMsg = String(firstError);
+            }
+            setReviewImageError(errMsg);
         } finally {
             setReviewLoading(false);
         }
-    };
-
-    
-    const getActionFee = (action: 'cancel' | 'return' | 'exchange') => {
-        const method = order?.payment_method === 'cod' ? 'cod' : 'prepaid';
-        const rules = settings?.shipping_rules?.[method];
-        if (rules && rules[`${action}_fee`]) {
-            const percent = parseFloat(rules[`${action}_fee`]);
-            const baseValue = order?.items.reduce((acc: number, item: any) => acc + (parseFloat(item.price as string || "0") * item.quantity), 0) || 0;
-            return (percent / 100) * baseValue;
-        }
-        return 0;
     };
 
     const handleActionSubmit = async () => {
@@ -226,6 +314,11 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                         <div>
                             <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusStyle(order.status)} shadow-sm`}>
                                 {order.status}
+                                {order.status === 'delivered' && (
+                                    <span className="ml-1 opacity-80 font-medium">
+                                        (On {new Date(order.updated_at || order.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
+                                    </span>
+                                )}
                             </span>
                         </div>
                     </div>
@@ -433,26 +526,34 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                 <div className="space-y-6">
                                     <div>
                                         <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3">Shipping Address</h3>
-                                        <p className="text-sm text-gray-800 leading-relaxed font-medium">
-                                            <span className="block text-gray-900 font-bold mb-1">{order.shipping_address.name}</span>
-                                            {order.shipping_address.address_line1}<br />
-                                            {order.shipping_address.address_line2 && <>{order.shipping_address.address_line2}<br /></>}
-                                            {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zip_code}
-                                        </p>
+                                        {order.shipping_address ? (
+                                            <p className="text-sm text-gray-800 leading-relaxed font-medium">
+                                                <span className="block text-gray-900 font-bold mb-1">{order.shipping_address.name}</span>
+                                                {order.shipping_address.address_line1}<br />
+                                                {order.shipping_address.address_line2 && <>{order.shipping_address.address_line2}<br /></>}
+                                                {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zip_code}
+                                            </p>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">No shipping address provided.</p>
+                                        )}
                                     </div>
 
                                     <div>
                                         <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3">Contact Details</h3>
-                                        <div className="text-sm text-gray-800 font-medium space-y-1.5">
-                                            <p className="flex items-center gap-2">
-                                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                                {order.shipping_address.email}
-                                            </p>
-                                            <p className="flex items-center gap-2">
-                                                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                                {order.shipping_address.phone}
-                                            </p>
-                                        </div>
+                                        {order.shipping_address ? (
+                                            <div className="text-sm text-gray-800 font-medium space-y-1.5">
+                                                <p className="flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                                    {order.shipping_address.email}
+                                                </p>
+                                                <p className="flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                                    {order.shipping_address.phone}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">No contact details provided.</p>
+                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
@@ -609,6 +710,67 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                     className="w-full border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm p-3"
                                     placeholder="What did you like or dislike? What did you use this product for?"
                                 ></textarea>
+                            </div>
+                            
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Photos (Max 5, up to 8MB each, supports HEIC)</label>
+                                
+                                <div className="flex flex-wrap gap-3 mb-3">
+                                    {existingImages.map((img) => (
+                                        <div key={`existing-${img.id}`} className="relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group">
+                                                                                        {img.image_path.toLowerCase().endsWith('.heic') || img.image_path.toLowerCase().endsWith('.heif') ? (
+                                                <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400">
+                                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                    <span className="text-[8px] font-bold mt-0.5">HEIC</span>
+                                                </div>
+                                            ) : (
+                                                <img src={`/${img.image_path}`} className="w-full h-full object-cover rounded-lg" onError={(e) => {
+                                                    e.currentTarget.onerror = null;
+                                                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+                                                }} />
+                                            )}
+                                            <button type="button" onClick={() => removeExistingImage(img.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10">
+                                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    {reviewImages.map((file, i) => (
+                                        <div key={`new-${i}`} className="relative w-16 h-16 rounded-lg border border-gray-200 shadow-sm group">
+                                                                                        {file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') ? (
+                                                <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400">
+                                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                    <span className="text-[8px] font-bold mt-0.5">HEIC</span>
+                                                </div>
+                                            ) : (
+                                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded-lg" onError={(e) => {
+                                                    e.currentTarget.onerror = null;
+                                                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[8px] font-bold mt-0.5">IMG</span></div>';
+                                                }} />
+                                            )}
+                                            <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10">
+                                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    {(existingImages.length + reviewImages.length) < 5 && (
+                                        <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition-colors cursor-pointer bg-gray-50 relative">
+                                            {isConvertingHeic ? (
+                                                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                                                    <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" multiple onChange={handleImageSelection} className="hidden" disabled={isConvertingHeic} />
+                                                </>
+                                            )}
+                                        </label>
+                                    )}
+                                </div>
+                                
+                                {reviewImageError && (
+                                    <p className="text-xs text-red-500 font-semibold">{reviewImageError}</p>
+                                )}
                             </div>
                             
                             <div className="flex justify-end gap-3">

@@ -32,7 +32,7 @@ class Order extends Model
                     ->with(['smsTemplate', 'emailTemplate', 'whatsappTemplate'])
                     ->first();
 
-                if ($expectedStatus && $order->order_status_id !== $expectedStatus->id) {
+                if ($expectedStatus && $order->order_status_id != $expectedStatus->id) {
                     Order::withoutEvents(function () use ($order, $expectedStatus) {
                         $order->update(['order_status_id' => $expectedStatus->id]);
                     });

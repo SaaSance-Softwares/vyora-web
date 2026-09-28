@@ -525,7 +525,6 @@ export default function Dashboard() {
                                             value={cashAmount}
                                             onChange={(e) => setCashAmount(e.target.value ? Number(e.target.value) : '')}
                                             className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold"
-                                            autoFocus
                                         />
                                     </div>
                                 )}
@@ -547,7 +546,6 @@ export default function Dashboard() {
                                                 value={upiAmount}
                                                 onChange={(e) => setUpiAmount(e.target.value ? Number(e.target.value) : '')}
                                                 className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white text-lg font-bold text-purple-700"
-                                                autoFocus
                                             />
                                         </div>
                                         <div>

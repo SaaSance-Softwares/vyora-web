@@ -179,10 +179,9 @@
             </div>
             @endif
         </div>
-
-
-
     </div>
+</div>
+    <!-- End Tab Content: Product Info -->
 
     <!-- Tab Content: SEO and AEO -->
     <div id="tab-seo" class="tab-content hidden flex flex-col gap-6">
@@ -342,25 +341,26 @@
     <!-- Tab Content: SKUs & Variants -->
     <div id="tab-skus" class="tab-content hidden">
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Variants & Pricing (SKUs)</h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Variants & Pricing (SKUs)</h3>
+                <div class="flex gap-2">
+                    <button type="button" onclick="copyToAll('sku-price')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync Price</button>
+                    <button type="button" onclick="copyToAll('sku-mrp')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync MRP</button>
+                    <button type="button" onclick="copyToAll('sku-purchase')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors text-blue-600 font-medium">Sync Purchase</button>
+                    <button type="button" onclick="copyToAll('sku-stock')" class="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 transition-colors">Sync Stock</button>
+                </div>
+            </div>
 
             <div class="mt-6 border-t pt-4">
-                <h4 class="text-sm font-medium text-gray-900 mb-3">Add Variants</h4>
-                <div class="grid grid-cols-12 gap-2 mb-2 px-3">
-                    <div class="col-span-2 text-xs font-medium text-gray-500">SKU</div>
-                    <div class="col-span-2 text-xs font-medium text-gray-500">Color</div>
-                    <div class="col-span-2 text-xs font-medium text-gray-500">Size</div>
-                    <div class="col-span-2 text-xs font-medium text-gray-500">Price</div>
-                    <div class="col-span-2 text-xs font-medium text-gray-500">Stock</div>
-                    <div class="col-span-2"></div>
-                </div>
-                <div id="new-variants-container"></div>
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Add Variants</h4>
                 
-                <button type="button" onclick="addNewVariantRow()" class="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-900 font-medium px-3">
+                <div id="new-variants-container" class="space-y-4"></div>
+                
+                <button type="button" onclick="addNewVariantRow()" class="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                     </svg>
-                    Add Variant Row
+                    Add Row
                 </button>
             </div>
         </div>
@@ -369,36 +369,61 @@
 
     <!-- Template for new variant row -->
     <template id="new-variant-template">
-        <div class="grid grid-cols-12 gap-2 mb-2 px-3 new-variant-row items-center bg-gray-50 p-2 rounded">
+        <div class="grid grid-cols-12 gap-2 mb-2 px-3 new-variant-row items-center bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-violet-100 transition-all">
             <div class="col-span-2">
-                <input type="text" name="new_skus[INDEX][code]" placeholder="SKU Code" class="w-full border-gray-300 rounded text-xs p-1">
+                <input type="text" name="new_skus[INDEX][code]" placeholder="SKU CODE" class="w-full border-gray-200 rounded-lg text-xs p-2 font-bold uppercase">
             </div>
             <div class="col-span-2">
-                <select name="new_skus[INDEX][color_id]" class="w-full border-gray-300 rounded text-xs p-1">
-                    <option value="">Select Color</option>
+                <select name="new_skus[INDEX][color_id]" class="w-full border-gray-200 rounded-lg text-xs p-2 font-bold">
+                    <option value="">COLOR</option>
                     @foreach($colors as $color)
                         <option value="{{ $color->id }}">{{ $color->name }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-span-2">
-                <input type="text" name="new_skus[INDEX][size]" placeholder="Size (e.g., S, M, L, A3)" class="w-full border-gray-300 rounded text-xs p-1">
+                <input type="text" name="new_skus[INDEX][size]" placeholder="SIZE" class="w-full border-gray-200 rounded-lg text-xs p-2 font-bold uppercase">
             </div>
-            <div class="col-span-2 flex flex-col gap-1">
-                <input type="number" step="0.01" name="new_skus[INDEX][price]" placeholder="SP" class="w-full border-gray-300 rounded text-xs p-1">
-                <input type="number" step="0.01" name="new_skus[INDEX][mrp]" placeholder="MRP" class="w-full border-gray-300 rounded text-[10px] p-1 text-gray-500">
+            <div class="col-span-1">
+                <input type="text" name="new_skus[INDEX][design_sku]" placeholder="DESIGN SKU" class="w-full border-gray-200 rounded-lg text-xs p-2 font-mono">
             </div>
-            <div class="col-span-2">
-                <input type="number" name="new_skus[INDEX][stock]" placeholder="Stock" class="w-full border-gray-300 rounded text-xs p-1">
+            <div class="col-span-1">
+                <input type="text" name="new_skus[INDEX][product_sku]" placeholder="PRODUCT SKU" class="w-full border-gray-200 rounded-lg text-xs p-2 font-mono">
             </div>
-            <div class="col-span-2 text-right">
-                <button type="button" onclick="this.closest('.new-variant-row').remove()" class="text-red-600 hover:text-red-900 text-xs font-medium">Remove</button>
+            <div class="col-span-1">
+                <input type="number" step="0.01" name="new_skus[INDEX][price]" placeholder="SP" class="sku-price w-full border-gray-200 rounded-lg text-[10px] p-2 font-bold">
+            </div>
+            <div class="col-span-1">
+                <input type="number" step="0.01" name="new_skus[INDEX][mrp]" placeholder="MRP" class="sku-mrp w-full border-gray-200 rounded-lg text-[10px] p-2 text-gray-500">
+            </div>
+            <div class="col-span-1">
+                <input type="number" step="0.01" name="new_skus[INDEX][purchase_price]" placeholder="Purch" class="sku-purchase w-full border-gray-200 rounded-lg text-[10px] p-2 text-blue-500">
+            </div>
+            <div class="col-span-1">
+                <input type="number" name="new_skus[INDEX][stock]" placeholder="QTY" class="sku-stock w-full border-gray-200 rounded-lg text-xs p-2 font-bold">
+            </div>
+            <div class="col-span-1 text-right">
+                <button type="button" onclick="this.closest('.new-variant-row').remove()" class="p-2 text-red-300 hover:text-red-500 rounded-lg transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
         </div>
     </template>
 
     <script>
         let newVariantIndex = 0;
+        function copyToAll(className) {
+            const first = document.querySelector(`.${className}`);
+            if (first) document.querySelectorAll(`.${className}`).forEach(i => i.value = first.value);
+        }
+
+        function syncDimensions() {
+            copyToAll('sku-width');
+            copyToAll('sku-height');
+            copyToAll('sku-length');
+            copyToAll('sku-weight');
+        }
+
         function addNewVariantRow() {
             const container = document.getElementById('new-variants-container');
             const template = document.getElementById('new-variant-template');

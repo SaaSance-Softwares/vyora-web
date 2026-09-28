@@ -19,5 +19,5 @@ Artisan::command('debug:cats', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('cart:abandoned-emails')->everyFifteenMinutes();
-Schedule::command('qikink:sync-orders')->hourly();
+Schedule::command('qikink:sync-orders')->everyTenMinutes();
 Schedule::command('qikink:push-orders')->everyMinute();
