@@ -59,18 +59,18 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     // Filters
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
-        in_stock: initialFilters?.in_stock || false,
-        sort: initialFilters?.sort || 'new',
-        min_price: initialFilters?.min_price || '',
-        max_price: initialFilters?.max_price || '',
-        size: initialFilters?.size || [],
-        color: initialFilters?.color || [],
-        fit: initialFilters?.fit || [],
-        fabric: initialFilters?.fabric || [],
+        in_stock: searchParams.has('in_stock') ? searchParams.get('in_stock') === '1' : (initialFilters?.in_stock || false),
+        sort: searchParams.get('sort') || initialFilters?.sort || 'new',
+        min_price: searchParams.get('min_price') || initialFilters?.min_price || '',
+        max_price: searchParams.get('max_price') || initialFilters?.max_price || '',
+        size: searchParams.get('size') ? searchParams.get('size')!.split(',') : (initialFilters?.size || []),
+        color: searchParams.get('color') ? searchParams.get('color')!.split(',') : (initialFilters?.color || []),
+        fit: searchParams.get('fit') ? searchParams.get('fit')!.split(',') : (initialFilters?.fit || []),
+        fabric: searchParams.get('fabric') ? searchParams.get('fabric')!.split(',') : (initialFilters?.fabric || []),
     });
 
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        sort: true, price: true, size: true, color: true, fit: false, fabric: false
+        sort: true, price: true, size: true, color: true, fit: true, fabric: true
     });
 
     const toggleSection = (section: string) => {
@@ -122,6 +122,8 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                     const dynamicFilters = (res.data as any).filters;
                     if (dynamicFilters.fits) setAvailableFits(dynamicFilters.fits);
                     if (dynamicFilters.fabrics) setAvailableFabrics(dynamicFilters.fabrics);
+                    if (dynamicFilters.colors) setAvailableColors(dynamicFilters.colors);
+                    if (dynamicFilters.sizes) setAvailableSizes(dynamicFilters.sizes);
                 }
             }
             
@@ -141,6 +143,33 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         setPage(1);
         setHasMore(true);
         fetchProducts(1, false);
+
+        // Update browser URL silently for sharing/bookmarking
+        const params = new URLSearchParams(window.location.search);
+        
+        // Remove existing filter params
+        params.delete('in_stock');
+        params.delete('sort');
+        params.delete('min_price');
+        params.delete('max_price');
+        params.delete('size');
+        params.delete('color');
+        params.delete('fit');
+        params.delete('fabric');
+        
+        // Add active params
+        if (filters.in_stock) params.set('in_stock', '1');
+        if (filters.sort && filters.sort !== 'new') params.set('sort', filters.sort);
+        if (filters.min_price) params.set('min_price', filters.min_price);
+        if (filters.max_price) params.set('max_price', filters.max_price);
+        if (filters.size.length) params.set('size', filters.size.join(','));
+        if (filters.color.length) params.set('color', filters.color.join(','));
+        if (filters.fit.length) params.set('fit', filters.fit.join(','));
+        if (filters.fabric.length) params.set('fabric', filters.fabric.join(','));
+        
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+
     }, [filters, fetchProducts, activeQueryKey, activeQueryValue]);
 
     // Infinite scroll intersection observer
@@ -189,12 +218,12 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         });
     };
 
-    const [availableFits, setAvailableFits] = useState<string[]>([]);
-    const [availableFabrics, setAvailableFabrics] = useState<string[]>([]);
+    const [availableFits, setAvailableFits] = useState<{name: string, count: number}[]>([]);
+    const [availableFabrics, setAvailableFabrics] = useState<{name: string, count: number}[]>([]);
+    const [availableColors, setAvailableColors] = useState<{name: string, hex: string, count: number}[]>([]);
+    const [availableSizes, setAvailableSizes] = useState<{name: string, count: number}[]>([]);
 
     // Dummy filter options for UI demonstration. In a real app, these should come from API.
-    const MOCK_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
-    const MOCK_COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Navy'];
 
     const displayTitle = title ? title : (activeQueryValue ? activeQueryValue.split('-').join(' ') : 'Products');
 
@@ -244,18 +273,23 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
 
                 {/* Sidebar Filters */}
                 <div className={`
-                    fixed lg:sticky top-[64px] pb-16 lg:pb-0 right-0 h-[calc(100vh-64px)] lg:h-auto 
+                    fixed lg:sticky top-[80px] pb-16 lg:pb-0 right-0 max-h-[calc(100vh-64px)] lg:max-h-[calc(100vh-100px)]
                     w-80 lg:w-64 bg-white z-40 lg:z-0 
                     transform transition-transform duration-300 ease-in-out
                     flex flex-col border-l lg:border-l-0 lg:border-r border-gray-100 pr-0 lg:pr-6
                     ${isFilterOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
                 `}>
-                    <div className="flex items-center justify-between p-4 lg:p-0 lg:pb-4 border-b lg:border-none">
+                    <div className="flex items-center justify-between p-4 lg:p-0 lg:pb-4 border-b lg:border-none shrink-0">
                         <h2 className="text-lg font-bold flex items-center gap-2"><Filter size={18} /> Filters</h2>
-                        <button onClick={() => setIsFilterOpen(false)} className="lg:hidden p-2 text-gray-500"><X size={20} /></button>
+                        <div className="flex items-center gap-3">
+                            <button onClick={clearFilters} className="text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2">
+                                Clear
+                            </button>
+                            <button onClick={() => setIsFilterOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500"><X size={20} /></button>
+                        </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 lg:p-0 space-y-6 lg:mt-2 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 lg:p-0 space-y-6 lg:mt-2 custom-scrollbar min-h-0">
                         
                         {/* Availability */}
                         <label className="flex items-center gap-3 cursor-pointer group">
@@ -302,41 +336,55 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         </div>
 
                         {/* Size */}
-                        <div className="border-t border-gray-100 pt-5">
-                            <button onClick={() => toggleSection('size')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
-                                Size <ChevronDown size={16} className={`transition-transform ${expandedSections.size ? 'rotate-180' : ''}`} />
-                            </button>
-                            {expandedSections.size && (
-                                <div className="flex flex-wrap gap-2">
-                                    {MOCK_SIZES.map(s => (
-                                        <button 
-                                            key={s}
-                                            onClick={() => toggleArrayFilter('size', s)}
-                                            className={`min-w-[40px] h-10 px-2 rounded-md border text-sm font-medium transition-colors ${filters.size.includes(s) ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}
-                                        >
-                                            {s}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {availableSizes.length > 0 && (
+                            <div className="border-t border-gray-100 pt-5">
+                                <button onClick={() => toggleSection('size')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                    Size <ChevronDown size={16} className={`transition-transform ${expandedSections.size ? 'rotate-180' : ''}`} />
+                                </button>
+                                {expandedSections.size && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableSizes.map(s => (
+                                            <button 
+                                                key={s.name}
+                                                onClick={() => toggleArrayFilter('size', s.name)}
+                                                className={`min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 ${filters.size.includes(s.name) ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}
+                                            >
+                                                <span>{s.name}</span>
+                                                <span className={`text-xs opacity-60 ${filters.size.includes(s.name) ? 'text-gray-300' : 'text-gray-500'}`}>({s.count})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Color */}
-                        <div className="border-t border-gray-100 pt-5">
-                            <button onClick={() => toggleSection('color')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
-                                Color <ChevronDown size={16} className={`transition-transform ${expandedSections.color ? 'rotate-180' : ''}`} />
-                            </button>
-                            {expandedSections.color && (
-                                <div className="space-y-2">
-                                    {MOCK_COLORS.map(c => (
-                                        <label key={c} className="flex items-center gap-3 cursor-pointer group">
-                                            <input type="checkbox" checked={filters.color.includes(c)} onChange={() => toggleArrayFilter('color', c)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
-                                            <span className="text-sm text-gray-600 group-hover:text-black">{c}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {availableColors.length > 0 && (
+                            <div className="border-t border-gray-100 pt-5">
+                                <button onClick={() => toggleSection('color')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                    Color <ChevronDown size={16} className={`transition-transform ${expandedSections.color ? 'rotate-180' : ''}`} />
+                                </button>
+                                {expandedSections.color && (
+                                    <div className="space-y-2">
+                                        {availableColors.map(c => (
+                                            <label key={c.name} className="flex items-center justify-between cursor-pointer group w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" checked={filters.color.includes(c.name)} onChange={() => toggleArrayFilter('color', c.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <div className="flex items-center gap-2">
+                                                        <span 
+                                                            className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" 
+                                                            style={{ backgroundColor: c.hex || '#ffffff' }}
+                                                        />
+                                                        <span className="text-sm text-gray-600 group-hover:text-black">{c.name}</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-gray-400 text-xs mr-3">{c.count}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Fit */}
                         {availableFits.length > 0 && (
@@ -347,9 +395,12 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                 {expandedSections.fit && (
                                     <div className="space-y-2">
                                         {availableFits.map(f => (
-                                            <label key={f} className="flex items-center gap-3 cursor-pointer group">
-                                                <input type="checkbox" checked={filters.fit.includes(f)} onChange={() => toggleArrayFilter('fit', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
-                                                <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
+                                            <label key={f.name} className="flex items-center justify-between cursor-pointer group w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" checked={filters.fit.includes(f.name)} onChange={() => toggleArrayFilter('fit', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <span className="text-sm text-gray-600 group-hover:text-black">{f.name}</span>
+                                                </div>
+                                                <span className="text-gray-400 text-xs mr-3">{f.count}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -366,9 +417,12 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                 {expandedSections.fabric && (
                                     <div className="space-y-2 pt-2">
                                         {availableFabrics.map(f => (
-                                            <label key={f} className="flex items-center gap-3 cursor-pointer group">
-                                                <input type="checkbox" checked={filters.fabric.includes(f)} onChange={() => toggleArrayFilter('fabric', f)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
-                                                <span className="text-sm text-gray-600 group-hover:text-black">{f}</span>
+                                            <label key={f.name} className="flex items-center justify-between cursor-pointer group w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" checked={filters.fabric.includes(f.name)} onChange={() => toggleArrayFilter('fabric', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <span className="text-sm text-gray-600 group-hover:text-black">{f.name}</span>
+                                                </div>
+                                                <span className="text-gray-400 text-xs mr-3">{f.count}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -376,13 +430,12 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                             </div>
                         )}
 
+                        {/* Spacer block at the end to guarantee extra scrollable space so items aren't cut off */}
+                        <div className="h-20 w-full shrink-0 lg:h-32"></div>
                     </div>
 
-                    <div className="p-4 border-t border-gray-100 lg:sticky lg:bottom-0 lg:bg-white z-10 w-full">
-                        <button onClick={clearFilters} className="w-full py-2.5 text-sm font-bold text-gray-500 hover:text-black hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200">
-                            Clear All Filters
-                        </button>
-                        <button onClick={() => setIsFilterOpen(false)} className="w-full mt-2 py-3 bg-black text-white text-sm font-bold rounded-lg lg:hidden shadow-sm">
+                    <div className="p-4 border-t border-gray-100 mt-auto bg-white z-10 w-full lg:hidden">
+                        <button onClick={() => setIsFilterOpen(false)} className="w-full py-3 bg-black text-white text-sm font-bold rounded-lg shadow-sm">
                             Show Results
                         </button>
                     </div>

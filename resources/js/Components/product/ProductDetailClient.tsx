@@ -681,7 +681,10 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                     <img src={matchingImg.url} alt={color.value} className="w-full h-full absolute inset-0 object-cover" />
                                                 )}
                                                 {/* Hover Tooltip Overlay mapped over visually */}
-                                                <span className="absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-opacity uppercase z-10 text-center leading-none">
+                                                <span className={cn(
+                                                    "absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-all duration-300 uppercase z-10 text-center leading-none",
+                                                    selectedColor === color.value ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full group-hover:opacity-100 group-hover:translate-y-0"
+                                                )}>
                                                     {color.value}
                                                 </span>
                                             </button>
@@ -1192,7 +1195,10 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                     style={{ backgroundColor: color.meta || '#ccc' }}
                                                 />
                                             </button>
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20">
+                                            <div className={cn(
+                                                "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20",
+                                                selectedColor === color.value ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                            )}>
                                                 {color.value}
                                             </div>
                                         </div>

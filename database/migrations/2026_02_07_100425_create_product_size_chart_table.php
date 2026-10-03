@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('product_size_chart', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignId('size_chart_id')->constrained('size_charts')->onDelete('cascade');
-            $table->timestamps();
+        if (!Schema::hasTable('product_size_chart')) {
+            Schema::create('product_size_chart', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+                $table->foreignId('size_chart_id')->constrained('size_charts')->onDelete('cascade');
+                $table->timestamps();
 
-            // Ensure one product can only have one size chart
-            $table->unique('product_id');
-        });
+                // Ensure one product can only have one size chart
+                $table->unique('product_id');
+            });
+        }
     }
 
     /**

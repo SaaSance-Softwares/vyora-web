@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('category_product', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('category_id')->constrained()->cascadeOnDelete();
-            $table->timestamps();
+        Schema::table('products', function (Blueprint $table) {
+            $table->boolean('is_featured')->default(false)->after('is_active');
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('category_product');
+        Schema::table('products', function (Blueprint $table) {
+            $table->dropColumn('is_featured');
+        });
     }
 };

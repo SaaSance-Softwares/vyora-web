@@ -72,10 +72,14 @@ export default function PriceHistoryModal({ isOpen, onClose, skuId, skuName }: P
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke={textColor} />
-                    <XAxis dataKey="date" tick={{fontSize: 12, fill: textColor}} />
+                    <XAxis 
+                        dataKey="fullDate" 
+                        tickFormatter={(val) => new Date(val).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} 
+                        tick={{fontSize: 12, fill: textColor}} 
+                    />
                     <YAxis tick={{fontSize: 12, fill: textColor}} domain={['auto', 'auto']} tickFormatter={(value) => `₹${value}`} />
                     <RechartsTooltip 
-                        formatter={(value: number) => [`₹${value}`, undefined]}
+                        formatter={(value: number, name: string) => [`₹${value} (${name})`, undefined]}
                         labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
                         contentStyle={{ backgroundColor: bgColor, color: textColor, borderColor: textColor, opacity: 0.9 }}
                     />
