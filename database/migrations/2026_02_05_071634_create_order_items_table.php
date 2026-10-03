@@ -11,22 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('sku_id')->nullable()->constrained()->nullOnDelete();
+        if (!Schema::hasTable('order_items')) {
+            Schema::create('order_items', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+                $table->foreignId('sku_id')->nullable()->constrained()->nullOnDelete();
 
-            // Snapshots - in case product details change later
-            $table->string('product_name');
-            $table->string('variant_name')->nullable(); // "Black - L"
+                // Snapshots - in case product details change later
+                $table->string('product_name');
+                $table->string('variant_name')->nullable(); // "Black - L"
 
-            $table->integer('quantity');
-            $table->decimal('price', 10, 2); // Unit price at booking
-            $table->decimal('total', 10, 2); // price * quantity
+                $table->integer('quantity');
+                $table->decimal('price', 10, 2); // Unit price at booking
+                $table->decimal('total', 10, 2); // price * quantity
 
-            $table->timestamps();
-        });
+                $table->timestamps();
+            });
+        }
     }
 
     /**

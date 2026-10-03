@@ -11,32 +11,34 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uuid')->unique(); // Public ID
-            $table->string('order_number')->unique(); // Readable ID like ORD-1001
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+        if (!Schema::hasTable('orders')) {
+            Schema::create('orders', function (Blueprint $table) {
+                $table->id();
+                $table->uuid('uuid')->unique(); // Public ID
+                $table->string('order_number')->unique(); // Readable ID like ORD-1001
+                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
 
-            // Status
-            $table->enum('status', ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'])->default('pending');
-            $table->enum('payment_status', ['pending', 'paid', 'failed', 'refunded'])->default('pending');
-            $table->string('payment_method')->nullable();
-            $table->string('transaction_id')->nullable();
+                // Status
+                $table->enum('status', ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'])->default('pending');
+                $table->enum('payment_status', ['pending', 'paid', 'failed', 'refunded'])->default('pending');
+                $table->string('payment_method')->nullable();
+                $table->string('transaction_id')->nullable();
 
-            // Financials
-            $table->decimal('total_amount', 10, 2);
-            $table->decimal('shipping_amount', 10, 2)->default(0);
-            $table->decimal('tax_amount', 10, 2)->default(0);
-            $table->decimal('discount_amount', 10, 2)->default(0);
-            $table->string('coupon_code')->nullable();
+                // Financials
+                $table->decimal('total_amount', 10, 2);
+                $table->decimal('shipping_amount', 10, 2)->default(0);
+                $table->decimal('tax_amount', 10, 2)->default(0);
+                $table->decimal('discount_amount', 10, 2)->default(0);
+                $table->string('coupon_code')->nullable();
 
-            // Addresses
-            $table->foreignId('shipping_address_id')->nullable()->constrained('addresses')->nullOnDelete();
-            $table->foreignId('billing_address_id')->nullable()->constrained('addresses')->nullOnDelete();
+                // Addresses
+                $table->foreignId('shipping_address_id')->nullable()->constrained('addresses')->nullOnDelete();
+                $table->foreignId('billing_address_id')->nullable()->constrained('addresses')->nullOnDelete();
 
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
+                $table->text('notes')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**
