@@ -49,6 +49,8 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                     sizeName: sizeAttr?.value || undefined,
                     size: sizeAttr?.value || undefined,
                     deliveryDate: data.delivery_timeline?.formatted_date || undefined,
+                    exchangeDays: data.is_exchangeable ? data.exchange_days : null,
+                    returnDays: data.is_returnable ? data.return_days : null,
                 });
                 if (action === 'buy') {
                     router.visit('/checkout');

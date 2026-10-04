@@ -98,6 +98,8 @@ export default function QuickViewModal() {
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
             deliveryDate: product.delivery_timeline?.formatted_date || undefined,
+            exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+            returnDays: product.is_returnable ? product.return_days : null,
         });
         
         closeQuickView();

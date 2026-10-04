@@ -145,6 +145,11 @@ class ProductResource extends JsonResource
             'video' => $videoUrl,
             'category' => $this->categories->first()?->name ?? 'General',
             'is_new' => $this->created_at->diffInDays(now()) < 7,
+            'is_featured' => (bool) $this->is_featured,
+            'is_returnable' => (bool) $this->is_returnable,
+            'return_days' => $this->return_days,
+            'is_exchangeable' => (bool) $this->is_exchangeable,
+            'exchange_days' => $this->exchange_days,
 
             'delivery_timeline' => $this->deliveryTimeline ? [
                 'min_days' => $this->deliveryTimeline->min_days,

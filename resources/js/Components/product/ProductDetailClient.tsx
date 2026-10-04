@@ -297,6 +297,8 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
             deliveryDate: product.delivery_timeline?.formatted_date || undefined,
+            exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+            returnDays: product.is_returnable ? product.return_days : null,
         });
         trackAddToCart(product, 1);
     }
@@ -358,6 +360,8 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             sizeName: selectedSize || undefined,
             size: selectedSize || undefined,
             deliveryDate: product.delivery_timeline?.formatted_date || undefined,
+            exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+            returnDays: product.is_returnable ? product.return_days : null,
         });
         trackAddToCart(product, 1);
         router.visit('/checkout');
