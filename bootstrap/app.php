@@ -58,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             CheckInstalled::class,
             HandleInertiaRequests::class,
+            \App\Http\Middleware\EnsureConsentIsGiven::class,
         ]);
 
         $middleware->api(prepend: [

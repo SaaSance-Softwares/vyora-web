@@ -305,6 +305,9 @@ Route::prefix('install')->name('install.')->group(function () {
 });
 
 // Frontend Auth Routes
+Route::get('/consent', [\App\Http\Controllers\Auth\ConsentController::class, 'show'])->name('frontend.consent');
+Route::post('/consent', [\App\Http\Controllers\Auth\ConsentController::class, 'store'])->name('frontend.consent.submit');
+
 Route::get('/s/{short_code}', [App\Http\Controllers\Frontend\ShortlinkController::class, 'resolve'])->name('frontend.shortlink.resolve');
 
 Route::get('/login', function () {
