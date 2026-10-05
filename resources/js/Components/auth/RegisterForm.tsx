@@ -421,6 +421,23 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
                             </div>
                         </label>
 
+                        {settings?.marketing_consent_fields?.whatsapp && (
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="relative flex items-start mt-0.5">
+                                    <input 
+                                        type="checkbox" 
+                                        className="peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer"
+                                        checked={form.marketing_preferences.whatsapp}
+                                        onChange={(e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, whatsapp: e.target.checked } })}
+                                    />
+                                    <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <div className="text-sm text-gray-600 group-hover:text-black transition-colors">
+                                    I consent to receiving marketing WhatsApp messages. (Optional)
+                                </div>
+                            </label>
+                        )}
+
                         {settings?.marketing_consent_fields?.email && (
                             <label className="flex items-start gap-3 cursor-pointer group">
                                 <div className="relative flex items-start mt-0.5">
@@ -451,23 +468,6 @@ export default function RegisterForm({ settings, onSuccess, onSwitchToLogin, isM
                                 </div>
                                 <div className="text-sm text-gray-600 group-hover:text-black transition-colors">
                                     I consent to receiving marketing SMS updates. (Optional)
-                                </div>
-                            </label>
-                        )}
-
-                        {settings?.marketing_consent_fields?.whatsapp && (
-                            <label className="flex items-start gap-3 cursor-pointer group">
-                                <div className="relative flex items-start mt-0.5">
-                                    <input 
-                                        type="checkbox" 
-                                        className="peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer"
-                                        checked={form.marketing_preferences.whatsapp}
-                                        onChange={(e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, whatsapp: e.target.checked } })}
-                                    />
-                                    <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                </div>
-                                <div className="text-sm text-gray-600 group-hover:text-black transition-colors">
-                                    I consent to receiving marketing WhatsApp messages. (Optional)
                                 </div>
                             </label>
                         )}

@@ -596,6 +596,22 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                             <div className="p-4 hover:bg-gray-50/50 transition-colors">
                                 <div className="flex justify-between items-center">
                                     <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">WhatsApp Marketing</span>
+                                        <span className="text-xs text-gray-500 block">Receive offers via WhatsApp.</span>
+                                        {user?.marketing_preferences?.whatsapp_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.whatsapp} onChange={(e) => toggleMarketing('whatsapp', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
                                         <span className="text-sm font-semibold text-gray-900 block mb-0.5">Email Marketing</span>
                                         <span className="text-xs text-gray-500 block">Receive offers via Email.</span>
                                         {user?.marketing_preferences?.email_timestamp && (
@@ -620,22 +636,6 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                     </div>
                                     <label className="flex items-center cursor-pointer relative shrink-0">
                                         <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.sms} onChange={(e) => toggleMarketing('sms', e.target.checked)} disabled={saving} />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
-                                <div className="flex justify-between items-center">
-                                    <div className="pr-4">
-                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">WhatsApp Marketing</span>
-                                        <span className="text-xs text-gray-500 block">Receive offers via WhatsApp.</span>
-                                        {user?.marketing_preferences?.whatsapp_timestamp && (
-                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()}</span>
-                                        )}
-                                    </div>
-                                    <label className="flex items-center cursor-pointer relative shrink-0">
-                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.whatsapp} onChange={(e) => toggleMarketing('whatsapp', e.target.checked)} disabled={saving} />
                                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                                     </label>
                                 </div>

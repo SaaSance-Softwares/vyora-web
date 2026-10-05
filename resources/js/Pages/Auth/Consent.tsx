@@ -62,6 +62,24 @@ export default function ConsentPage() {
                             <p className="text-sm text-red-600 pl-8">{errors.terms}</p>
                         )}
 
+                        {marketingConfig.whatsapp && (
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="flex h-6 items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.marketing_preferences.whatsapp}
+                                        onChange={(e) => handleMarketingChange('whatsapp', e.target.checked)}
+                                        className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                    />
+                                </div>
+                                <div className="text-sm">
+                                    <p className="text-gray-600">
+                                        I consent to receiving marketing WhatsApp messages. (Optional)
+                                    </p>
+                                </div>
+                            </label>
+                        )}
+
                         {marketingConfig.email && (
                             <label className="flex items-start gap-3 cursor-pointer group">
                                 <div className="flex h-6 items-center">
@@ -93,24 +111,6 @@ export default function ConsentPage() {
                                 <div className="text-sm">
                                     <p className="text-gray-600">
                                         I consent to receiving marketing SMS updates. (Optional)
-                                    </p>
-                                </div>
-                            </label>
-                        )}
-
-                        {marketingConfig.whatsapp && (
-                            <label className="flex items-start gap-3 cursor-pointer group">
-                                <div className="flex h-6 items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.marketing_preferences.whatsapp}
-                                        onChange={(e) => handleMarketingChange('whatsapp', e.target.checked)}
-                                        className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
-                                    />
-                                </div>
-                                <div className="text-sm">
-                                    <p className="text-gray-600">
-                                        I consent to receiving marketing WhatsApp messages. (Optional)
                                     </p>
                                 </div>
                             </label>

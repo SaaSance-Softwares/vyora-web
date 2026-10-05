@@ -1037,6 +1037,20 @@ function DpdpSection({ user, onSaved }) {
         /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm", children: [
           /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "WhatsApp Marketing" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via WhatsApp." }),
+              user?.marketing_preferences?.whatsapp_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.whatsapp, onChange: (e) => toggleMarketing("whatsapp", e.target.checked), disabled: saving }),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Email Marketing" }),
               /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via Email." }),
               user?.marketing_preferences?.email_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
@@ -1060,20 +1074,6 @@ function DpdpSection({ user, onSaved }) {
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.sms, onChange: (e) => toggleMarketing("sms", e.target.checked), disabled: saving }),
-              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
-            ] })
-          ] }) }),
-          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
-              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "WhatsApp Marketing" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via WhatsApp." }),
-              user?.marketing_preferences?.whatsapp_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
-                "Timestamp: ",
-                new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
-              /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.whatsapp, onChange: (e) => toggleMarketing("whatsapp", e.target.checked), disabled: saving }),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
           ] }) })
@@ -2490,6 +2490,18 @@ function ConsentPage() {
             ] }) })
           ] }),
           errors.terms && /* @__PURE__ */ jsx("p", { className: "text-sm text-red-600 pl-8", children: errors.terms }),
+          marketingConfig.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: data.marketing_preferences.whatsapp,
+                onChange: (e) => handleMarketingChange("whatsapp", e.target.checked),
+                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing WhatsApp messages. (Optional)" }) })
+          ] }),
           marketingConfig.email && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
             /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
               "input",
@@ -2513,18 +2525,6 @@ function ConsentPage() {
               }
             ) }),
             /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing SMS updates. (Optional)" }) })
-          ] }),
-          marketingConfig.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: data.marketing_preferences.whatsapp,
-                onChange: (e) => handleMarketingChange("whatsapp", e.target.checked),
-                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
-              }
-            ) }),
-            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing WhatsApp messages. (Optional)" }) })
           ] })
         ] }),
         /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx(
@@ -3435,6 +3435,21 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
                   /* @__PURE__ */ jsx("span", { className: "text-red-500", children: "*" })
                 ] })
               ] }),
+              settings?.marketing_consent_fields?.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+                /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      className: "peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer",
+                      checked: form.marketing_preferences.whatsapp,
+                      onChange: (e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, whatsapp: e.target.checked } })
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing WhatsApp messages. (Optional)" })
+              ] }),
               settings?.marketing_consent_fields?.email && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
                 /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
                   /* @__PURE__ */ jsx(
@@ -3464,21 +3479,6 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
                   /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
                 ] }),
                 /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing SMS updates. (Optional)" })
-              ] }),
-              settings?.marketing_consent_fields?.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
-                /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      className: "peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer",
-                      checked: form.marketing_preferences.whatsapp,
-                      onChange: (e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, whatsapp: e.target.checked } })
-                    }
-                  ),
-                  /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
-                ] }),
-                /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing WhatsApp messages. (Optional)" })
               ] })
             ] }),
             /* @__PURE__ */ jsx(
