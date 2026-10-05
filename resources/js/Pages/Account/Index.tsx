@@ -551,7 +551,7 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                             <div>
                                 <span className="text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1">Terms & Privacy Policy</span>
                                 <p className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-                                    To use the Dope Style Terms & Privacy Policy should be accepted or else user can only browse through and cannot place order.
+                                    user need to be accepted to login, if you do not agree the terms and condition, you need to delete the account
                                 </p>
                             </div>
                             <span className="font-bold text-green-600">{user?.has_consented_to_terms ? 'Accepted' : 'Not Accepted'}</span>
