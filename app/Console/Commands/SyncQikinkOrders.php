@@ -187,11 +187,24 @@ class SyncQikinkOrders extends Command
                 // 2. Update Shipping Details
                 if (!empty($qikinkData['shipping'])) {
                     $shipping = $qikinkData['shipping'];
-                    if (!empty($shipping['awb']) && !$order->tracking_number) {
-                        $updateData['tracking_number'] = $shipping['awb'];
+                    $awb = $shipping['awb'] ?? null;
+                    
+                    if (!empty($awb) && !$order->tracking_number) {
+                        $updateData['tracking_number'] = $awb;
                     }
-                    if (!empty($shipping['tracking_link']) && !$order->tracking_url) {
-                        $updateData['tracking_url'] = $shipping['tracking_link'];
+                    
+                    if (!empty($shipping['tracking_link'])) {
+                        $trackingUrl = $shipping['tracking_link'];
+                        
+                        // Fix incomplete tracking URLs from QikInk (e.g. "https://courierupdates.com/?awb=")
+                        if (!empty($awb) && str_ends_with($trackingUrl, '=')) {
+                            $trackingUrl .= $awb;
+                        }
+                        
+                        // Save if empty, or overwrite if the current DB value is incomplete (ends with =)
+                        if (!$order->tracking_url || str_ends_with($order->tracking_url, '=')) {
+                            $updateData['tracking_url'] = $trackingUrl;
+                        }
                     }
                 }
 
