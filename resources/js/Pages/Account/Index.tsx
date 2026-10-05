@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 // ── Section tab ids ──────────────────────────────────────────────────────────
-type Tab = 'profile' | 'security' | 'addresses' | 'orders' | 'gift-cards';
+type Tab = 'profile' | 'security' | 'addresses' | 'orders' | 'gift-cards' | 'dpdp';
 
 // ── Reusable section card ────────────────────────────────────────────────────
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
@@ -517,6 +517,46 @@ function AddressesSection() {
     );
 }
 
+// ── DPDP Section ─────────────────────────────────────────────────────────────
+function DpdpSection({ user }: { user: any }) {
+    return (
+        <SectionCard title="Data Privacy (DPDP)" icon={Shield}>
+            <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                    As per the Digital Personal Data Protection (DPDP) Act, here are your consent details.
+                </p>
+                <div className="bg-gray-50 p-6 rounded-xl space-y-4 border border-gray-100">
+                    <div className="flex justify-between items-center text-sm border-b border-gray-200 pb-3">
+                        <span className="text-gray-500 font-bold uppercase tracking-wider text-xs">Terms & Privacy Policy</span>
+                        <span className="font-bold text-green-600">{user?.has_consented_to_terms ? 'Accepted' : 'Not Accepted'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm border-b border-gray-200 pb-3">
+                        <span className="text-gray-500 font-bold uppercase tracking-wider text-xs">Marketing Emails</span>
+                        <span className="font-bold text-gray-900">{user?.has_consented_to_marketing ? 'Consented' : 'Not Consented'}</span>
+                    </div>
+                    {user?.consent_timestamp && (
+                        <div className="flex justify-between items-center text-sm border-b border-gray-200 pb-3">
+                            <span className="text-gray-500 font-bold uppercase tracking-wider text-xs">Consent Timestamp</span>
+                            <span className="text-gray-900">{new Date(user.consent_timestamp).toLocaleString()}</span>
+                        </div>
+                    )}
+                    {user?.consent_ip_address && (
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 font-bold uppercase tracking-wider text-xs">IP Address</span>
+                            <span className="text-gray-900">{user.consent_ip_address}</span>
+                        </div>
+                    )}
+                </div>
+                {!user?.has_consented_to_terms && (
+                    <div className="mt-4">
+                        <a href="/consent" className="text-blue-600 hover:underline text-sm font-bold">Review & Accept Consent</a>
+                    </div>
+                )}
+            </div>
+        </SectionCard>
+    );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AccountPage() {
     const { user, logout } = useAuthStore();
@@ -526,7 +566,7 @@ export default function AccountPage() {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             const t = params.get('tab') as Tab;
-            if (t && ['profile', 'security', 'addresses', 'orders', 'gift-cards'].includes(t)) {
+            if (t && ['profile', 'security', 'addresses', 'orders', 'gift-cards', 'dpdp'].includes(t)) {
                 return t;
             }
         }
@@ -598,6 +638,7 @@ export default function AccountPage() {
         { id: 'addresses',   label: 'Addresses',   icon: MapPin  },
         { id: 'orders',      label: 'Orders',      icon: Package },
         { id: 'gift-cards',  label: 'Gift Cards',  icon: Gift    },
+        { id: 'dpdp',        label: 'DPDP Consent',icon: Shield  },
     ];
 
     return (
@@ -744,6 +785,7 @@ export default function AccountPage() {
                             )}
                         </SectionCard>
                     )}
+                    {activeTab === 'dpdp'        && <DpdpSection user={userData || user} />}
                 </main>
             </div>
         </div>
