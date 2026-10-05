@@ -518,7 +518,26 @@ function AddressesSection() {
 }
 
 // ── DPDP Section ─────────────────────────────────────────────────────────────
-function DpdpSection({ user }: { user: any }) {
+function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
+    const [saving, setSaving] = useState(false);
+
+    const toggleMarketing = async (checked: boolean) => {
+        setSaving(true);
+        try {
+            await api.put('/api/account/profile', { 
+                name: user.name, 
+                email: user.email, 
+                phone: user.phone,
+                has_consented_to_marketing: checked 
+            });
+            onSaved();
+        } catch (e) {
+            console.error('Could not update marketing consent', e);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <SectionCard title="Digital Personal Data Protection" icon={Shield}>
             <div className="space-y-4">
@@ -532,7 +551,21 @@ function DpdpSection({ user }: { user: any }) {
                     </div>
                     <div className="flex justify-between items-center text-sm border-b border-gray-200 pb-3">
                         <span className="text-gray-500 font-bold uppercase tracking-wider text-xs">Marketing Emails</span>
-                        <span className="font-bold text-gray-900">{user?.has_consented_to_marketing ? 'Consented' : 'Not Consented'}</span>
+                        <div className="flex items-center gap-2">
+                            <label className="flex items-center cursor-pointer relative">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={!!user?.has_consented_to_marketing}
+                                    onChange={(e) => toggleMarketing(e.target.checked)}
+                                    disabled={saving}
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gray-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gray-900"></div>
+                            </label>
+                            <span className="font-bold text-gray-900 text-xs uppercase tracking-wider">
+                                {user?.has_consented_to_marketing ? 'Consented' : 'Opted Out'}
+                            </span>
+                        </div>
                     </div>
                     {user?.consent_timestamp && (
                         <div className="flex justify-between items-center text-sm border-b border-gray-200 pb-3">
@@ -785,7 +818,7 @@ export default function AccountPage() {
                             )}
                         </SectionCard>
                     )}
-                    {activeTab === 'dpdp'        && <DpdpSection user={userData || user} />}
+                    {activeTab === 'dpdp'        && <DpdpSection user={userData || user} onSaved={() => { useAuthStore.getState().checkAuth().then(() => api.get('/api/user').then(r => setUserData(r.data))); }} />}
                 </main>
             </div>
         </div>

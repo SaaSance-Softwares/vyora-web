@@ -21,6 +21,7 @@ class AccountController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:20|unique:users,phone,'.$user->id,
+            'has_consented_to_marketing' => 'nullable|boolean',
         ]);
 
         $user->update($validated);
