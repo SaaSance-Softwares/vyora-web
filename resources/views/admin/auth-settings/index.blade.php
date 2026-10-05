@@ -13,6 +13,7 @@
         <input type="hidden" name="auth_appearance" x-ref="hiddenAppearance">
         <input type="hidden" name="auth_header" x-ref="hiddenHeader">
         <input type="hidden" name="auth_footer" x-ref="hiddenFooter">
+        <input type="hidden" name="marketing_consent_fields" x-ref="hiddenMarketing">
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
@@ -165,6 +166,51 @@
                                         Your template <span class="text-red-500">must contain exactly one variable {{1}}</span> which will be dynamically replaced by the OTP code.
                                     </p>
                                 </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- Marketing Consent Checkboxes -->
+                        <div class="pt-6 border-t border-gray-100">
+                            <h4 class="font-bold text-gray-900 mb-1">Marketing Consent Options</h4>
+                            <p class="text-xs text-gray-500 mb-6">Choose which marketing channels users can opt-in to during registration.</p>
+                            
+                            <div class="space-y-4">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center">
+                                        <input type="checkbox" x-model="config.marketing.email" class="peer sr-only">
+                                        <div class="w-6 h-6 border-2 border-gray-300 rounded-lg peer-checked:bg-black peer-checked:border-black transition-colors group-hover:border-black"></div>
+                                        <svg class="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5L5 9L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-gray-900 group-hover:text-black transition-colors">Email Marketing</span>
+                                        <span class="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Enable Email Checkbox</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center">
+                                        <input type="checkbox" x-model="config.marketing.sms" class="peer sr-only">
+                                        <div class="w-6 h-6 border-2 border-gray-300 rounded-lg peer-checked:bg-black peer-checked:border-black transition-colors group-hover:border-black"></div>
+                                        <svg class="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5L5 9L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-gray-900 group-hover:text-black transition-colors">SMS Marketing</span>
+                                        <span class="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Enable SMS Checkbox</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center">
+                                        <input type="checkbox" x-model="config.marketing.whatsapp" class="peer sr-only">
+                                        <div class="w-6 h-6 border-2 border-gray-300 rounded-lg peer-checked:bg-black peer-checked:border-black transition-colors group-hover:border-black"></div>
+                                        <svg class="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5L5 9L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-gray-900 group-hover:text-black transition-colors">WhatsApp Marketing</span>
+                                        <span class="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Enable WhatsApp Checkbox</span>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
@@ -459,13 +505,15 @@
                 social_enabled: {{ $settings['social_login_enabled'] ?? 'false' }},
                 appearance: @json($settings['auth_appearance']),
                 header: @json($settings['auth_header']),
-                footer: @json($settings['auth_footer'])
+                footer: @json($settings['auth_footer']),
+                marketing: @json($settings['marketing_consent_fields'])
             },
             prepSubmit(e) {
                 this.$refs.hiddenFields.value = JSON.stringify(this.config.fields);
                 this.$refs.hiddenAppearance.value = JSON.stringify(this.config.appearance);
                 this.$refs.hiddenHeader.value = JSON.stringify(this.config.header);
                 this.$refs.hiddenFooter.value = JSON.stringify(this.config.footer);
+                this.$refs.hiddenMarketing.value = JSON.stringify(this.config.marketing);
                 e.target.submit();
             },
             init() {

@@ -37,6 +37,7 @@ class AuthSettingsController extends Controller
             'auth_appearance' => json_decode($rows->get('auth_appearance')?->value ?? '{"ux_mode":"page","border_radius":"16","border_color":"#e5e7eb"}', true),
             'auth_header' => json_decode($rows->get('auth_header')?->value ?? '{"text":"Welcome Back","image":"","order":["image","text"],"image_width":"120"}', true),
             'auth_footer' => json_decode($rows->get('auth_footer')?->value ?? '{"text":"Secure payment powered by Dope Style"}', true),
+            'marketing_consent_fields' => json_decode($rows->get('marketing_consent_fields')?->value ?? '{"email":true,"sms":false,"whatsapp":false}', true),
         ];
 
         $brandRows = ThemeSetting::where('group', 'typography')->orWhere('group', 'colors')->get()->keyBy('key');
@@ -57,7 +58,7 @@ class AuthSettingsController extends Controller
         $data = $request->all();
 
         // Handle JSON fields
-        $jsonFields = ['auth_methods', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer'];
+        $jsonFields = ['auth_methods', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer', 'marketing_consent_fields'];
 
         // Save boolean toggle
         if ($request->has('social_login_enabled')) {

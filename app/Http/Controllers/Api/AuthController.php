@@ -23,6 +23,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|max:128|confirmed',
             'has_consented_to_terms' => 'required|boolean|accepted',
             'has_consented_to_marketing' => 'nullable|boolean',
+            'marketing_preferences' => 'nullable|array',
         ]);
 
         $geo = \App\Services\GeoLocationService::getLocation($request->ip());
@@ -35,7 +36,10 @@ class AuthController extends Controller
             'role' => 'user',
             'has_consented_to_terms' => $request->boolean('has_consented_to_terms'),
             'has_consented_to_marketing' => $request->boolean('has_consented_to_marketing'),
+            'marketing_preferences' => $request->input('marketing_preferences', []),
             'consent_timestamp' => now(),
+            'marketing_consent_timestamp' => ($request->boolean('has_consented_to_marketing') || !empty($request->input('marketing_preferences'))) ? now() : null,
+            'marketing_consent_ip_address' => ($request->boolean('has_consented_to_marketing') || !empty($request->input('marketing_preferences'))) ? $request->ip() : null,
             'consent_ip_address' => $request->ip(),
             'registration_ip' => $geo['ip'],
             'city' => $geo['city'],
@@ -96,7 +100,7 @@ class AuthController extends Controller
         $cacheKey = 'register_otp_' . preg_replace('/[^0-9]/', '', $phone);
         Cache::put($cacheKey, [
             'data' => $request->only([
-                'name', 'email', 'phone', 'password', 'has_consented_to_terms', 'has_consented_to_marketing'
+                'name', 'email', 'phone', 'password', 'has_consented_to_terms', 'has_consented_to_marketing', 'marketing_preferences'
             ]),
             'otp' => $otp,
         ], now()->addMinutes(10));
@@ -159,7 +163,10 @@ class AuthController extends Controller
             'role' => 'user',
             'has_consented_to_terms' => $data['has_consented_to_terms'],
             'has_consented_to_marketing' => $data['has_consented_to_marketing'] ?? false,
+            'marketing_preferences' => $data['marketing_preferences'] ?? [],
             'consent_timestamp' => now(),
+            'marketing_consent_timestamp' => (($data['has_consented_to_marketing'] ?? false) || !empty($data['marketing_preferences'] ?? [])) ? now() : null,
+            'marketing_consent_ip_address' => (($data['has_consented_to_marketing'] ?? false) || !empty($data['marketing_preferences'] ?? [])) ? $request->ip() : null,
             'consent_ip_address' => $request->ip(),
             'registration_ip' => $geo['ip'],
             'city' => $geo['city'],
