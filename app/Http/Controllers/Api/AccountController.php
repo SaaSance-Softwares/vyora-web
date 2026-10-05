@@ -24,6 +24,11 @@ class AccountController extends Controller
             'has_consented_to_marketing' => 'nullable|boolean',
         ]);
 
+        if (array_key_exists('has_consented_to_marketing', $validated)) {
+            $validated['marketing_consent_timestamp'] = now();
+            $validated['marketing_consent_ip_address'] = $request->ip();
+        }
+
         $user->update($validated);
 
         return response()->json(['success' => true, 'user' => $user]);

@@ -40,6 +40,10 @@ class ConsentController extends Controller
         $user->has_consented_to_marketing = $request->boolean('marketing');
         $user->consent_timestamp = now();
         $user->consent_ip_address = $request->ip();
+        
+        $user->marketing_consent_timestamp = now();
+        $user->marketing_consent_ip_address = $request->ip();
+        
         $user->save();
 
         return redirect()->intended('/');

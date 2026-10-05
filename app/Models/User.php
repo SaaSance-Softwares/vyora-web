@@ -31,6 +31,8 @@ class User extends Authenticatable
         'has_consented_to_marketing',
         'consent_timestamp',
         'consent_ip_address',
+        'marketing_consent_timestamp',
+        'marketing_consent_ip_address',
         'registration_ip',
         'city',
         'state',
@@ -61,6 +63,7 @@ class User extends Authenticatable
             'has_consented_to_terms' => 'boolean',
             'has_consented_to_marketing' => 'boolean',
             'consent_timestamp' => 'datetime',
+            'marketing_consent_timestamp' => 'datetime',
         ];
     }
 
