@@ -167,7 +167,6 @@
                                     </p>
                                 </div>
                             </div>
-                            </div>
                         </div>
 
                         <!-- Marketing Consent Checkboxes -->
