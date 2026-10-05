@@ -520,7 +520,7 @@ function AddressesSection() {
 // ── DPDP Section ─────────────────────────────────────────────────────────────
 function DpdpSection({ user }: { user: any }) {
     return (
-        <SectionCard title="Data Privacy (DPDP)" icon={Shield}>
+        <SectionCard title="Digital Personal Data Protection" icon={Shield}>
             <div className="space-y-4">
                 <p className="text-sm text-gray-600">
                     As per the Digital Personal Data Protection (DPDP) Act, here are your consent details.
