@@ -134,7 +134,7 @@ export default function CookieConsent() {
                                 </div>
                                 <label className="flex items-center cursor-pointer relative">
                                     <input type="checkbox" className="sr-only peer" checked={toggles.google_analytics} onChange={(e) => setToggles({...toggles, google_analytics: e.target.checked})} />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.google_analytics ? themeColor : undefined }}></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.google_analytics ? themeColor : undefined }}></div>
                                 </label>
                             </div>
                             
@@ -145,7 +145,7 @@ export default function CookieConsent() {
                                 </div>
                                 <label className="flex items-center cursor-pointer relative">
                                     <input type="checkbox" className="sr-only peer" checked={toggles.meta_pixel} onChange={(e) => setToggles({...toggles, meta_pixel: e.target.checked})} />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.meta_pixel ? themeColor : undefined }}></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.meta_pixel ? themeColor : undefined }}></div>
                                 </label>
                             </div>
 
@@ -156,7 +156,7 @@ export default function CookieConsent() {
                                 </div>
                                 <label className="flex items-center cursor-pointer relative">
                                     <input type="checkbox" className="sr-only peer" checked={toggles.snapchat_pixel} onChange={(e) => setToggles({...toggles, snapchat_pixel: e.target.checked})} />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.snapchat_pixel ? themeColor : undefined }}></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: toggles.snapchat_pixel ? themeColor : undefined }}></div>
                                 </label>
                             </div>
                         </div>
