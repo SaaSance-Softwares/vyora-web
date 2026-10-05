@@ -46,7 +46,7 @@ export default function Home({ page, content, layout }) {
     return (
         <main className="min-h-screen bg-gray-50">
             <Head>
-                <title>{page.title || 'Home'}</title>
+                <title>{page.title ? `${page.title} - ${storeName}` : storeName}</title>
                 <script type="application/ld+json" head-key="jsonld">
                     {JSON.stringify(getHomeSchema())}
                 </script>

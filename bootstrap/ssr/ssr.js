@@ -8383,7 +8383,7 @@ function Home({ page, content, layout }) {
   };
   return /* @__PURE__ */ jsxs("main", { className: "min-h-screen bg-gray-50", children: [
     /* @__PURE__ */ jsxs(Head, { children: [
-      /* @__PURE__ */ jsx("title", { children: page.title || "Home" }),
+      /* @__PURE__ */ jsx("title", { children: page.title ? `${page.title} - ${storeName}` : storeName }),
       /* @__PURE__ */ jsx("script", { type: "application/ld+json", "head-key": "jsonld", children: JSON.stringify(getHomeSchema()) })
     ] }),
     /* @__PURE__ */ jsx(PageRenderer, { content, layout, settings })
