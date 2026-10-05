@@ -974,11 +974,15 @@ function AddressesSection() {
 function DpdpSection({ user, onSaved }) {
   const [saving, setSaving] = useState(false);
   const { settings } = usePage().props;
-  const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
+  settings?.marketing_consent_fields || {};
   const toggleMarketing = async (channel, checked) => {
     setSaving(true);
     try {
-      const newPrefs = { ...user?.marketing_preferences || {}, [channel]: checked };
+      const newPrefs = {
+        ...user?.marketing_preferences || {},
+        [channel]: checked,
+        [`${channel}_timestamp`]: (/* @__PURE__ */ new Date()).toISOString()
+      };
       const payload = {
         name: user.name,
         email: user.email,
@@ -996,7 +1000,7 @@ function DpdpSection({ user, onSaved }) {
       setSaving(false);
     }
   };
-  const hasAnyMarketing = user?.has_consented_to_marketing || Object.values(user?.marketing_preferences || {}).some((v) => v);
+  user?.has_consented_to_marketing || Object.values(user?.marketing_preferences || {}).some((v) => v);
   return /* @__PURE__ */ jsx(SectionCard, { title: "Digital Personal Data Protection", icon: Shield, children: /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600", children: "As per the Digital Personal Data Protection (DPDP) Act, here are your consent details." }),
     /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 p-6 rounded-xl space-y-6 border border-gray-100", children: [
@@ -1028,48 +1032,48 @@ function DpdpSection({ user, onSaved }) {
           /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500 leading-relaxed", children: "Manage how you receive exclusive offers and updates." })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm", children: [
-          marketingConfig.email && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Email Marketing" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via Email." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via Email." }),
+              user?.marketing_preferences?.email_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.marketing_preferences.email_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!(user?.marketing_preferences?.email || user?.has_consented_to_marketing), onChange: (e) => toggleMarketing("email", e.target.checked), disabled: saving }),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] }),
-          marketingConfig.sms && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "SMS Marketing" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via SMS." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via SMS." }),
+              user?.marketing_preferences?.sms_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.marketing_preferences.sms_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.sms, onChange: (e) => toggleMarketing("sms", e.target.checked), disabled: saving }),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] }),
-          marketingConfig.whatsapp && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "WhatsApp Marketing" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via WhatsApp." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Receive offers via WhatsApp." }),
+              user?.marketing_preferences?.whatsapp_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.whatsapp, onChange: (e) => toggleMarketing("whatsapp", e.target.checked), disabled: saving }),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] })
-        ] }),
-        hasAnyMarketing && user?.marketing_consent_timestamp && /* @__PURE__ */ jsxs("div", { className: "bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3", children: [
-          /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "Timestamp:" }),
-            " ",
-            new Date(user.marketing_consent_timestamp).toLocaleString()
-          ] }),
-          /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "IP:" }),
-            " ",
-            user.marketing_consent_ip_address
-          ] })
+          ] }) })
         ] })
       ] }),
       /* @__PURE__ */ jsx("hr", { className: "border-gray-200" }),
@@ -1079,10 +1083,14 @@ function DpdpSection({ user, onSaved }) {
           /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500 leading-relaxed", children: "Manage how third-party integrations track your activity across our website." })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm", children: [
-          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Google Analytics" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Helps us understand how you use the site so we can improve it." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Helps us understand how you use the site so we can improve it." }),
+              user?.tracking_consent?.google_analytics_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.tracking_consent.google_analytics_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx(
@@ -1092,7 +1100,7 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.google_analytics ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked };
+                    const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked, google_analytics_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
                     await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
                     onSaved();
                   },
@@ -1101,11 +1109,15 @@ function DpdpSection({ user, onSaved }) {
               ),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Meta Pixel" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Allows us to show you personalized ads on Facebook and Instagram." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Allows us to show you personalized ads on Facebook and Instagram." }),
+              user?.tracking_consent?.meta_pixel_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.tracking_consent.meta_pixel_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx(
@@ -1115,7 +1127,7 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.meta_pixel ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked };
+                    const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked, meta_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
                     await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
                     onSaved();
                   },
@@ -1124,11 +1136,15 @@ function DpdpSection({ user, onSaved }) {
               ),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "p-4 hover:bg-gray-50/50 transition-colors", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
               /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Snapchat Pixel" }),
-              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Allows us to show you personalized ads on Snapchat." })
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500 block", children: "Allows us to show you personalized ads on Snapchat." }),
+              user?.tracking_consent?.snapchat_pixel_timestamp && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400 mt-1 block", children: [
+                "Timestamp: ",
+                new Date(user.tracking_consent.snapchat_pixel_timestamp).toLocaleString()
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
               /* @__PURE__ */ jsx(
@@ -1138,7 +1154,7 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.snapchat_pixel ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked };
+                    const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked, snapchat_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
                     await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
                     onSaved();
                   },
@@ -1147,19 +1163,7 @@ function DpdpSection({ user, onSaved }) {
               ),
               /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
             ] })
-          ] })
-        ] }),
-        user?.tracking_consent_timestamp && /* @__PURE__ */ jsxs("div", { className: "bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3", children: [
-          /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "Timestamp:" }),
-            " ",
-            new Date(user.tracking_consent_timestamp).toLocaleString()
-          ] }),
-          /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "IP:" }),
-            " ",
-            user.tracking_consent_ip_address
-          ] })
+          ] }) })
         ] })
       ] })
     ] }),
@@ -12701,18 +12705,27 @@ function CookieConsent() {
       }
     }
   };
+  const addTimestamps = (prefs) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    return {
+      ...prefs,
+      google_analytics_timestamp: now,
+      meta_pixel_timestamp: now,
+      snapchat_pixel_timestamp: now
+    };
+  };
   const acceptAll = () => {
     const prefs = { google_analytics: true, meta_pixel: true, snapchat_pixel: true };
     setToggles(prefs);
-    savePreferences(prefs);
+    savePreferences(addTimestamps(prefs));
   };
   const rejectNonEssential = () => {
     const prefs = { google_analytics: false, meta_pixel: false, snapchat_pixel: false };
     setToggles(prefs);
-    savePreferences(prefs);
+    savePreferences(addTimestamps(prefs));
   };
   const saveCustom = () => {
-    savePreferences(toggles);
+    savePreferences(addTimestamps(toggles));
   };
   if (!showBanner && !isFloating && !showCustomize) return null;
   if (showCustomize) {

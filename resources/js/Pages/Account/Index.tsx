@@ -526,7 +526,11 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
     const toggleMarketing = async (channel: string, checked: boolean) => {
         setSaving(true);
         try {
-            const newPrefs = { ...(user?.marketing_preferences || {}), [channel]: checked };
+            const newPrefs = { 
+                ...(user?.marketing_preferences || {}), 
+                [channel]: checked,
+                [`${channel}_timestamp`]: new Date().toISOString()
+            };
             const payload: any = { 
                 name: user.name, 
                 email: user.email, 
@@ -585,46 +589,54 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                         </div>
 
                         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm">
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Email Marketing</span>
-                                    <span className="text-xs text-gray-500">Receive offers via Email.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">Email Marketing</span>
+                                        <span className="text-xs text-gray-500 block">Receive offers via Email.</span>
+                                        {user?.marketing_preferences?.email_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.marketing_preferences.email_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!(user?.marketing_preferences?.email || user?.has_consented_to_marketing)} onChange={(e) => toggleMarketing('email', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input type="checkbox" className="sr-only peer" checked={!!(user?.marketing_preferences?.email || user?.has_consented_to_marketing)} onChange={(e) => toggleMarketing('email', e.target.checked)} disabled={saving} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
                             
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">SMS Marketing</span>
-                                    <span className="text-xs text-gray-500">Receive offers via SMS.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">SMS Marketing</span>
+                                        <span className="text-xs text-gray-500 block">Receive offers via SMS.</span>
+                                        {user?.marketing_preferences?.sms_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.marketing_preferences.sms_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.sms} onChange={(e) => toggleMarketing('sms', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.sms} onChange={(e) => toggleMarketing('sms', e.target.checked)} disabled={saving} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
 
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">WhatsApp Marketing</span>
-                                    <span className="text-xs text-gray-500">Receive offers via WhatsApp.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">WhatsApp Marketing</span>
+                                        <span className="text-xs text-gray-500 block">Receive offers via WhatsApp.</span>
+                                        {user?.marketing_preferences?.whatsapp_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.marketing_preferences.whatsapp_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.whatsapp} onChange={(e) => toggleMarketing('whatsapp', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.whatsapp} onChange={(e) => toggleMarketing('whatsapp', e.target.checked)} disabled={saving} />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
                         </div>
-
-                        {hasAnyMarketing && user?.marketing_consent_timestamp && (
-                            <div className="bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3">
-                                <span><span className="font-semibold text-gray-700">Timestamp:</span> {new Date(user.marketing_consent_timestamp).toLocaleString()}</span>
-                                <span><span className="font-semibold text-gray-700">IP:</span> {user.marketing_consent_ip_address}</span>
-                            </div>
-                        )}
                     </div>
                     
                     <hr className="border-gray-200" />
@@ -639,76 +651,84 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                         </div>
                         
                         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm">
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Google Analytics</span>
-                                    <span className="text-xs text-gray-500">Helps us understand how you use the site so we can improve it.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">Google Analytics</span>
+                                        <span className="text-xs text-gray-500 block">Helps us understand how you use the site so we can improve it.</span>
+                                        {user?.tracking_consent?.google_analytics_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.tracking_consent.google_analytics_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={user?.tracking_consent?.google_analytics ?? false}
+                                            onChange={async (e) => {
+                                                const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked, google_analytics_timestamp: new Date().toISOString() };
+                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                onSaved();
+                                            }}
+                                            disabled={saving}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={user?.tracking_consent?.google_analytics ?? false}
-                                        onChange={async (e) => {
-                                            const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked };
-                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                            onSaved();
-                                        }}
-                                        disabled={saving}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
                             
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Meta Pixel</span>
-                                    <span className="text-xs text-gray-500">Allows us to show you personalized ads on Facebook and Instagram.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">Meta Pixel</span>
+                                        <span className="text-xs text-gray-500 block">Allows us to show you personalized ads on Facebook and Instagram.</span>
+                                        {user?.tracking_consent?.meta_pixel_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.tracking_consent.meta_pixel_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={user?.tracking_consent?.meta_pixel ?? false}
+                                            onChange={async (e) => {
+                                                const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked, meta_pixel_timestamp: new Date().toISOString() };
+                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                onSaved();
+                                            }}
+                                            disabled={saving}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={user?.tracking_consent?.meta_pixel ?? false}
-                                        onChange={async (e) => {
-                                            const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked };
-                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                            onSaved();
-                                        }}
-                                        disabled={saving}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
 
-                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
-                                <div className="pr-4">
-                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Snapchat Pixel</span>
-                                    <span className="text-xs text-gray-500">Allows us to show you personalized ads on Snapchat.</span>
+                            <div className="p-4 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">Snapchat Pixel</span>
+                                        <span className="text-xs text-gray-500 block">Allows us to show you personalized ads on Snapchat.</span>
+                                        {user?.tracking_consent?.snapchat_pixel_timestamp && (
+                                            <span className="text-[10px] text-gray-400 mt-1 block">Timestamp: {new Date(user.tracking_consent.snapchat_pixel_timestamp).toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={user?.tracking_consent?.snapchat_pixel ?? false}
+                                            onChange={async (e) => {
+                                                const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked, snapchat_pixel_timestamp: new Date().toISOString() };
+                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                onSaved();
+                                            }}
+                                            disabled={saving}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
                                 </div>
-                                <label className="flex items-center cursor-pointer relative shrink-0">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={user?.tracking_consent?.snapchat_pixel ?? false}
-                                        onChange={async (e) => {
-                                            const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked };
-                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                            onSaved();
-                                        }}
-                                        disabled={saving}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
                             </div>
                         </div>
-
-                        {user?.tracking_consent_timestamp && (
-                            <div className="bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3">
-                                <span><span className="font-semibold text-gray-700">Timestamp:</span> {new Date(user.tracking_consent_timestamp).toLocaleString()}</span>
-                                <span><span className="font-semibold text-gray-700">IP:</span> {user.tracking_consent_ip_address}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
                 {!user?.has_consented_to_terms && (

@@ -38,8 +38,17 @@ class ConsentController extends Controller
 
         $user = auth()->user();
         $user->has_consented_to_terms = true;
-        $user->has_consented_to_marketing = $request->boolean('marketing') || !empty($request->input('marketing_preferences.email'));
-        $user->marketing_preferences = $request->input('marketing_preferences', []);
+        
+        $marketingPreferences = $request->input('marketing_preferences', []);
+        $now = now()->toIso8601String();
+        foreach (['email', 'sms', 'whatsapp'] as $channel) {
+            if (!empty($marketingPreferences[$channel])) {
+                $marketingPreferences["{$channel}_timestamp"] = $now;
+            }
+        }
+        
+        $user->has_consented_to_marketing = $request->boolean('marketing') || !empty($marketingPreferences['email']);
+        $user->marketing_preferences = $marketingPreferences;
         
         $user->consent_timestamp = now();
         $user->consent_ip_address = $request->ip();

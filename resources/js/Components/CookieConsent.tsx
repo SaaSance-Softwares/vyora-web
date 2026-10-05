@@ -76,20 +76,30 @@ export default function CookieConsent() {
         }
     };
 
+    const addTimestamps = (prefs: any) => {
+        const now = new Date().toISOString();
+        return {
+            ...prefs,
+            google_analytics_timestamp: now,
+            meta_pixel_timestamp: now,
+            snapchat_pixel_timestamp: now
+        };
+    };
+
     const acceptAll = () => {
         const prefs = { google_analytics: true, meta_pixel: true, snapchat_pixel: true };
         setToggles(prefs);
-        savePreferences(prefs);
+        savePreferences(addTimestamps(prefs));
     };
 
     const rejectNonEssential = () => {
         const prefs = { google_analytics: false, meta_pixel: false, snapchat_pixel: false };
         setToggles(prefs);
-        savePreferences(prefs);
+        savePreferences(addTimestamps(prefs));
     };
     
     const saveCustom = () => {
-        savePreferences(toggles);
+        savePreferences(addTimestamps(toggles));
     };
 
     if (!showBanner && !isFloating && !showCustomize) return null;
