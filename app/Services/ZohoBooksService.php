@@ -175,12 +175,12 @@ class ZohoBooksService
         return $response['contact']['contact_id'];
     }
 
-    public function createOrUpdateItem($orderItem)
+    public function createOrUpdateItem($orderItem, $taxId = null)
     {
         $sku = $orderItem->variant ? $orderItem->variant->sku : ($orderItem->product->sku ?? 'SKU-'.$orderItem->product_id);
         $name = $orderItem->product_name . ($orderItem->variant_name ? ' - ' . $orderItem->variant_name : '');
         $price = $orderItem->price;
-        $hsnCode = $orderItem->product->hsn_code ?? '';
+        $hsnCode = $orderItem->product->productType->hsn_code ?? ($orderItem->product->hsn_code ?? '');
 
         // Search if item exists
         $search = $this->apiRequest('GET', 'items', ['sku' => $sku]);
@@ -196,6 +196,10 @@ class ZohoBooksService
             'sku' => $sku,
             'hsn_or_sac' => $hsnCode,
         ];
+
+        if ($taxId) {
+            $payload['tax_id'] = $taxId;
+        }
 
         $response = $this->apiRequest('POST', 'items', $payload);
         return $response['item']['item_id'];
@@ -237,7 +241,7 @@ class ZohoBooksService
             $taxId = $this->matchTaxId($generalTaxRate, $taxes);
 
             foreach ($order->items as $item) {
-                $itemId = $this->createOrUpdateItem($item);
+                $itemId = $this->createOrUpdateItem($item, $taxId);
                 
                 $lineItems[] = [
                     'item_id' => $itemId,
