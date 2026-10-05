@@ -16,6 +16,13 @@ class EnsureConsentIsGiven
     public function handle(Request $request, Closure $next): Response
     {
         if (auth()->check() && !auth()->user()->has_consented_to_terms) {
+            
+            // Exempt staff members from the customer consent gate
+            $userRole = auth()->user()->role;
+            if ($userRole && $userRole !== 'customer' && $userRole !== 'user') {
+                return $next($request);
+            }
+
             $exemptRoutes = [
                 'frontend.consent',
                 'frontend.consent.submit',

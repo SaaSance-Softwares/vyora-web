@@ -14,6 +14,11 @@ class ConsentController extends Controller
             return redirect('/');
         }
         
+        $userRole = auth()->user()->role;
+        if ($userRole && $userRole !== 'customer' && $userRole !== 'user') {
+            return redirect('/');
+        }
+        
         return Inertia::render('Auth/Consent');
     }
 
