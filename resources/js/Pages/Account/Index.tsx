@@ -601,14 +601,17 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                         <div>
                             <span className="text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1">Tracking & Cookies</span>
                             <p className="text-[11px] text-gray-500 leading-relaxed">
-                                Manage how third-party integrations track your activity.
+                                Manage how third-party integrations track your activity across our website.
                             </p>
                         </div>
                         
-                        <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-100">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-semibold text-gray-700">Google Analytics</span>
-                                <label className="flex items-center cursor-pointer relative">
+                        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm">
+                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                <div className="pr-4">
+                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Google Analytics</span>
+                                    <span className="text-xs text-gray-500">Helps us understand how you use the site so we can improve it.</span>
+                                </div>
+                                <label className="flex items-center cursor-pointer relative shrink-0">
                                     <input 
                                         type="checkbox" 
                                         className="sr-only peer"
@@ -620,13 +623,16 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                         }}
                                         disabled={saving}
                                     />
-                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                                 </label>
                             </div>
                             
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-semibold text-gray-700">Meta Pixel</span>
-                                <label className="flex items-center cursor-pointer relative">
+                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                <div className="pr-4">
+                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Meta Pixel</span>
+                                    <span className="text-xs text-gray-500">Allows us to show you personalized ads on Facebook and Instagram.</span>
+                                </div>
+                                <label className="flex items-center cursor-pointer relative shrink-0">
                                     <input 
                                         type="checkbox" 
                                         className="sr-only peer"
@@ -638,13 +644,16 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                         }}
                                         disabled={saving}
                                     />
-                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                                 </label>
                             </div>
 
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-semibold text-gray-700">Snapchat Pixel</span>
-                                <label className="flex items-center cursor-pointer relative">
+                            <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                <div className="pr-4">
+                                    <span className="text-sm font-semibold text-gray-900 block mb-0.5">Snapchat Pixel</span>
+                                    <span className="text-xs text-gray-500">Allows us to show you personalized ads on Snapchat.</span>
+                                </div>
+                                <label className="flex items-center cursor-pointer relative shrink-0">
                                     <input 
                                         type="checkbox" 
                                         className="sr-only peer"
@@ -656,7 +665,7 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                         }}
                                         disabled={saving}
                                     />
-                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                                 </label>
                             </div>
                         </div>
