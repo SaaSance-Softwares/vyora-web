@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { usePage } from '@inertiajs/react';
+import { usePage, useRemember } from '@inertiajs/react';
 import { ProductCard } from '@/components/product/ProductCard';
 import api from '@/lib/api';
 import { PaginatedResponse, ProductList } from '@/types';
@@ -50,15 +50,15 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     const activeQueryKey = queryKey || (searchParams.has('category') ? 'category' : searchParams.has('collection') ? 'collection' : undefined);
     const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : undefined) || undefined;
     
-    const [products, setProducts] = useState<ProductList[]>([]);
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
+    const [products, setProducts] = useRemember<ProductList[]>([], `products-${url}`);
+    const [page, setPage] = useRemember(1, `page-${url}`);
+    const [hasMore, setHasMore] = useRemember(true, `hasMore-${url}`);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     
     // Filters
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState<FilterState>({
+    const [filters, setFilters] = useRemember<FilterState>({
         in_stock: searchParams.has('in_stock') ? searchParams.get('in_stock') === '1' : (initialFilters?.in_stock || false),
         sort: searchParams.get('sort') || initialFilters?.sort || 'new',
         min_price: searchParams.get('min_price') || initialFilters?.min_price || '',
@@ -138,8 +138,19 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         }
     }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
 
+    const isFirstMount = useRef(true);
+
     // Initial fetch when filters change
     useEffect(() => {
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            if (products.length > 0) {
+                // State restored from useRemember, skip initial fetch
+                setLoading(false);
+                return;
+            }
+        }
+
         setPage(1);
         setHasMore(true);
         fetchProducts(1, false);
