@@ -79,6 +79,12 @@ class HandleInertiaRequests extends Middleware
                 if (isset($allData['footer_structure'])) {
                     $allData['footer_structure'] = json_decode($allData['footer_structure'], true) ?? [];
                 }
+                $jsonFieldsToDecode = ['marketing_consent_fields', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer'];
+                foreach ($jsonFieldsToDecode as $field) {
+                    if (isset($allData[$field]) && is_string($allData[$field])) {
+                        $allData[$field] = json_decode($allData[$field], true) ?? [];
+                    }
+                }
 
                 $policyKeys = ['cod_charges', 'prepaid_charges', 'delivery_timeline', 'return_policy', 'exchange_policy', 'refund_method', 'extra_sections', 'mega_deal_label', 'mega_deal_icon', 'mega_deal_badge', 'mega_deal_bg_from', 'mega_deal_bg_to', 'mega_deal_text_color', 'mega_deal_subtext_color'];
                 $generalKeys = ['store_name', 'store_email', 'support_phone', 'store_address', 'default_currency', 'currency_symbol', 'time_zone', 'date_format', 'weight_unit', 'length_unit', 'social_instagram', 'social_facebook', 'social_twitter', 'social_youtube', 'social_tiktok', 'social_pinterest', 'social_whatsapp', 'social_arattai', 'social_linkedin', 'social_custom_links'];
