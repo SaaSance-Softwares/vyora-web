@@ -14,9 +14,10 @@
                 <nav class="flex space-x-6" aria-label="Tabs">
                     <button type="button" class="tab-button border-b-2 border-black text-black py-3 px-1 text-sm font-bold transition-all" data-tab="info">Product Info</button>
                     <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="seo">SEO and AEO</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="organization">Organization</button>
                     <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="media">Media Gallery</button>
                     <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="skus">SKUs & Variants</button>
-                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="organization">Organization</button>
+                    <button type="button" class="tab-button border-b-2 border-transparent text-gray-400 hover:text-black py-3 px-1 text-sm font-bold transition-all" data-tab="publishing">Publishing</button>
                 </nav>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('admin.products.index') }}" class="text-xs font-bold text-gray-500 hover:text-black">Cancel</a>
@@ -109,48 +110,84 @@
                         </div>
                     </div>
 
-                    <!-- Publishing, SEO Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- End Tab Content: Product Info -->
+                </div>
+
+            <div id="tab-publishing" class="tab-content hidden flex flex-col gap-6">
         <!-- Publishing -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Publishing</h3>
 
             <div class="flex items-center justify-between mb-4">
-                <span class="text-gray-700">Active Status</span>
+                <div>
+                    <span class="text-gray-700 block font-bold">Active Status</span>
+                    <span class="text-[10px] text-gray-400 block">Show this product in store</span>
+                </div>
                 <label class="switch">
                     <input type="checkbox" name="is_active" value="1" {{ old('is_active') ? 'checked' : '' }}>
                     <span class="slider round"></span>
                 </label>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-4 pt-4 border-t border-gray-100">
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-700">Returnable</span>
-                    <input type="checkbox" name="is_returnable" id="is_returnable" value="1" {{ old('is_returnable') ? 'checked' : '' }}
-                        class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" onchange="toggleDays('return_days_container', this.checked)">
-                </div>
-                <div id="return_days_container" class="{{ old('is_returnable') ? '' : 'hidden' }} mt-2 ml-4">
-                    <label class="text-xs text-gray-500 block mb-1">Return window (days)</label>
-                    <input type="number" name="return_days" value="{{ old('return_days', 7) }}" class="w-24 border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm p-1">
+                    <div>
+                        <span class="text-gray-700 block font-bold">On Sale</span>
+                        <span class="text-[10px] text-gray-400 block">Mark this product as on sale</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="on_sale" value="1" {{ old('on_sale') ? 'checked' : '' }}>
+                        <span class="slider round"></span>
+                    </label>
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-4 pt-4 border-t border-gray-100">
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-700">Exchangeable</span>
-                    <input type="checkbox" name="is_exchangeable" id="is_exchangeable" value="1" {{ old('is_exchangeable') ? 'checked' : '' }}
-                        class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" onchange="toggleDays('exchange_days_container', this.checked)">
+                    <div>
+                        <span class="text-gray-700 block font-bold">Exchangeable</span>
+                        <span class="text-[10px] text-gray-400 block">Allow customers to exchange this item</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="is_exchangeable" id="is_exchangeable" value="1" {{ old('is_exchangeable') ? 'checked' : '' }} onchange="toggleDays('exchange_days_container', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
                 </div>
-                <div id="exchange_days_container" class="{{ old('is_exchangeable') ? '' : 'hidden' }} mt-2 ml-4">
-                    <label class="text-xs text-gray-500 block mb-1">Exchange window (days)</label>
-                    <input type="number" name="exchange_days" value="{{ old('exchange_days', 7) }}" class="w-24 border border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm p-1">
+                <div id="exchange_days_container" class="{{ old('is_exchangeable') ? '' : 'hidden' }} mt-3 pb-2">
+                    <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-md border border-gray-100">
+                        <label class="text-sm text-gray-700 font-medium whitespace-nowrap">Exchange Window:</label>
+                        <div class="relative flex-1 max-w-[250px]">
+                            <input type="number" name="exchange_days" value="{{ old('exchange_days', 7) }}" class="block w-full rounded-md border-gray-300 pl-4 pr-12 py-2 focus:border-black focus:ring-black text-base" placeholder="7">
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                <span class="text-gray-500 text-sm">Days</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-gray-700">On Sale</span>
-                <input type="checkbox" name="on_sale" value="1" {{ old('on_sale') ? 'checked' : '' }}
-                    class="h-4 w-4 text-black focus:ring-black border-gray-300 rounded">
+            <div class="mb-4 pt-4 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-gray-700 block font-bold">Returnable</span>
+                        <span class="text-[10px] text-gray-400 block">Allow customers to return this item</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="is_returnable" id="is_returnable" value="1" {{ old('is_returnable') ? 'checked' : '' }} onchange="toggleDays('return_days_container', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div id="return_days_container" class="{{ old('is_returnable') ? '' : 'hidden' }} mt-3">
+                    <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-md border border-gray-100">
+                        <label class="text-sm text-gray-700 font-medium whitespace-nowrap">Return Window:</label>
+                        <div class="relative flex-1 max-w-[250px]">
+                            <input type="number" name="return_days" value="{{ old('return_days', 7) }}" class="block w-full rounded-md border-gray-300 pl-4 pr-12 py-2 focus:border-black focus:ring-black text-base" placeholder="7">
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                <span class="text-gray-500 text-sm">Days</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <script>
@@ -166,6 +203,17 @@
                 }
             </script>
 
+            <div class="flex items-center justify-between mb-4 pt-4 border-t border-gray-100">
+                <div>
+                    <span class="text-gray-700 block font-bold">Featured Product</span>
+                    <span class="text-[10px] text-gray-400 block">Show this product in featured sections</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="is_featured" value="1" {{ old('is_featured') ? 'checked' : '' }}>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
             @if(\App\Models\ThemeSetting::where('group', 'integration.qikink')->where('key', 'enabled')->value('value') == '1')
             <div class="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div>
@@ -180,8 +228,6 @@
             @endif
         </div>
     </div>
-</div>
-    <!-- End Tab Content: Product Info -->
 
     <!-- Tab Content: SEO and AEO -->
     <div id="tab-seo" class="tab-content hidden flex flex-col gap-6">

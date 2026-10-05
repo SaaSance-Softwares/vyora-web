@@ -77,14 +77,8 @@ class QikinkOrderService
                     return ['success' => false, 'error' => 'Missing SKU code for a product.'];
                 }
 
-                $itemName = $item->product_name;
-                if (!empty($item->variant_name)) {
-                    $itemName .= ' - ' . $item->variant_name;
-                }
-
                 $lineItems[] = [
                     'search_from_my_products' => 1,
-                    'name' => $itemName,
                     'sku' => $qikinkSku,
                     'quantity' => (int) $item->quantity,
                     'price' => (float) $item->price,

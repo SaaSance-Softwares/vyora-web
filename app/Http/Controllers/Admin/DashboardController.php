@@ -136,6 +136,8 @@ class DashboardController extends Controller
             'packed' => ($shippingStats['processing'] ?? 0),
             'shipped' => $shippingStats['shipped'] ?? 0,
             'delivered' => $shippingStats['delivered'] ?? 0,
+            'cancelled' => $shippingStats['cancelled'] ?? 0,
+            'returned' => ($shippingStats['returned'] ?? 0) + ($shippingStats['exchanged'] ?? 0),
         ];
         
         $shippingTotal = array_sum($shippingData);

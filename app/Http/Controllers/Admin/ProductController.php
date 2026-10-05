@@ -145,6 +145,7 @@ class ProductController extends Controller
             'is_exchangeable' => 'boolean',
             'exchange_days' => 'nullable|integer|min:0',
             'on_sale' => 'boolean',
+            'is_featured' => 'boolean',
             'use_qikink' => 'boolean',
             'tax_class' => 'nullable|string|max:255',
             'delivery_timeline_id' => 'nullable|exists:delivery_timelines,id',
@@ -189,6 +190,7 @@ class ProductController extends Controller
             'seo_description' => $request->seo_description,
             'seo_keywords' => $request->seo_keywords,
             'is_active' => false, // Products are inactive by default until admin activates
+            'is_featured' => $request->has('is_featured'),
             'is_returnable' => $request->has('is_returnable'),
             'return_days' => $request->return_days ?? 7,
             'is_exchangeable' => $request->has('is_exchangeable'),
@@ -354,6 +356,7 @@ class ProductController extends Controller
             'is_exchangeable' => 'boolean',
             'exchange_days' => 'nullable|integer|min:0',
             'on_sale' => 'boolean',
+            'is_featured' => 'boolean',
             'use_qikink' => 'boolean',
             'tax_class' => 'nullable|string|max:255',
             'delivery_timeline_id' => 'nullable|exists:delivery_timelines,id',
@@ -411,6 +414,7 @@ class ProductController extends Controller
             'seo_description' => $request->seo_description,
             'seo_keywords' => $request->seo_keywords,
             'is_active' => $request->has('is_active'),
+            'is_featured' => $request->has('is_featured'),
             'is_returnable' => $request->has('is_returnable'),
             'return_days' => $request->return_days ?? 7,
             'is_exchangeable' => $request->has('is_exchangeable'),
@@ -731,7 +735,7 @@ class ProductController extends Controller
             }
         }
         
-        $boolFields = ['is_active', 'is_returnable', 'is_exchangeable', 'on_sale', 'use_qikink'];
+        $boolFields = ['is_active', 'is_featured', 'is_returnable', 'is_exchangeable', 'on_sale', 'use_qikink'];
         foreach ($boolFields as $field) {
             if ($request->filled($field) && $request->$field !== 'leave') {
                 $updateData[$field] = $request->$field === '1';

@@ -31,18 +31,23 @@ class ConsentController extends Controller
         $request->validate([
             'terms' => 'required|accepted',
             'marketing' => 'nullable|boolean',
+            'marketing_preferences' => 'nullable|array',
         ], [
             'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy to continue.',
         ]);
 
         $user = auth()->user();
         $user->has_consented_to_terms = true;
-        $user->has_consented_to_marketing = $request->boolean('marketing');
+        $user->has_consented_to_marketing = $request->boolean('marketing') || !empty($request->input('marketing_preferences.email'));
+        $user->marketing_preferences = $request->input('marketing_preferences', []);
+        
         $user->consent_timestamp = now();
         $user->consent_ip_address = $request->ip();
         
-        $user->marketing_consent_timestamp = now();
-        $user->marketing_consent_ip_address = $request->ip();
+        if ($user->has_consented_to_marketing || !empty($user->marketing_preferences)) {
+            $user->marketing_consent_timestamp = now();
+            $user->marketing_consent_ip_address = $request->ip();
+        }
         
         $user->save();
 

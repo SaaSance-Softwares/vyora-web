@@ -3,15 +3,24 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 
 export default function ConsentPage() {
     const { settings } = usePage().props as any;
+    const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
     
     const { data, setData, post, processing, errors } = useForm({
         terms: false,
-        marketing: false,
+        marketing_preferences: {
+            email: false,
+            sms: false,
+            whatsapp: false
+        }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/consent');
+    };
+
+    const handleMarketingChange = (channel: string, checked: boolean) => {
+        setData('marketing_preferences', { ...data.marketing_preferences, [channel]: checked });
     };
 
     return (
@@ -53,22 +62,59 @@ export default function ConsentPage() {
                             <p className="text-sm text-red-600 pl-8">{errors.terms}</p>
                         )}
 
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                            <div className="flex h-6 items-center">
-                                <input
-                                    type="checkbox"
-                                    name="marketing"
-                                    checked={data.marketing}
-                                    onChange={(e) => setData('marketing', e.target.checked)}
-                                    className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
-                                />
-                            </div>
-                            <div className="text-sm">
-                                <p className="text-gray-600">
-                                    I consent to receiving marketing emails and exclusive offers. (Optional)
-                                </p>
-                            </div>
-                        </label>
+                        {marketingConfig.email && (
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="flex h-6 items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.marketing_preferences.email}
+                                        onChange={(e) => handleMarketingChange('email', e.target.checked)}
+                                        className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                    />
+                                </div>
+                                <div className="text-sm">
+                                    <p className="text-gray-600">
+                                        I consent to receiving marketing emails and exclusive offers. (Optional)
+                                    </p>
+                                </div>
+                            </label>
+                        )}
+
+                        {marketingConfig.sms && (
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="flex h-6 items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.marketing_preferences.sms}
+                                        onChange={(e) => handleMarketingChange('sms', e.target.checked)}
+                                        className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                    />
+                                </div>
+                                <div className="text-sm">
+                                    <p className="text-gray-600">
+                                        I consent to receiving marketing SMS updates. (Optional)
+                                    </p>
+                                </div>
+                            </label>
+                        )}
+
+                        {marketingConfig.whatsapp && (
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="flex h-6 items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.marketing_preferences.whatsapp}
+                                        onChange={(e) => handleMarketingChange('whatsapp', e.target.checked)}
+                                        className="h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                    />
+                                </div>
+                                <div className="text-sm">
+                                    <p className="text-gray-600">
+                                        I consent to receiving marketing WhatsApp messages. (Optional)
+                                    </p>
+                                </div>
+                            </label>
+                        )}
                         
                     </div>
 

@@ -22,12 +22,18 @@ class AccountController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:20|unique:users,phone,'.$user->id,
             'has_consented_to_marketing' => 'nullable|boolean',
+            'marketing_preferences' => 'nullable|array',
             'tracking_consent' => 'nullable|array',
         ]);
 
-        if (array_key_exists('has_consented_to_marketing', $validated)) {
+        if (array_key_exists('has_consented_to_marketing', $validated) || array_key_exists('marketing_preferences', $validated)) {
             $validated['marketing_consent_timestamp'] = now();
             $validated['marketing_consent_ip_address'] = $request->ip();
+        }
+
+        if (array_key_exists('tracking_consent', $validated)) {
+            $validated['tracking_consent_timestamp'] = now();
+            $validated['tracking_consent_ip_address'] = $request->ip();
         }
 
         $user->update($validated);

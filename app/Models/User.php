@@ -35,6 +35,8 @@ class User extends Authenticatable
         'marketing_consent_ip_address',
         'marketing_preferences',
         'tracking_consent',
+        'tracking_consent_timestamp',
+        'tracking_consent_ip_address',
         'registration_ip',
         'city',
         'state',
@@ -68,6 +70,7 @@ class User extends Authenticatable
             'marketing_consent_timestamp' => 'datetime',
             'marketing_preferences' => 'array',
             'tracking_consent' => 'array',
+            'tracking_consent_timestamp' => 'datetime',
         ];
     }
 

@@ -128,6 +128,9 @@ class ProductListResource extends JsonResource
             'hover_image' => $hoverImage ? $hoverImage->url : null,
             'category' => $this->categories->first()?->name ?? 'General',
             'is_new' => $this->created_at->diffInDays(now()) < 7,
+            'is_featured' => (bool) $this->is_featured,
+            'rating_avg' => $this->reviews_avg_rating ? round($this->reviews_avg_rating, 1) : null,
+            'rating_count' => $this->reviews_count ?? 0,
             'colors' => $colors,
         ];
     }

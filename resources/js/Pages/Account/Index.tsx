@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { useState, useEffect } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
 import CountryCodePicker, { COUNTRIES } from '@/Components/auth/CountryCodePicker';
 import { formatPrice } from '@/lib/utils';
@@ -520,16 +520,23 @@ function AddressesSection() {
 // ── DPDP Section ─────────────────────────────────────────────────────────────
 function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
     const [saving, setSaving] = useState(false);
+    const { settings } = usePage().props as any;
+    const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
 
-    const toggleMarketing = async (checked: boolean) => {
+    const toggleMarketing = async (channel: string, checked: boolean) => {
         setSaving(true);
         try {
-            await api.put('/api/account/profile', { 
+            const newPrefs = { ...(user?.marketing_preferences || {}), [channel]: checked };
+            const payload: any = { 
                 name: user.name, 
                 email: user.email, 
                 phone: user.phone,
-                has_consented_to_marketing: checked 
-            });
+                marketing_preferences: newPrefs 
+            };
+            if (channel === 'email') {
+                payload.has_consented_to_marketing = checked;
+            }
+            await api.put('/api/account/profile', payload);
             onSaved();
         } catch (e) {
             console.error('Could not update marketing consent', e);
@@ -537,6 +544,8 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
             setSaving(false);
         }
     };
+
+    const hasAnyMarketing = (user?.has_consented_to_marketing) || Object.values(user?.marketing_preferences || {}).some(v => v);
 
     return (
         <SectionCard title="Digital Personal Data Protection" icon={Shield}>
@@ -567,27 +576,57 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                     <hr className="border-gray-200" />
 
                     {/* Marketing Group */}
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-900 font-bold uppercase tracking-wider text-xs">Marketing Emails</span>
-                            <div className="flex items-center gap-2">
-                                <label className="flex items-center cursor-pointer relative">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={!!user?.has_consented_to_marketing}
-                                        onChange={(e) => toggleMarketing(e.target.checked)}
-                                        disabled={saving}
-                                    />
-                                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gray-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gray-900"></div>
-                                </label>
-                                <span className="font-bold text-gray-900 text-xs uppercase tracking-wider">
-                                    {user?.has_consented_to_marketing ? 'Consented' : 'Opted Out'}
-                                </span>
-                            </div>
+                    <div className="space-y-4">
+                        <div>
+                            <span className="text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1">Marketing Communications</span>
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                                Manage how you receive exclusive offers and updates.
+                            </p>
                         </div>
-                        {user?.has_consented_to_marketing && user?.marketing_consent_timestamp && (
-                            <div className="bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500">
+
+                        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm">
+                            {marketingConfig.email && (
+                                <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">Email Marketing</span>
+                                        <span className="text-xs text-gray-500">Receive offers via Email.</span>
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!(user?.marketing_preferences?.email || user?.has_consented_to_marketing)} onChange={(e) => toggleMarketing('email', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
+                                </div>
+                            )}
+                            
+                            {marketingConfig.sms && (
+                                <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">SMS Marketing</span>
+                                        <span className="text-xs text-gray-500">Receive offers via SMS.</span>
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.sms} onChange={(e) => toggleMarketing('sms', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
+                                </div>
+                            )}
+
+                            {marketingConfig.whatsapp && (
+                                <div className="p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-semibold text-gray-900 block mb-0.5">WhatsApp Marketing</span>
+                                        <span className="text-xs text-gray-500">Receive offers via WhatsApp.</span>
+                                    </div>
+                                    <label className="flex items-center cursor-pointer relative shrink-0">
+                                        <input type="checkbox" className="sr-only peer" checked={!!user?.marketing_preferences?.whatsapp} onChange={(e) => toggleMarketing('whatsapp', e.target.checked)} disabled={saving} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+
+                        {hasAnyMarketing && user?.marketing_consent_timestamp && (
+                            <div className="bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3">
                                 <span><span className="font-semibold text-gray-700">Timestamp:</span> {new Date(user.marketing_consent_timestamp).toLocaleString()}</span>
                                 <span><span className="font-semibold text-gray-700">IP:</span> {user.marketing_consent_ip_address}</span>
                             </div>
@@ -669,6 +708,13 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                 </label>
                             </div>
                         </div>
+
+                        {user?.tracking_consent_timestamp && (
+                            <div className="bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3">
+                                <span><span className="font-semibold text-gray-700">Timestamp:</span> {new Date(user.tracking_consent_timestamp).toLocaleString()}</span>
+                                <span><span className="font-semibold text-gray-700">IP:</span> {user.tracking_consent_ip_address}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
                 {!user?.has_consented_to_terms && (

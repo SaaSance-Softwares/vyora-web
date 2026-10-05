@@ -11,6 +11,9 @@ export interface ProductList {
     video?: string | null;
     category: string;
     is_new: boolean;
+    is_featured?: boolean;
+    rating_avg?: number | null;
+    rating_count?: number;
     hover_image?: string | null;
     coupon_price?: number;
     colors?: { name: string; hex: string }[];

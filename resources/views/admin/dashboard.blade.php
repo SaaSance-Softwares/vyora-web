@@ -281,6 +281,14 @@
                         <span class="w-3 h-3 rounded bg-[#10b981]"></span>
                         <span class="text-sm text-[#3a3541de] font-medium">Delivered</span>
                     </div>
+                    <div class="flex items-center gap-3">
+                        <span class="w-3 h-3 rounded bg-[#f43f5e]"></span>
+                        <span class="text-sm text-[#3a3541de] font-medium">Cancelled</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="w-3 h-3 rounded bg-[#f97316]"></span>
+                        <span class="text-sm text-[#3a3541de] font-medium">Returned</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -422,7 +430,7 @@
             salesChart: null,
             shippingChart: null,
             salesData: { labels: [], counts: [], amounts: [] },
-            shippingData: [0, 0, 0, 0],
+            shippingData: [0, 0, 0, 0, 0, 0],
             shippingTotal: 0,
             currencySymbol: '{{ $currencySymbol }}',
             
@@ -585,6 +593,8 @@
                     '#8b5cf6', // packed (processing)
                     '#3b82f6', // shipped
                     '#10b981', // delivered
+                    '#f43f5e', // cancelled
+                    '#f97316'  // returned
                 ];
                 
                 if (this.shippingTotal === 0) {
@@ -595,7 +605,7 @@
                 this.shippingChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: this.shippingTotal === 0 ? ['No Data'] : ['Pending', 'Packed', 'Shipped', 'Delivered'],
+                        labels: this.shippingTotal === 0 ? ['No Data'] : ['Pending', 'Packed', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
                         datasets: [{
                             data: plotData,
                             backgroundColor: bgColors,

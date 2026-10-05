@@ -3,8 +3,8 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
-import { Link, usePage, router, Head, useForm, createInertiaApp } from "@inertiajs/react";
-import { ChevronDown, Search, User, ArrowRight, LogOut, Shield, MapPin, Package, Gift, ChevronRight, Wallet, AlertCircle, Check, Lock, EyeOff, Eye, Plus, Pencil, Trash2, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, Minus, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark } from "lucide-react";
+import { Link, usePage, router, useForm, Head, useRemember, createInertiaApp } from "@inertiajs/react";
+import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, Minus, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
 import clsx$1, { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Confetti from "react-confetti";
@@ -971,6 +971,201 @@ function AddressesSection() {
     )
   ] });
 }
+function DpdpSection({ user, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const { settings } = usePage().props;
+  const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
+  const toggleMarketing = async (channel, checked) => {
+    setSaving(true);
+    try {
+      const newPrefs = { ...user?.marketing_preferences || {}, [channel]: checked };
+      const payload = {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        marketing_preferences: newPrefs
+      };
+      if (channel === "email") {
+        payload.has_consented_to_marketing = checked;
+      }
+      await api.put("/api/account/profile", payload);
+      onSaved();
+    } catch (e) {
+      console.error("Could not update marketing consent", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const hasAnyMarketing = user?.has_consented_to_marketing || Object.values(user?.marketing_preferences || {}).some((v) => v);
+  return /* @__PURE__ */ jsx(SectionCard, { title: "Digital Personal Data Protection", icon: Shield, children: /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+    /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600", children: "As per the Digital Personal Data Protection (DPDP) Act, here are your consent details." }),
+    /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 p-6 rounded-xl space-y-6 border border-gray-100", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start text-sm", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1", children: "Terms & Privacy Policy" }),
+            /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500 max-w-xs leading-relaxed", children: "user need to be accepted to login, if you do not agree the terms and condition, you need to delete the account" })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "font-bold text-green-600", children: user?.has_consented_to_terms ? "Accepted" : "Not Accepted" })
+        ] }),
+        user?.has_consented_to_terms && user?.consent_timestamp && /* @__PURE__ */ jsxs("div", { className: "bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500", children: [
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "Timestamp:" }),
+            " ",
+            new Date(user.consent_timestamp).toLocaleString()
+          ] }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "IP:" }),
+            " ",
+            user.consent_ip_address
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("hr", { className: "border-gray-200" }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1", children: "Marketing Communications" }),
+          /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500 leading-relaxed", children: "Manage how you receive exclusive offers and updates." })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm", children: [
+          marketingConfig.email && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Email Marketing" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via Email." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!(user?.marketing_preferences?.email || user?.has_consented_to_marketing), onChange: (e) => toggleMarketing("email", e.target.checked), disabled: saving }),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] }),
+          marketingConfig.sms && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "SMS Marketing" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via SMS." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.sms, onChange: (e) => toggleMarketing("sms", e.target.checked), disabled: saving }),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] }),
+          marketingConfig.whatsapp && /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "WhatsApp Marketing" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Receive offers via WhatsApp." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: !!user?.marketing_preferences?.whatsapp, onChange: (e) => toggleMarketing("whatsapp", e.target.checked), disabled: saving }),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] })
+        ] }),
+        hasAnyMarketing && user?.marketing_consent_timestamp && /* @__PURE__ */ jsxs("div", { className: "bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3", children: [
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "Timestamp:" }),
+            " ",
+            new Date(user.marketing_consent_timestamp).toLocaleString()
+          ] }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "IP:" }),
+            " ",
+            user.marketing_consent_ip_address
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("hr", { className: "border-gray-200" }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1", children: "Tracking & Cookies" }),
+          /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500 leading-relaxed", children: "Manage how third-party integrations track your activity across our website." })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-100 shadow-sm", children: [
+          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Google Analytics" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Helps us understand how you use the site so we can improve it." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "sr-only peer",
+                  checked: user?.tracking_consent?.google_analytics ?? false,
+                  onChange: async (e) => {
+                    const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked };
+                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                    onSaved();
+                  },
+                  disabled: saving
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Meta Pixel" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Allows us to show you personalized ads on Facebook and Instagram." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "sr-only peer",
+                  checked: user?.tracking_consent?.meta_pixel ?? false,
+                  onChange: async (e) => {
+                    const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked };
+                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                    onSaved();
+                  },
+                  disabled: saving
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "p-4 flex justify-between items-center hover:bg-gray-50/50 transition-colors", children: [
+            /* @__PURE__ */ jsxs("div", { className: "pr-4", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block mb-0.5", children: "Snapchat Pixel" }),
+              /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Allows us to show you personalized ads on Snapchat." })
+            ] }),
+            /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative shrink-0", children: [
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "sr-only peer",
+                  checked: user?.tracking_consent?.snapchat_pixel ?? false,
+                  onChange: async (e) => {
+                    const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked };
+                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                    onSaved();
+                  },
+                  disabled: saving
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900" })
+            ] })
+          ] })
+        ] }),
+        user?.tracking_consent_timestamp && /* @__PURE__ */ jsxs("div", { className: "bg-white p-3 rounded-lg border border-gray-100 text-[11px] flex justify-between items-center text-gray-500 shadow-sm mt-3", children: [
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "Timestamp:" }),
+            " ",
+            new Date(user.tracking_consent_timestamp).toLocaleString()
+          ] }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            /* @__PURE__ */ jsx("span", { className: "font-semibold text-gray-700", children: "IP:" }),
+            " ",
+            user.tracking_consent_ip_address
+          ] })
+        ] })
+      ] })
+    ] }),
+    !user?.has_consented_to_terms && /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx("a", { href: "/consent", className: "text-blue-600 hover:underline text-sm font-bold", children: "Review & Accept Consent" }) })
+  ] }) });
+}
 function AccountPage() {
   const { user, logout } = useAuthStore();
   const { openAuthModal } = useUIStore();
@@ -979,7 +1174,7 @@ function AccountPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("tab");
-      if (t && ["profile", "security", "addresses", "orders", "gift-cards"].includes(t)) {
+      if (t && ["profile", "security", "addresses", "orders", "gift-cards", "dpdp"].includes(t)) {
         return t;
       }
     }
@@ -1035,10 +1230,11 @@ function AccountPage() {
   }
   const navTabs = [
     { id: "profile", label: "Profile", icon: User },
-    { id: "security", label: "Security", icon: Shield },
+    { id: "security", label: "Security", icon: Lock },
     { id: "addresses", label: "Addresses", icon: MapPin },
     { id: "orders", label: "Orders", icon: Package },
-    { id: "gift-cards", label: "Gift Cards", icon: Gift }
+    { id: "gift-cards", label: "Gift Cards", icon: Gift },
+    { id: "dpdp", label: "DPDP Consent", icon: Shield }
   ];
   return /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-12", children: [
     /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-10", children: [
@@ -1160,7 +1356,10 @@ function AccountPage() {
             "View More ",
             /* @__PURE__ */ jsx(ArrowRight, { className: "w-3.5 h-3.5" })
           ] }) })
-        ] }) })
+        ] }) }),
+        activeTab === "dpdp" && /* @__PURE__ */ jsx(DpdpSection, { user: userData || user, onSaved: () => {
+          useAuthStore.getState().checkAuth().then(() => api.get("/api/user").then((r) => setUserData(r.data)));
+        } })
       ] })
     ] })
   ] });
@@ -2211,6 +2410,109 @@ const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.def
   __proto__: null,
   default: MyOrdersPage
 }, Symbol.toStringTag, { value: "Module" }));
+function ConsentPage() {
+  const { settings } = usePage().props;
+  const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
+  const { data, setData, post, processing, errors } = useForm({
+    terms: false,
+    marketing_preferences: {
+      email: false,
+      sms: false,
+      whatsapp: false
+    }
+  });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    post("/consent");
+  };
+  const handleMarketingChange = (channel, checked) => {
+    setData("marketing_preferences", { ...data.marketing_preferences, [channel]: checked });
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50", children: [
+    /* @__PURE__ */ jsx(Head, { title: "Action Required - Terms of Service" }),
+    /* @__PURE__ */ jsxs("div", { className: "max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx("h2", { className: "mt-2 text-center text-3xl font-extrabold text-gray-900", children: "Action Required" }),
+        /* @__PURE__ */ jsx("p", { className: "mt-4 text-center text-sm text-gray-600", children: "To continue using our services, we require your consent to our updated policies." })
+      ] }),
+      /* @__PURE__ */ jsxs("form", { className: "mt-8 space-y-6", onSubmit: handleSubmit, children: [
+        /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "checkbox",
+                name: "terms",
+                required: true,
+                checked: data.terms,
+                onChange: (e) => setData("terms", e.target.checked),
+                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsxs("p", { className: "text-gray-700 font-medium", children: [
+              "I agree to the ",
+              /* @__PURE__ */ jsx("a", { href: "/policy/terms-of-service", target: "_blank", className: "font-semibold underline", children: "Terms of Service" }),
+              " and ",
+              /* @__PURE__ */ jsx("a", { href: "/policy/privacy-policy", target: "_blank", className: "font-semibold underline", children: "Privacy Policy" }),
+              " ",
+              /* @__PURE__ */ jsx("span", { className: "text-red-500", children: "*" })
+            ] }) })
+          ] }),
+          errors.terms && /* @__PURE__ */ jsx("p", { className: "text-sm text-red-600 pl-8", children: errors.terms }),
+          marketingConfig.email && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: data.marketing_preferences.email,
+                onChange: (e) => handleMarketingChange("email", e.target.checked),
+                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing emails and exclusive offers. (Optional)" }) })
+          ] }),
+          marketingConfig.sms && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: data.marketing_preferences.sms,
+                onChange: (e) => handleMarketingChange("sms", e.target.checked),
+                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing SMS updates. (Optional)" }) })
+          ] }),
+          marketingConfig.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex h-6 items-center", children: /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: data.marketing_preferences.whatsapp,
+                onChange: (e) => handleMarketingChange("whatsapp", e.target.checked),
+                className: "h-5 w-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              }
+            ) }),
+            /* @__PURE__ */ jsx("div", { className: "text-sm", children: /* @__PURE__ */ jsx("p", { className: "text-gray-600", children: "I consent to receiving marketing WhatsApp messages. (Optional)" }) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "submit",
+            disabled: processing || !data.terms,
+            className: "w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50",
+            children: processing ? "Saving..." : "Continue"
+          }
+        ) })
+      ] })
+    ] })
+  ] });
+}
+const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: ConsentPage
+}, Symbol.toStringTag, { value: "Module" }));
 function LoginForm({ settings, onSuccess, onSwitchToRegister, isModal }) {
   const login = useAuthStore((state) => state.login);
   const [identifier, setIdentifier] = useState("");
@@ -2722,7 +3024,7 @@ function LoginPage() {
     /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[420px] w-full", children: /* @__PURE__ */ jsx(LoginForm, { settings }) }) })
   ] });
 }
-const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: LoginPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -2778,7 +3080,12 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
     password: "",
     password_confirmation: "",
     has_consented_to_terms: false,
-    has_consented_to_marketing: false
+    has_consented_to_marketing: false,
+    marketing_preferences: {
+      email: false,
+      sms: false,
+      whatsapp: false
+    }
   });
   const [countryCode, setCountryCode] = useState("+91");
   const [error, setError] = useState("");
@@ -2811,7 +3118,12 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
           setFinalSubmitPhone(finalPhone);
         }
       } else {
-        const res = await api.post("/api/register", { ...form, phone: finalPhone });
+        const payload = {
+          ...form,
+          phone: finalPhone,
+          has_consented_to_marketing: form.marketing_preferences.email || form.has_consented_to_marketing
+        };
+        const res = await api.post("/api/register", payload);
         login(res.data.access_token, res.data.user);
         if (onSuccess) onSuccess();
         else router.visit("/");
@@ -3092,20 +3404,50 @@ function RegisterForm({ settings, onSuccess, onSwitchToLogin, isModal }) {
                   /* @__PURE__ */ jsx("span", { className: "text-red-500", children: "*" })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+              settings?.marketing_consent_fields?.email && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
                 /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
                   /* @__PURE__ */ jsx(
                     "input",
                     {
                       type: "checkbox",
                       className: "peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer",
-                      checked: form.has_consented_to_marketing,
-                      onChange: (e) => setForm({ ...form, has_consented_to_marketing: e.target.checked })
+                      checked: form.marketing_preferences.email || form.has_consented_to_marketing,
+                      onChange: (e) => setForm({ ...form, has_consented_to_marketing: e.target.checked, marketing_preferences: { ...form.marketing_preferences, email: e.target.checked } })
                     }
                   ),
                   /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
                 ] }),
                 /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing emails and exclusive offers. (Optional)" })
+              ] }),
+              settings?.marketing_consent_fields?.sms && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+                /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      className: "peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer",
+                      checked: form.marketing_preferences.sms,
+                      onChange: (e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, sms: e.target.checked } })
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing SMS updates. (Optional)" })
+              ] }),
+              settings?.marketing_consent_fields?.whatsapp && /* @__PURE__ */ jsxs("label", { className: "flex items-start gap-3 cursor-pointer group", children: [
+                /* @__PURE__ */ jsxs("div", { className: "relative flex items-start mt-0.5", children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      className: "peer w-4 h-4 border-2 border-gray-300 rounded appearance-none checked:bg-black checked:border-black transition-all cursor-pointer",
+                      checked: form.marketing_preferences.whatsapp,
+                      onChange: (e) => setForm({ ...form, marketing_preferences: { ...form.marketing_preferences, whatsapp: e.target.checked } })
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("svg", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-600 group-hover:text-black transition-colors", children: "I consent to receiving marketing WhatsApp messages. (Optional)" })
               ] })
             ] }),
             /* @__PURE__ */ jsx(
@@ -3202,7 +3544,7 @@ function RegisterPage() {
     /* @__PURE__ */ jsx("div", { className: "max-w-[1280px] mx-auto px-4 py-16 flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "max-w-[460px] w-full", children: /* @__PURE__ */ jsx(RegisterForm, { settings }) }) })
   ] });
 }
-const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: RegisterPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -3309,7 +3651,7 @@ function ResetPassword({ token, email }) {
     ] })
   ] });
 }
-const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ResetPassword
 }, Symbol.toStringTag, { value: "Module" }));
@@ -3595,7 +3937,7 @@ function CartPage() {
     ] })
   ] });
 }
-const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CartPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -3823,7 +4165,9 @@ function ProductCard({ product, activeCategory, onRemove }) {
           colorHex: colorAttr?.meta || void 0,
           sizeName: sizeAttr?.value || void 0,
           size: sizeAttr?.value || void 0,
-          deliveryDate: data.delivery_timeline?.formatted_date || void 0
+          deliveryDate: data.delivery_timeline?.formatted_date || void 0,
+          exchangeDays: data.is_exchangeable ? data.exchange_days : null,
+          returnDays: data.is_returnable ? data.return_days : null
         });
         if (action === "buy") {
           router.visit("/checkout");
@@ -3935,7 +4279,10 @@ function ProductCard({ product, activeCategory, onRemove }) {
         )),
         /* @__PURE__ */ jsx("div", { className: `absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${imgRadiusClass}` })
       ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-gray-300 bg-gray-50", children: "No Image" }),
-      product.is_new && /* @__PURE__ */ jsx("span", { className: "absolute top-3 left-3 bg-primary/90 backdrop-blur-md text-white border border-primary/20 text-[10px] px-2.5 py-1 font-bold rounded-full uppercase tracking-wider shadow-sm shadow-primary/20 z-10", children: "New" }),
+      /* @__PURE__ */ jsxs("div", { className: "absolute top-3 left-3 flex flex-col gap-2 z-10", children: [
+        product.is_new && /* @__PURE__ */ jsx("span", { className: "w-max bg-primary/90 backdrop-blur-md text-white border border-primary/20 text-[10px] px-2.5 py-1 font-bold rounded-full uppercase tracking-wider shadow-sm shadow-primary/20", children: "New" }),
+        product.is_featured && /* @__PURE__ */ jsx("span", { className: "w-max bg-black/80 backdrop-blur-md text-white border border-black/20 text-[10px] px-2.5 py-1 font-bold rounded-full uppercase tracking-wider shadow-sm", children: "Featured" })
+      ] }),
       onRemove && /* @__PURE__ */ jsx(
         "button",
         {
@@ -3948,7 +4295,13 @@ function ProductCard({ product, activeCategory, onRemove }) {
           title: "Remove from Wishlist",
           children: /* @__PURE__ */ jsx(Trash2, { size: 15 })
         }
-      )
+      ),
+      product.rating_count > 0 && /* @__PURE__ */ jsxs("div", { className: "absolute bottom-3 left-3 bg-white/70 backdrop-blur-md text-gray-800 text-[10px] px-2 py-1 font-bold rounded-md shadow-sm z-10 flex items-center gap-1 border border-white/50", children: [
+        /* @__PURE__ */ jsx("span", { children: product.rating_avg }),
+        /* @__PURE__ */ jsx("svg", { className: "w-3 h-3 text-yellow-400 -mt-0.5", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsx("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" }) }),
+        /* @__PURE__ */ jsx("span", { className: "text-gray-300 font-normal", children: "|" }),
+        /* @__PURE__ */ jsx("span", { children: product.rating_count })
+      ] })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "mt-4 px-1 pb-1 flex flex-col gap-1 flex-grow", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center gap-2 min-h-[14px]", children: [
@@ -4092,29 +4445,29 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   const primaryColor = settings?.tc_primary_color || "#000000";
   const activeQueryKey = queryKey || (searchParams.has("category") ? "category" : searchParams.has("collection") ? "collection" : void 0);
   const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : void 0) || void 0;
-  const [products, setProducts] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [products, setProducts] = useRemember([], `products-${url}`);
+  const [page, setPage] = useRemember(1, `page-${url}`);
+  const [hasMore, setHasMore] = useRemember(true, `hasMore-${url}`);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    in_stock: initialFilters?.in_stock || false,
-    sort: initialFilters?.sort || "new",
-    min_price: initialFilters?.min_price || "",
-    max_price: initialFilters?.max_price || "",
-    size: initialFilters?.size || [],
-    color: initialFilters?.color || [],
-    fit: initialFilters?.fit || [],
-    fabric: initialFilters?.fabric || []
+  const [filters, setFilters] = useRemember({
+    in_stock: searchParams.has("in_stock") ? searchParams.get("in_stock") === "1" : initialFilters?.in_stock || false,
+    sort: searchParams.get("sort") || initialFilters?.sort || "new",
+    min_price: searchParams.get("min_price") || initialFilters?.min_price || "",
+    max_price: searchParams.get("max_price") || initialFilters?.max_price || "",
+    size: searchParams.get("size") ? searchParams.get("size").split(",") : initialFilters?.size || [],
+    color: searchParams.get("color") ? searchParams.get("color").split(",") : initialFilters?.color || [],
+    fit: searchParams.get("fit") ? searchParams.get("fit").split(",") : initialFilters?.fit || [],
+    fabric: searchParams.get("fabric") ? searchParams.get("fabric").split(",") : initialFilters?.fabric || []
   });
   const [expandedSections, setExpandedSections] = useState({
     sort: true,
     price: true,
     size: true,
     color: true,
-    fit: false,
-    fabric: false
+    fit: true,
+    fabric: true
   });
   const toggleSection = (section) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -4151,6 +4504,8 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
           const dynamicFilters = res.data.filters;
           if (dynamicFilters.fits) setAvailableFits(dynamicFilters.fits);
           if (dynamicFilters.fabrics) setAvailableFabrics(dynamicFilters.fabrics);
+          if (dynamicFilters.colors) setAvailableColors(dynamicFilters.colors);
+          if (dynamicFilters.sizes) setAvailableSizes(dynamicFilters.sizes);
         }
       }
       setHasMore(res.data.meta.current_page < res.data.meta.last_page);
@@ -4163,10 +4518,37 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       setLoadingMore(false);
     }
   }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
+  const isFirstMount = useRef(true);
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      if (products.length > 0) {
+        setLoading(false);
+        return;
+      }
+    }
     setPage(1);
     setHasMore(true);
     fetchProducts(1, false);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("in_stock");
+    params.delete("sort");
+    params.delete("min_price");
+    params.delete("max_price");
+    params.delete("size");
+    params.delete("color");
+    params.delete("fit");
+    params.delete("fabric");
+    if (filters.in_stock) params.set("in_stock", "1");
+    if (filters.sort && filters.sort !== "new") params.set("sort", filters.sort);
+    if (filters.min_price) params.set("min_price", filters.min_price);
+    if (filters.max_price) params.set("max_price", filters.max_price);
+    if (filters.size.length) params.set("size", filters.size.join(","));
+    if (filters.color.length) params.set("color", filters.color.join(","));
+    if (filters.fit.length) params.set("fit", filters.fit.join(","));
+    if (filters.fabric.length) params.set("fabric", filters.fabric.join(","));
+    const newUrl = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+    window.history.replaceState({}, "", newUrl);
   }, [filters, fetchProducts, activeQueryKey, activeQueryValue]);
   useEffect(() => {
     const handleObserver = (entities) => {
@@ -4210,8 +4592,8 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   };
   const [availableFits, setAvailableFits] = useState([]);
   const [availableFabrics, setAvailableFabrics] = useState([]);
-  const MOCK_SIZES = ["S", "M", "L", "XL", "XXL"];
-  const MOCK_COLORS = ["Black", "White", "Red", "Blue", "Green", "Navy"];
+  const [availableColors, setAvailableColors] = useState([]);
+  const [availableSizes, setAvailableSizes] = useState([]);
   const displayTitle = title ? title : activeQueryValue ? activeQueryValue.split("-").join(" ") : "Products";
   return /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-8 relative", children: [
     /* @__PURE__ */ jsxs("div", { className: "mb-6 flex flex-col gap-4", children: [
@@ -4258,20 +4640,23 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col lg:flex-row gap-8 items-start", children: [
       isFilterOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 z-30 lg:hidden", onClick: () => setIsFilterOpen(false) }),
       /* @__PURE__ */ jsxs("div", { className: `
-                    fixed lg:sticky top-[64px] pb-16 lg:pb-0 right-0 h-[calc(100vh-64px)] lg:h-auto 
+                    fixed lg:sticky top-[80px] pb-16 lg:pb-0 right-0 max-h-[calc(100vh-64px)] lg:max-h-[calc(100vh-100px)]
                     w-80 lg:w-64 bg-white z-40 lg:z-0 
                     transform transition-transform duration-300 ease-in-out
                     flex flex-col border-l lg:border-l-0 lg:border-r border-gray-100 pr-0 lg:pr-6
                     ${isFilterOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
                 `, children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-4 lg:p-0 lg:pb-4 border-b lg:border-none", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-4 lg:p-0 lg:pb-4 border-b lg:border-none shrink-0", children: [
           /* @__PURE__ */ jsxs("h2", { className: "text-lg font-bold flex items-center gap-2", children: [
             /* @__PURE__ */ jsx(Filter, { size: 18 }),
             " Filters"
           ] }),
-          /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "lg:hidden p-2 text-gray-500", children: /* @__PURE__ */ jsx(X, { size: 20 }) })
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsx("button", { onClick: clearFilters, className: "text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2", children: "Clear" }),
+            /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "lg:hidden p-2 -mr-2 text-gray-500", children: /* @__PURE__ */ jsx(X, { size: 20 }) })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto p-4 lg:p-0 space-y-6 lg:mt-2 custom-scrollbar", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto p-4 lg:p-0 space-y-6 lg:mt-2 custom-scrollbar min-h-0", children: [
           /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-3 cursor-pointer group", children: [
             /* @__PURE__ */ jsxs("div", { className: "relative flex items-center", children: [
               /* @__PURE__ */ jsx(
@@ -4316,56 +4701,79 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
               )
             ] })
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
+          availableSizes.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
             /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("size"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
               "Size ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.size ? "rotate-180" : ""}` })
             ] }),
-            expandedSections.size && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: MOCK_SIZES.map((s) => /* @__PURE__ */ jsx(
+            expandedSections.size && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: availableSizes.map((s) => /* @__PURE__ */ jsxs(
               "button",
               {
-                onClick: () => toggleArrayFilter("size", s),
-                className: `min-w-[40px] h-10 px-2 rounded-md border text-sm font-medium transition-colors ${filters.size.includes(s) ? "bg-black text-white border-black" : "border-gray-200 text-gray-700 hover:border-gray-300"}`,
-                children: s
+                onClick: () => toggleArrayFilter("size", s.name),
+                className: `min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 ${filters.size.includes(s.name) ? "bg-black text-white border-black" : "border-gray-200 text-gray-700 hover:border-gray-300"}`,
+                children: [
+                  /* @__PURE__ */ jsx("span", { children: s.name }),
+                  /* @__PURE__ */ jsxs("span", { className: `text-xs opacity-60 ${filters.size.includes(s.name) ? "text-gray-300" : "text-gray-500"}`, children: [
+                    "(",
+                    s.count,
+                    ")"
+                  ] })
+                ]
               },
-              s
+              s.name
             )) })
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
+          availableColors.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
             /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("color"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
               "Color ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.color ? "rotate-180" : ""}` })
             ] }),
-            expandedSections.color && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: MOCK_COLORS.map((c) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-3 cursor-pointer group", children: [
-              /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.color.includes(c), onChange: () => toggleArrayFilter("color", c), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
-              /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: c })
-            ] }, c)) })
+            expandedSections.color && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: availableColors.map((c) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.color.includes(c.name), onChange: () => toggleArrayFilter("color", c.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsx(
+                    "span",
+                    {
+                      className: "w-4 h-4 rounded-full border border-gray-200 shadow-sm",
+                      style: { backgroundColor: c.hex || "#ffffff" }
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: c.name })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 text-xs mr-3", children: c.count })
+            ] }, c.name)) })
           ] }),
           availableFits.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
             /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fit"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
               "Fit ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.fit ? "rotate-180" : ""}` })
             ] }),
-            expandedSections.fit && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: availableFits.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-3 cursor-pointer group", children: [
-              /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fit.includes(f), onChange: () => toggleArrayFilter("fit", f), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
-              /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f })
-            ] }, f)) })
+            expandedSections.fit && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: availableFits.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fit.includes(f.name), onChange: () => toggleArrayFilter("fit", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f.name })
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 text-xs mr-3", children: f.count })
+            ] }, f.name)) })
           ] }),
           availableFabrics.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
             /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fabric"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2", children: [
               "Fabric ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.fabric ? "rotate-180" : ""}` })
             ] }),
-            expandedSections.fabric && /* @__PURE__ */ jsx("div", { className: "space-y-2 pt-2", children: availableFabrics.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-3 cursor-pointer group", children: [
-              /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fabric.includes(f), onChange: () => toggleArrayFilter("fabric", f), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
-              /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f })
-            ] }, f)) })
-          ] })
+            expandedSections.fabric && /* @__PURE__ */ jsx("div", { className: "space-y-2 pt-2", children: availableFabrics.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fabric.includes(f.name), onChange: () => toggleArrayFilter("fabric", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f.name })
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 text-xs mr-3", children: f.count })
+            ] }, f.name)) })
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "h-20 w-full shrink-0 lg:h-32" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4 border-t border-gray-100 lg:sticky lg:bottom-0 lg:bg-white z-10 w-full", children: [
-          /* @__PURE__ */ jsx("button", { onClick: clearFilters, className: "w-full py-2.5 text-sm font-bold text-gray-500 hover:text-black hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200", children: "Clear All Filters" }),
-          /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "w-full mt-2 py-3 bg-black text-white text-sm font-bold rounded-lg lg:hidden shadow-sm", children: "Show Results" })
-        ] })
+        /* @__PURE__ */ jsx("div", { className: "p-4 border-t border-gray-100 mt-auto bg-white z-10 w-full lg:hidden", children: /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "w-full py-3 bg-black text-white text-sm font-bold rounded-lg shadow-sm", children: "Show Results" }) })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full min-w-0", children: [
         loading && products.length === 0 ? /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-4 gap-y-10", children: [...Array(6)].map((_, i) => /* @__PURE__ */ jsxs("div", { className: "animate-pulse", children: [
@@ -4444,7 +4852,7 @@ function CategoryPage({ category }) {
     )
   ] });
 }
-const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CategoryPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -5540,7 +5948,7 @@ function CheckoutPage() {
     ] })
   ] });
 }
-const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CheckoutPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -5761,7 +6169,7 @@ function ThankYouPage({ order }) {
     ] })
   ] });
 }
-const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ThankYouPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6875,7 +7283,7 @@ function CmsPage({ page, content, layout }) {
     /* @__PURE__ */ jsx(PageRenderer, { content, layout, settings })
   ] });
 }
-const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CmsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -6929,7 +7337,7 @@ function CollectionPage({ collection }) {
     )
   ] });
 }
-const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: CollectionPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7253,7 +7661,7 @@ function GiftCardsPage() {
     ] })
   ] });
 }
-const __vite_glob_0_12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: GiftCardsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7732,7 +8140,7 @@ function MyGiftCardsPage() {
     useCard && /* @__PURE__ */ jsx(UseModal, { card: useCard, onClose: () => setUseCard(null) })
   ] });
 }
-const __vite_glob_0_13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: MyGiftCardsPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7902,7 +8310,7 @@ function GiftCardSharePage() {
     ] })
   ] });
 }
-const __vite_glob_0_14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: GiftCardSharePage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -7950,7 +8358,7 @@ function Home({ page, content, layout }) {
     /* @__PURE__ */ jsx(PageRenderer, { content, layout, settings })
   ] });
 }
-const __vite_glob_0_15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Home
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8002,7 +8410,7 @@ function LegalPage({ page }) {
     ] })
   ] });
 }
-const __vite_glob_0_16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: LegalPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -8182,7 +8590,7 @@ function PosLayout({
     ] })
   ] });
 }
-const __vite_glob_0_18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: PosLayout
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9232,7 +9640,7 @@ function Dashboard() {
   );
 }
 Dashboard.layout = (page) => page;
-const __vite_glob_0_17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Dashboard
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9378,7 +9786,7 @@ function ReceiptBuilder() {
   ] }) });
 }
 ReceiptBuilder.layout = (page) => page;
-const __vite_glob_0_19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ReceiptBuilder
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9850,7 +10258,7 @@ New Order #: EXC-${result.new_order_id}` : ""}`);
   ] });
 }
 Returns.layout = (page) => page;
-const __vite_glob_0_20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: Returns
 }, Symbol.toStringTag, { value: "Module" }));
@@ -9892,12 +10300,19 @@ function PriceHistoryModal({ isOpen, onClose, skuId, skuName }) {
   }));
   const chartNode = /* @__PURE__ */ jsx("div", { className: "h-64 w-full", children: /* @__PURE__ */ jsx(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ jsxs(LineChart, { data: chartData, margin: { top: 5, right: 30, left: 20, bottom: 5 }, children: [
     /* @__PURE__ */ jsx(CartesianGrid, { strokeDasharray: "3 3", opacity: 0.2, stroke: textColor }),
-    /* @__PURE__ */ jsx(XAxis, { dataKey: "date", tick: { fontSize: 12, fill: textColor } }),
+    /* @__PURE__ */ jsx(
+      XAxis,
+      {
+        dataKey: "fullDate",
+        tickFormatter: (val) => new Date(val).toLocaleDateString("en-IN", { month: "short", day: "numeric" }),
+        tick: { fontSize: 12, fill: textColor }
+      }
+    ),
     /* @__PURE__ */ jsx(YAxis, { tick: { fontSize: 12, fill: textColor }, domain: ["auto", "auto"], tickFormatter: (value) => `₹${value}` }),
     /* @__PURE__ */ jsx(
       Tooltip,
       {
-        formatter: (value) => [`₹${value}`, void 0],
+        formatter: (value, name) => [`₹${value} (${name})`, void 0],
         labelFormatter: (label, payload) => payload?.[0]?.payload?.fullDate || label,
         contentStyle: { backgroundColor: bgColor, color: textColor, borderColor: textColor, opacity: 0.9 }
       }
@@ -10163,7 +10578,9 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
       colorHex: colorObj?.meta || void 0,
       sizeName: selectedSize || void 0,
       size: selectedSize || void 0,
-      deliveryDate: product.delivery_timeline?.formatted_date || void 0
+      deliveryDate: product.delivery_timeline?.formatted_date || void 0,
+      exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+      returnDays: product.is_returnable ? product.return_days : null
     });
     trackAddToCart(product, 1);
   }
@@ -10220,7 +10637,9 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
       colorHex: colorObj?.meta || void 0,
       sizeName: selectedSize || void 0,
       size: selectedSize || void 0,
-      deliveryDate: product.delivery_timeline?.formatted_date || void 0
+      deliveryDate: product.delivery_timeline?.formatted_date || void 0,
+      exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+      returnDays: product.is_returnable ? product.return_days : null
     });
     trackAddToCart(product, 1);
     router.visit("/checkout");
@@ -10470,7 +10889,10 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                   ),
                   children: [
                     matchingImg.url.match(/\.(mp4|webm|mov|qt)$/i) ? /* @__PURE__ */ jsx("video", { src: matchingImg.url, className: "w-full h-full object-cover absolute inset-0", autoPlay: true, loop: true, muted: true, playsInline: true }) : /* @__PURE__ */ jsx("img", { src: matchingImg.url, alt: color.value, className: "w-full h-full absolute inset-0 object-cover" }),
-                    /* @__PURE__ */ jsx("span", { className: "absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-opacity uppercase z-10 text-center leading-none", children: color.value })
+                    /* @__PURE__ */ jsx("span", { className: cn(
+                      "absolute inset-x-0 bottom-0 bg-black/60 pt-6 pb-1 flex items-center justify-center text-[9px] text-white font-bold tracking-wider transition-all duration-300 uppercase z-10 text-center leading-none",
+                      selectedColor === color.value ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full group-hover:opacity-100 group-hover:translate-y-0"
+                    ), children: color.value })
                   ]
                 },
                 color.value
@@ -10895,7 +11317,10 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                 )
               }
             ),
-            /* @__PURE__ */ jsx("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20", children: color.value })
+            /* @__PURE__ */ jsx("div", { className: cn(
+              "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded transition-opacity pointer-events-none whitespace-nowrap z-20",
+              selectedColor === color.value ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            ), children: color.value })
           ] }, color.value)) })
         ] })
       ] }) : /* @__PURE__ */ jsxs("div", { className: "p-6 space-y-6 text-sm text-gray-600 leading-relaxed", children: [
@@ -11190,7 +11615,7 @@ function ProductPage({ product }) {
     /* @__PURE__ */ jsx(FaqAccordion, { faqs: product.faqs })
   ] });
 }
-const __vite_glob_0_21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ProductPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11223,7 +11648,7 @@ function ShopPage() {
     )
   ] });
 }
-const __vite_glob_0_22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: ShopPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11307,7 +11732,7 @@ function SearchInput({ initialValue = "" }) {
     ) }, idx)) }) })
   ] });
 }
-const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   SearchInput
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11334,7 +11759,7 @@ function SearchPage() {
     ] })
   ] });
 }
-const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: SearchPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11425,7 +11850,7 @@ function StoreLocator({ stores }) {
     ] }, store.id)) }) })
   ] });
 }
-const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: StoreLocator
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11481,7 +11906,7 @@ function WishlistPage() {
     )) })
   ] });
 }
-const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: WishlistPage
 }, Symbol.toStringTag, { value: "Module" }));
@@ -11969,7 +12394,9 @@ function QuickViewModal() {
       colorHex: colorObj?.meta || void 0,
       sizeName: selectedSize || void 0,
       size: selectedSize || void 0,
-      deliveryDate: product.delivery_timeline?.formatted_date || void 0
+      deliveryDate: product.delivery_timeline?.formatted_date || void 0,
+      exchangeDays: product.is_exchangeable ? product.exchange_days : null,
+      returnDays: product.is_returnable ? product.return_days : null
     });
     closeQuickView();
     if (action === "buy") {
@@ -12211,6 +12638,184 @@ function Footer() {
     ] }) })
   ] });
 }
+function CookieConsent() {
+  const { props } = usePage();
+  const settings = props.settings || {};
+  const { user, checkAuth } = useAuthStore();
+  const position = settings.cookie_widget_position === "right" ? "right" : "left";
+  const themeColor = settings.cookie_widget_color || "#000000";
+  const [showBanner, setShowBanner] = useState(false);
+  const [isFloating, setIsFloating] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [toggles, setToggles] = useState({
+    google_analytics: false,
+    meta_pixel: false,
+    snapchat_pixel: false
+  });
+  useEffect(() => {
+    const consent = localStorage.getItem("cookie_consent");
+    if (!consent) {
+      setShowBanner(true);
+    } else {
+      setIsFloating(true);
+      try {
+        const parsed = JSON.parse(consent);
+        setToggles({
+          google_analytics: !!parsed.google_analytics,
+          meta_pixel: !!parsed.meta_pixel,
+          snapchat_pixel: !!parsed.snapchat_pixel
+        });
+      } catch (e) {
+        if (consent === "all") {
+          setToggles({ google_analytics: true, meta_pixel: true, snapchat_pixel: true });
+        }
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (user?.tracking_consent) {
+      setToggles({
+        google_analytics: !!user.tracking_consent.google_analytics,
+        meta_pixel: !!user.tracking_consent.meta_pixel,
+        snapchat_pixel: !!user.tracking_consent.snapchat_pixel
+      });
+      localStorage.setItem("cookie_consent", JSON.stringify(user.tracking_consent));
+      window.dispatchEvent(new Event("cookie_consent_updated"));
+    }
+  }, [user?.tracking_consent]);
+  const savePreferences = async (prefs) => {
+    localStorage.setItem("cookie_consent", JSON.stringify(prefs));
+    setShowBanner(false);
+    setShowCustomize(false);
+    setIsFloating(true);
+    window.dispatchEvent(new Event("cookie_consent_updated"));
+    if (user) {
+      try {
+        await api.put("/api/account/profile", {
+          name: user.name,
+          email: user.email,
+          tracking_consent: prefs
+        });
+        checkAuth();
+      } catch (e) {
+      }
+    }
+  };
+  const acceptAll = () => {
+    const prefs = { google_analytics: true, meta_pixel: true, snapchat_pixel: true };
+    setToggles(prefs);
+    savePreferences(prefs);
+  };
+  const rejectNonEssential = () => {
+    const prefs = { google_analytics: false, meta_pixel: false, snapchat_pixel: false };
+    setToggles(prefs);
+    savePreferences(prefs);
+  };
+  const saveCustom = () => {
+    savePreferences(toggles);
+  };
+  if (!showBanner && !isFloating && !showCustomize) return null;
+  if (showCustomize) {
+    return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300", children: [
+      /* @__PURE__ */ jsxs("div", { className: "px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsx(Settings, { className: "w-5 h-5 text-gray-700" }),
+          /* @__PURE__ */ jsx("h3", { className: "font-bold text-gray-900", children: "Privacy Preferences" })
+        ] }),
+        /* @__PURE__ */ jsx("button", { onClick: () => {
+          setShowCustomize(false);
+          setShowBanner(true);
+        }, className: "p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500", children: /* @__PURE__ */ jsx(X, { className: "w-5 h-5" }) })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "p-6 space-y-6", children: /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-3 rounded-lg border border-gray-100", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block", children: "Strictly Necessary" }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Required for site functionality" })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded uppercase tracking-wider", children: "Always On" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-3 rounded-lg border border-gray-100", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block", children: "Google Analytics" }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Anonymous traffic analysis" })
+          ] }),
+          /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative", children: [
+            /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: toggles.google_analytics, onChange: (e) => setToggles({ ...toggles, google_analytics: e.target.checked }) }),
+            /* @__PURE__ */ jsx("div", { className: "w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all", style: { backgroundColor: toggles.google_analytics ? themeColor : void 0 } })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-3 rounded-lg border border-gray-100", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block", children: "Meta Pixel" }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Personalized Facebook/IG ads" })
+          ] }),
+          /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative", children: [
+            /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: toggles.meta_pixel, onChange: (e) => setToggles({ ...toggles, meta_pixel: e.target.checked }) }),
+            /* @__PURE__ */ jsx("div", { className: "w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all", style: { backgroundColor: toggles.meta_pixel ? themeColor : void 0 } })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-3 rounded-lg border border-gray-100", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-gray-900 block", children: "Snapchat Pixel" }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: "Personalized Snapchat ads" })
+          ] }),
+          /* @__PURE__ */ jsxs("label", { className: "flex items-center cursor-pointer relative", children: [
+            /* @__PURE__ */ jsx("input", { type: "checkbox", className: "sr-only peer", checked: toggles.snapchat_pixel, onChange: (e) => setToggles({ ...toggles, snapchat_pixel: e.target.checked }) }),
+            /* @__PURE__ */ jsx("div", { className: "w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all", style: { backgroundColor: toggles.snapchat_pixel ? themeColor : void 0 } })
+          ] })
+        ] })
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50", children: [
+        /* @__PURE__ */ jsx("button", { onClick: () => {
+          setShowCustomize(false);
+          setShowBanner(true);
+        }, className: "px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors", children: "Cancel" }),
+        /* @__PURE__ */ jsx("button", { onClick: saveCustom, className: "px-6 py-2 rounded-lg text-white text-sm font-bold transition-opacity hover:opacity-90 shadow-sm", style: { backgroundColor: themeColor }, children: "Save Preferences" })
+      ] })
+    ] }) });
+  }
+  if (showBanner) {
+    return /* @__PURE__ */ jsxs("div", { className: `fixed bottom-6 ${position === "right" ? "right-6" : "left-6"} z-[9999] w-[340px] bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 animate-in slide-in-from-bottom-8 duration-500`, children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3 mb-4", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-10 h-10 rounded-full flex items-center justify-center shrink-0", style: { backgroundColor: `${themeColor}15` }, children: /* @__PURE__ */ jsx(Cookie, { className: "w-5 h-5", style: { color: themeColor } }) }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-sm font-bold text-gray-900 mb-1", children: "Your Privacy Matters" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-gray-500 leading-relaxed", children: [
+            "We use cookies to improve your experience.",
+            /* @__PURE__ */ jsx("a", { href: "/cookie-policy", className: "underline ml-1 hover:text-gray-900", children: "Read policy" })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+        /* @__PURE__ */ jsx("button", { onClick: acceptAll, className: "w-full py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider transition-opacity hover:opacity-90 shadow-sm", style: { backgroundColor: themeColor }, children: "Accept All" }),
+        /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsx("button", { onClick: rejectNonEssential, className: "flex-1 py-2.5 rounded-xl text-gray-600 bg-gray-50 border border-gray-200 text-xs font-bold uppercase tracking-wider hover:bg-gray-100 transition-colors", children: "Essential Only" }),
+          /* @__PURE__ */ jsx("button", { onClick: () => {
+            setShowBanner(false);
+            setShowCustomize(true);
+          }, className: "flex-1 py-2.5 rounded-xl text-gray-600 bg-gray-50 border border-gray-200 text-xs font-bold uppercase tracking-wider hover:bg-gray-100 transition-colors", children: "Customize" })
+        ] })
+      ] })
+    ] });
+  }
+  if (isFloating) {
+    return /* @__PURE__ */ jsx(
+      "button",
+      {
+        onClick: () => {
+          setShowBanner(true);
+          setIsFloating(false);
+        },
+        className: `fixed bottom-6 ${position === "right" ? "right-6" : "left-6"} z-[9999] w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform`,
+        style: { backgroundColor: themeColor },
+        "aria-label": "Cookie Preferences",
+        children: /* @__PURE__ */ jsx(Cookie, { className: "w-5 h-5 text-white" })
+      }
+    );
+  }
+  return null;
+}
 const SettingsContext = React.createContext({});
 function Layout({ children }) {
   const { settings } = usePage().props;
@@ -12260,7 +12865,8 @@ function Layout({ children }) {
           /* @__PURE__ */ jsx("main", { className: "flex-grow pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0", children }),
           /* @__PURE__ */ jsx(Footer, {}),
           /* @__PURE__ */ jsx(AuthModal, {}),
-          /* @__PURE__ */ jsx(QuickViewModal, {})
+          /* @__PURE__ */ jsx(QuickViewModal, {}),
+          /* @__PURE__ */ jsx(CookieConsent, {})
         ]
       }
     )
@@ -12275,7 +12881,7 @@ createServer(
       return title ? title.includes(appName) ? title : `${title} - ${appName}` : appName;
     },
     resolve: (name) => {
-      const pages = /* @__PURE__ */ Object.assign({ "./Pages/Account/Index.tsx": __vite_glob_0_0, "./Pages/Account/OrderDetails.tsx": __vite_glob_0_1, "./Pages/Account/Orders.tsx": __vite_glob_0_2, "./Pages/Auth/Login.tsx": __vite_glob_0_3, "./Pages/Auth/Register.tsx": __vite_glob_0_4, "./Pages/Auth/ResetPassword.tsx": __vite_glob_0_5, "./Pages/Cart.tsx": __vite_glob_0_6, "./Pages/Category/Show.tsx": __vite_glob_0_7, "./Pages/Checkout.tsx": __vite_glob_0_8, "./Pages/Checkout/ThankYou.tsx": __vite_glob_0_9, "./Pages/CmsPage.tsx": __vite_glob_0_10, "./Pages/Collection/Show.tsx": __vite_glob_0_11, "./Pages/GiftCards/Index.tsx": __vite_glob_0_12, "./Pages/GiftCards/MyCards.tsx": __vite_glob_0_13, "./Pages/GiftCards/Share.tsx": __vite_glob_0_14, "./Pages/Home.tsx": __vite_glob_0_15, "./Pages/LegalPage.tsx": __vite_glob_0_16, "./Pages/Pos/Dashboard.tsx": __vite_glob_0_17, "./Pages/Pos/Layout.tsx": __vite_glob_0_18, "./Pages/Pos/ReceiptBuilder.tsx": __vite_glob_0_19, "./Pages/Pos/Returns.tsx": __vite_glob_0_20, "./Pages/Product/Show.tsx": __vite_glob_0_21, "./Pages/Shop/Index.tsx": __vite_glob_0_22, "./Pages/Shop/Search.tsx": __vite_glob_0_23, "./Pages/Shop/SearchInput.tsx": __vite_glob_0_24, "./Pages/StoreLocator/Index.tsx": __vite_glob_0_25, "./Pages/Wishlist.tsx": __vite_glob_0_26 });
+      const pages = /* @__PURE__ */ Object.assign({ "./Pages/Account/Index.tsx": __vite_glob_0_0, "./Pages/Account/OrderDetails.tsx": __vite_glob_0_1, "./Pages/Account/Orders.tsx": __vite_glob_0_2, "./Pages/Auth/Consent.tsx": __vite_glob_0_3, "./Pages/Auth/Login.tsx": __vite_glob_0_4, "./Pages/Auth/Register.tsx": __vite_glob_0_5, "./Pages/Auth/ResetPassword.tsx": __vite_glob_0_6, "./Pages/Cart.tsx": __vite_glob_0_7, "./Pages/Category/Show.tsx": __vite_glob_0_8, "./Pages/Checkout.tsx": __vite_glob_0_9, "./Pages/Checkout/ThankYou.tsx": __vite_glob_0_10, "./Pages/CmsPage.tsx": __vite_glob_0_11, "./Pages/Collection/Show.tsx": __vite_glob_0_12, "./Pages/GiftCards/Index.tsx": __vite_glob_0_13, "./Pages/GiftCards/MyCards.tsx": __vite_glob_0_14, "./Pages/GiftCards/Share.tsx": __vite_glob_0_15, "./Pages/Home.tsx": __vite_glob_0_16, "./Pages/LegalPage.tsx": __vite_glob_0_17, "./Pages/Pos/Dashboard.tsx": __vite_glob_0_18, "./Pages/Pos/Layout.tsx": __vite_glob_0_19, "./Pages/Pos/ReceiptBuilder.tsx": __vite_glob_0_20, "./Pages/Pos/Returns.tsx": __vite_glob_0_21, "./Pages/Product/Show.tsx": __vite_glob_0_22, "./Pages/Shop/Index.tsx": __vite_glob_0_23, "./Pages/Shop/Search.tsx": __vite_glob_0_24, "./Pages/Shop/SearchInput.tsx": __vite_glob_0_25, "./Pages/StoreLocator/Index.tsx": __vite_glob_0_26, "./Pages/Wishlist.tsx": __vite_glob_0_27 });
       let pageModule = pages[`./Pages/${name}.tsx`];
       if (!pageModule) {
         const pagesJsx = /* @__PURE__ */ Object.assign({});
