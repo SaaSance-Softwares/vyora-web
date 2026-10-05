@@ -681,7 +681,7 @@ export default function AccountPage() {
 
     const navTabs: { id: Tab; label: string; icon: any }[] = [
         { id: 'profile',     label: 'Profile',     icon: User    },
-        { id: 'security',    label: 'Security',    icon: Shield  },
+        { id: 'security',    label: 'Security',    icon: Lock    },
         { id: 'addresses',   label: 'Addresses',   icon: MapPin  },
         { id: 'orders',      label: 'Orders',      icon: Package },
         { id: 'gift-cards',  label: 'Gift Cards',  icon: Gift    },
