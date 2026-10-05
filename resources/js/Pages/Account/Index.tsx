@@ -524,7 +524,11 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
     const marketingConfig = settings?.marketing_consent_fields || { email: true, sms: false, whatsapp: false };
 
     const toggleMarketing = async (channel: string, checked: boolean) => {
+        if (!user.marketing_preferences) user.marketing_preferences = {};
+        user.marketing_preferences[channel] = checked;
+        if (channel === 'email') user.has_consented_to_marketing = checked;
         setSaving(true);
+        
         try {
             const newPrefs = { 
                 ...(user?.marketing_preferences || {}), 
@@ -666,9 +670,15 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                             className="sr-only peer"
                                             checked={user?.tracking_consent?.google_analytics ?? false}
                                             onChange={async (e) => {
-                                                const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked, google_analytics_timestamp: new Date().toISOString() };
-                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                                onSaved();
+                                                const checked = e.target.checked;
+                                                if (!user.tracking_consent) user.tracking_consent = {};
+                                                user.tracking_consent.google_analytics = checked;
+                                                setSaving(true);
+                                                const newConsent = { ...user.tracking_consent, google_analytics: checked, google_analytics_timestamp: new Date().toISOString() };
+                                                try {
+                                                    await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                    onSaved();
+                                                } finally { setSaving(false); }
                                             }}
                                             disabled={saving}
                                         />
@@ -692,9 +702,15 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                             className="sr-only peer"
                                             checked={user?.tracking_consent?.meta_pixel ?? false}
                                             onChange={async (e) => {
-                                                const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked, meta_pixel_timestamp: new Date().toISOString() };
-                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                                onSaved();
+                                                const checked = e.target.checked;
+                                                if (!user.tracking_consent) user.tracking_consent = {};
+                                                user.tracking_consent.meta_pixel = checked;
+                                                setSaving(true);
+                                                const newConsent = { ...user.tracking_consent, meta_pixel: checked, meta_pixel_timestamp: new Date().toISOString() };
+                                                try {
+                                                    await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                    onSaved();
+                                                } finally { setSaving(false); }
                                             }}
                                             disabled={saving}
                                         />
@@ -718,9 +734,15 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                                             className="sr-only peer"
                                             checked={user?.tracking_consent?.snapchat_pixel ?? false}
                                             onChange={async (e) => {
-                                                const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked, snapchat_pixel_timestamp: new Date().toISOString() };
-                                                await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
-                                                onSaved();
+                                                const checked = e.target.checked;
+                                                if (!user.tracking_consent) user.tracking_consent = {};
+                                                user.tracking_consent.snapchat_pixel = checked;
+                                                setSaving(true);
+                                                const newConsent = { ...user.tracking_consent, snapchat_pixel: checked, snapchat_pixel_timestamp: new Date().toISOString() };
+                                                try {
+                                                    await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                                    onSaved();
+                                                } finally { setSaving(false); }
                                             }}
                                             disabled={saving}
                                         />

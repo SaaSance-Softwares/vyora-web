@@ -976,6 +976,9 @@ function DpdpSection({ user, onSaved }) {
   const { settings } = usePage().props;
   settings?.marketing_consent_fields || {};
   const toggleMarketing = async (channel, checked) => {
+    if (!user.marketing_preferences) user.marketing_preferences = {};
+    user.marketing_preferences[channel] = checked;
+    if (channel === "email") user.has_consented_to_marketing = checked;
     setSaving(true);
     try {
       const newPrefs = {
@@ -1100,9 +1103,17 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.google_analytics ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked, google_analytics_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
-                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
-                    onSaved();
+                    const checked = e.target.checked;
+                    if (!user.tracking_consent) user.tracking_consent = {};
+                    user.tracking_consent.google_analytics = checked;
+                    setSaving(true);
+                    const newConsent = { ...user.tracking_consent, google_analytics: checked, google_analytics_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
+                    try {
+                      await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                      onSaved();
+                    } finally {
+                      setSaving(false);
+                    }
                   },
                   disabled: saving
                 }
@@ -1127,9 +1138,17 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.meta_pixel ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked, meta_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
-                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
-                    onSaved();
+                    const checked = e.target.checked;
+                    if (!user.tracking_consent) user.tracking_consent = {};
+                    user.tracking_consent.meta_pixel = checked;
+                    setSaving(true);
+                    const newConsent = { ...user.tracking_consent, meta_pixel: checked, meta_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
+                    try {
+                      await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                      onSaved();
+                    } finally {
+                      setSaving(false);
+                    }
                   },
                   disabled: saving
                 }
@@ -1154,9 +1173,17 @@ function DpdpSection({ user, onSaved }) {
                   className: "sr-only peer",
                   checked: user?.tracking_consent?.snapchat_pixel ?? false,
                   onChange: async (e) => {
-                    const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked, snapchat_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
-                    await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
-                    onSaved();
+                    const checked = e.target.checked;
+                    if (!user.tracking_consent) user.tracking_consent = {};
+                    user.tracking_consent.snapchat_pixel = checked;
+                    setSaving(true);
+                    const newConsent = { ...user.tracking_consent, snapchat_pixel: checked, snapchat_pixel_timestamp: (/* @__PURE__ */ new Date()).toISOString() };
+                    try {
+                      await api.put("/api/account/profile", { name: user.name, email: user.email, tracking_consent: newConsent });
+                      onSaved();
+                    } finally {
+                      setSaving(false);
+                    }
                   },
                   disabled: saving
                 }
