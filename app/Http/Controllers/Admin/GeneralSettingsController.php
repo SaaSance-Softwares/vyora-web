@@ -39,6 +39,8 @@ class GeneralSettingsController extends Controller
         'tax_id',
         'customer_support_hours',
         'store_description',
+        'cookie_widget_position',
+        'cookie_widget_color',
     ];
 
     public function index()

@@ -168,6 +168,32 @@
             </div>
         </div>
 
+        {{-- ── COOKIE WIDGET ─────────────────────────────── --}}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-1">Cookie Consent Widget</h3>
+            <p class="text-sm text-gray-500 mb-6">Manage the DPDP-compliant cookie widget.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Widget Position</label>
+                    <select name="cookie_widget_position" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                        <option value="left" {{ ($settings['cookie_widget_position'] ?? 'left') === 'left' ? 'selected' : '' }}>Bottom Left</option>
+                        <option value="right" {{ ($settings['cookie_widget_position'] ?? 'left') === 'right' ? 'selected' : '' }}>Bottom Right</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Theme Color</label>
+                    <div class="flex items-center gap-2">
+                        <input type="color" name="cookie_widget_color" value="{{ $settings['cookie_widget_color'] ?? '#000000' }}"
+                            class="h-9 w-12 border border-gray-300 rounded cursor-pointer">
+                        <input type="text" value="{{ $settings['cookie_widget_color'] ?? '#000000' }}"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                            oninput="this.previousElementSibling.value = this.value">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- ── LOCALIZATION ──────────────────────────────── --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-1">Localization</h3>
