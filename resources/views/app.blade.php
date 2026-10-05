@@ -145,44 +145,60 @@
 
         <script>
             function initTrackingScripts() {
-                if (localStorage.getItem('cookie_consent') !== 'all') return;
+                const consentRaw = localStorage.getItem('cookie_consent');
+                if (!consentRaw || consentRaw === 'essential') return;
+                
+                let consent = {};
+                try {
+                    consent = JSON.parse(consentRaw);
+                } catch(e) {
+                    if (consentRaw === 'all') {
+                        consent = { google_analytics: true, meta_pixel: true, snapchat_pixel: true };
+                    }
+                }
 
                 @if($gaEnabled && $gaId)
-                // Google Analytics
-                let ga = document.createElement('script');
-                ga.async = true;
-                ga.src = "https://www.googletagmanager.com/gtag/js?id={{ $gaId }}";
-                document.head.appendChild(ga);
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '{{ $gaId }}');
+                if (consent.google_analytics && !window.gaInitialized) {
+                    window.gaInitialized = true;
+                    let ga = document.createElement('script');
+                    ga.async = true;
+                    ga.src = "https://www.googletagmanager.com/gtag/js?id={{ $gaId }}";
+                    document.head.appendChild(ga);
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', '{{ $gaId }}');
+                }
                 @endif
 
                 @if($pixelEnabled && $pixelId)
-                // Meta Pixel
-                !function(f,b,e,v,n,t,s)
-                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                n.queue=[];t=b.createElement(e);t.async=!0;
-                t.src=v;s=b.getElementsByTagName(e)[0];
-                s.parentNode.insertBefore(t,s)}(window, document,'script',
-                'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '{{ $pixelId }}');
-                fbq('track', 'PageView');
+                if (consent.meta_pixel && !window.metaInitialized) {
+                    window.metaInitialized = true;
+                    !function(f,b,e,v,n,t,s)
+                    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                    n.queue=[];t=b.createElement(e);t.async=!0;
+                    t.src=v;s=b.getElementsByTagName(e)[0];
+                    s.parentNode.insertBefore(t,s)}(window, document,'script',
+                    'https://connect.facebook.net/en_US/fbevents.js');
+                    fbq('init', '{{ $pixelId }}');
+                    fbq('track', 'PageView');
+                }
                 @endif
 
                 @if($snapchatPixelEnabled && $snapchatPixelId)
-                // Snap Pixel
-                (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function()
-                {a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};
-                a.queue=[];var s='script';r=t.createElement(s);r.async=!0;
-                r.src=n;var u=t.getElementsByTagName(s)[0];
-                u.parentNode.insertBefore(r,u);})(window,document,
-                'https://sc-static.net/scevent.min.js');
-                snaptr('init', '{{ $snapchatPixelId }}');
-                snaptr('track', 'PAGE_VIEW');
+                if (consent.snapchat_pixel && !window.snapInitialized) {
+                    window.snapInitialized = true;
+                    (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function()
+                    {a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};
+                    a.queue=[];var s='script';r=t.createElement(s);r.async=!0;
+                    r.src=n;var u=t.getElementsByTagName(s)[0];
+                    u.parentNode.insertBefore(r,u);})(window,document,
+                    'https://sc-static.net/scevent.min.js');
+                    snaptr('init', '{{ $snapchatPixelId }}');
+                    snaptr('track', 'PAGE_VIEW');
+                }
                 @endif
             }
             

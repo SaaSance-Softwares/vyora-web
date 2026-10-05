@@ -593,6 +593,74 @@ function DpdpSection({ user, onSaved }: { user: any, onSaved: () => void }) {
                             </div>
                         )}
                     </div>
+                    
+                    <hr className="border-gray-200" />
+
+                    {/* Tracking Group */}
+                    <div className="space-y-4">
+                        <div>
+                            <span className="text-gray-900 font-bold uppercase tracking-wider text-xs block mb-1">Tracking & Cookies</span>
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                                Manage how third-party integrations track your activity.
+                            </p>
+                        </div>
+                        
+                        <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-100">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-semibold text-gray-700">Google Analytics</span>
+                                <label className="flex items-center cursor-pointer relative">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={user?.tracking_consent?.google_analytics ?? false}
+                                        onChange={async (e) => {
+                                            const newConsent = { ...user.tracking_consent, google_analytics: e.target.checked };
+                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                            onSaved();
+                                        }}
+                                        disabled={saving}
+                                    />
+                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-semibold text-gray-700">Meta Pixel</span>
+                                <label className="flex items-center cursor-pointer relative">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={user?.tracking_consent?.meta_pixel ?? false}
+                                        onChange={async (e) => {
+                                            const newConsent = { ...user.tracking_consent, meta_pixel: e.target.checked };
+                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                            onSaved();
+                                        }}
+                                        disabled={saving}
+                                    />
+                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-semibold text-gray-700">Snapchat Pixel</span>
+                                <label className="flex items-center cursor-pointer relative">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={user?.tracking_consent?.snapchat_pixel ?? false}
+                                        onChange={async (e) => {
+                                            const newConsent = { ...user.tracking_consent, snapchat_pixel: e.target.checked };
+                                            await api.put('/api/account/profile', { name: user.name, email: user.email, tracking_consent: newConsent });
+                                            onSaved();
+                                        }}
+                                        disabled={saving}
+                                    />
+                                    <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 {!user?.has_consented_to_terms && (
                     <div className="mt-4">
