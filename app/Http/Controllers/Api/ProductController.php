@@ -73,6 +73,8 @@ class ProductController extends Controller
             });
         }
 
+        $baseQueryForFilters = clone $query;
+
         // Price Filter (via SKUs)
         if ($request->filled('min_price')) {
             $query->whereHas('skus', function ($q) use ($request) {
@@ -172,24 +174,26 @@ class ProductController extends Controller
 
         return ProductListResource::collection($products)->additional([
             'filters' => [
-                'fits' => \App\Models\Fit::all()->map(function($f) {
-                    $count = \App\Models\Product::where('is_active', true)->where('fit_id', $f->id)->count();
+                'fits' => \App\Models\Fit::all()->map(function($f) use ($baseQueryForFilters) {
+                    $q = clone $baseQueryForFilters;
+                    $count = $q->where('fit_id', $f->id)->count();
                     return ['name' => $f->name, 'count' => $count];
                 })->filter(function($f) {
                     return $f['count'] > 0;
                 })->values()->toArray(),
                 
-                'fabrics' => \App\Models\Fabric::all()->map(function($f) {
-                    $count = \App\Models\Product::where('is_active', true)->where('fabric_id', $f->id)->count();
+                'fabrics' => \App\Models\Fabric::all()->map(function($f) use ($baseQueryForFilters) {
+                    $q = clone $baseQueryForFilters;
+                    $count = $q->where('fabric_id', $f->id)->count();
                     return ['name' => $f->name, 'count' => $count];
                 })->filter(function($f) {
                     return $f['count'] > 0;
                 })->values()->toArray(),
                 
-                'sizes' => \App\Models\Size::all()->map(function($size) {
-                    $count = \App\Models\Product::where('is_active', true)
-                        ->whereHas('skus', function($q) use ($size) {
-                            $q->where('size_id', $size->id);
+                'sizes' => \App\Models\Size::all()->map(function($size) use ($baseQueryForFilters) {
+                    $q = clone $baseQueryForFilters;
+                    $count = $q->whereHas('skus', function($sq) use ($size) {
+                            $sq->where('size_id', $size->id);
                         })->count();
                     return ['name' => $size->name, 'count' => $count];
                 })->filter(function($s) {
@@ -197,24 +201,23 @@ class ProductController extends Controller
                 })->values()->toArray(),
                 
                 'colors' => (
-                    \App\Models\Attribute::whereRaw('LOWER(name) = ?', ['color'])->first()?->values?->map(function($v) {
-                        $count = \App\Models\Product::where('is_active', true)
-                            ->whereHas('skus.attributeValues', function($q) use ($v) {
-                                $q->where('attribute_values.id', $v->id);
+                    \App\Models\Attribute::whereRaw('LOWER(name) = ?', ['color'])->first()?->values?->map(function($v) use ($baseQueryForFilters) {
+                        $q = clone $baseQueryForFilters;
+                        $count = $q->whereHas('skus.attributeValues', function($sq) use ($v) {
+                                $sq->where('attribute_values.id', $v->id);
                             })->count();
                         return ['name' => $v->value, 'hex' => $v->meta_value, 'count' => $count];
                     }) 
-                    ?? \App\Models\Color::all()->map(function($c) {
-                        $count = \App\Models\Product::where('is_active', true)
-                            ->whereHas('skus', function($q) use ($c) {
-                                $q->where('color_id', $c->id);
+                    ?? \App\Models\Color::all()->map(function($c) use ($baseQueryForFilters) {
+                        $q = clone $baseQueryForFilters;
+                        $count = $q->whereHas('skus', function($sq) use ($c) {
+                                $sq->where('color_id', $c->id);
                             })->count();
                         return ['name' => $c->name, 'hex' => $c->hex_code, 'count' => $count];
-                    })->filter(function($c) {
-                        return $c['count'] > 0;
-                    })->values() 
-                    ?? collect([])
-                )->toArray(),
+                    })
+                )->filter(function($c) {
+                    return $c['count'] > 0;
+                })->values()->toArray(),
             ]
         ]);
     }
