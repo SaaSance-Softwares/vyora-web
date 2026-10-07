@@ -78,7 +78,8 @@ class OrderController extends Controller
                 } elseif ($item->sku && $item->sku->product && $item->sku->product->deliveryTimeline) {
                     $maxDays = $item->sku->product->deliveryTimeline->max_days;
                 }
-                $item->delivery_date = $order->created_at->addDays($maxDays)->format('jS F Y');
+                $baseDateForDelivery = $order->delivered_at ? \Carbon\Carbon::parse($order->delivered_at) : $order->created_at->addDays($maxDays);
+                $item->delivery_date = $baseDateForDelivery->format('jS F Y');
                 return $item;
             });
 

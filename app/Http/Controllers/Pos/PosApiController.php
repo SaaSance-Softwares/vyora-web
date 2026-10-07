@@ -218,6 +218,7 @@ class PosApiController extends Controller
                     'balance_due' => 0,
                     'order_status_id' => $statusId,
                     'created_at' => \Carbon\Carbon::parse($posOrder['created_at']),
+                    'delivered_at' => \Carbon\Carbon::parse($posOrder['created_at']),
                     'updated_at' => now(),
                 ]);
 
