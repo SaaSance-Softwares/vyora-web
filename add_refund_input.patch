@@ -1,0 +1,17 @@
+--- resources/views/admin/orders/show.blade.php
++++ resources/views/admin/orders/show.blade.php
+@@ -499,6 +499,14 @@
+             <input type="text" name="payment_received_by" value="{{ $order->payment_received_by }}" placeholder="e.g. Collected by Delivery Agent"
+               class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+           </div>
++          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
++            <div>
++              <label class="text-xs font-semibold text-gray-600 mb-1 block">Amount Paid</label>
++              <input type="number" step="0.01" name="amount_paid" value="{{ $order->amount_paid }}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
++            </div>
++            <div>
++              <label class="text-xs font-bold text-red-600 mb-1 block">Amount Refunded</label>
++              <input type="number" step="0.01" name="amount_refunded" value="{{ $order->amount_refunded }}" class="w-full border border-red-200 bg-red-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-bold text-red-700">
++            </div>
++          </div>
+           <button type="submit" 

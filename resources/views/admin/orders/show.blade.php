@@ -75,6 +75,60 @@ $shipping = $order->shippingAddress;
   </div>
 </div>
 
+@if($order->return_request_data && in_array($order->status, ['return_requested', 'exchange_requested']))
+@php
+    $reqData = is_string($order->return_request_data) ? json_decode($order->return_request_data, true) : $order->return_request_data;
+    $reqType = ucfirst($reqData['type'] ?? 'Return');
+    $reqFee = $reqData['fee'] ?? 0;
+    $reqItems = $reqData['items'] ?? [];
+    
+    // Calculate max refund
+    $maxRefund = 0;
+    foreach($reqItems as $reqItem) {
+        $oi = $order->items->firstWhere('id', $reqItem['id']);
+        if ($oi) $maxRefund += ($oi->price * $reqItem['quantity']);
+    }
+    $suggestedRefund = max(0, $maxRefund - $reqFee);
+@endphp
+<div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm mb-6 mt-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-bold text-amber-900">{{ $reqType }} Request Pending</h2>
+            <p class="text-sm text-amber-700 mt-1">Requested on {{ \Carbon\Carbon::parse($reqData['requested_at'] ?? now())->format('d M Y, h:i A') }}</p>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl border border-amber-100 p-4 mb-4">
+        <h3 class="text-sm font-bold text-gray-900 mb-3">Requested Items</h3>
+        <div class="divide-y divide-gray-50">
+            @foreach($reqItems as $reqItem)
+                @php $oi = $order->items->firstWhere('id', $reqItem['id']); @endphp
+                @if($oi)
+                <div class="py-2 flex justify-between items-center text-sm">
+                    <div>
+                        <span class="font-medium text-gray-900">{{ $reqItem['quantity'] }}x {{ $oi->product_name }}</span>
+                        @if($oi->variant_name)<span class="text-gray-500 ml-2">({{ $oi->variant_name }})</span>@endif
+                    </div>
+                    <span class="font-semibold text-gray-700">₹{{ number_format($oi->price * $reqItem['quantity'], 2) }}</span>
+                </div>
+                @endif
+            @endforeach
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-sm">
+            <span class="font-medium text-gray-600">Applicable Fee ({{ $reqType }})</span>
+            <span class="font-bold text-red-600">- ₹{{ number_format($reqFee, 2) }}</span>
+        </div>
+        @if($reqType === 'Return')
+        <div class="mt-2 pt-2 flex justify-between items-center text-sm bg-amber-50/50 p-2 rounded-lg">
+            <span class="font-bold text-gray-900">Suggested Refund</span>
+            <span class="font-bold text-emerald-600">₹{{ number_format($suggestedRefund, 2) }}</span>
+        </div>
+        @endif
+    </div>
+
+    <div class="text-xs text-amber-800 mb-2 font-medium">To process this request: Update the Order Status in the sidebar to <b>"Returned"</b> or <b>"Exchanged"</b>, and log the final Refund Amount below.</div>
+</div>
+@endif
 
 {{-- TIMELINE --}}
 <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
@@ -450,6 +504,17 @@ $shipping = $order->shippingAddress;
             <label class="text-xs font-semibold text-gray-600 mb-1 block">Received By / Remarks</label>
             <input type="text" name="payment_received_by" value="{{ $order->payment_received_by }}" placeholder="e.g. Collected by Delivery Agent"
               class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+            <div>
+              <label class="text-xs font-semibold text-gray-600 mb-1 block">Amount Paid</label>
+              <input type="number" step="0.01" name="amount_paid" value="{{ $order->amount_paid }}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-red-600 mb-1 block">Refunded Amount</label>
+              <input type="number" step="0.01" name="amount_refunded" value="{{ $order->amount_refunded }}" placeholder="e.g. 500" class="w-full border border-red-200 bg-red-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-bold text-red-700">
+            </div>
           </div>
           <button type="submit" 
                   x-bind:disabled="saving"

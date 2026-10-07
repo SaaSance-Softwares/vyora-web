@@ -243,6 +243,8 @@ class OrderController extends Controller
             'payment_status' => 'required|string|in:pending,paid,failed',
             'payment_received_via' => 'nullable|string|max:255',
             'payment_received_by' => 'nullable|string|max:255',
+            'amount_paid' => 'nullable|numeric|min:0',
+            'amount_refunded' => 'nullable|numeric|min:0',
         ]);
 
         $updateData = [
@@ -250,16 +252,18 @@ class OrderController extends Controller
             'payment_received_via' => $validated['payment_received_via'],
             'payment_received_by' => $validated['payment_received_by'],
         ];
-
-        // If marked as paid, we might want to update amount_paid and balance_due
-        if ($validated['payment_status'] === 'paid' && $order->payment_status !== 'paid') {
-            $updateData['amount_paid'] = $order->total_amount;
-            $updateData['balance_due'] = 0;
-        } elseif ($validated['payment_status'] !== 'paid') {
-            // Reset if marked back to pending or failed (optional logic)
-            $updateData['amount_paid'] = 0;
-            $updateData['balance_due'] = $order->total_amount;
+        
+        if (isset($validated['amount_paid'])) {
+            $updateData['amount_paid'] = $validated['amount_paid'];
         }
+        if (isset($validated['amount_refunded'])) {
+            $updateData['amount_refunded'] = $validated['amount_refunded'];
+        }
+
+        // Auto-calculate balance if possible
+        $amtPaid = $updateData['amount_paid'] ?? $order->amount_paid;
+        $amtRef = $updateData['amount_refunded'] ?? $order->amount_refunded;
+        $updateData['balance_due'] = max(0, $order->total_amount - $amtPaid + $amtRef);
 
         $order->update($updateData);
 

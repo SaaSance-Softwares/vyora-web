@@ -104,6 +104,12 @@ class UserOrderActionController extends Controller
         $order->update([
             'status' => 'return_requested',
             'notes' => $notes,
+            'return_request_data' => [
+                'type' => 'return',
+                'fee' => $fee,
+                'items' => $requestedItems,
+                'requested_at' => now()->toDateTimeString(),
+            ]
         ]);
 
         return response()->json([
@@ -144,6 +150,12 @@ class UserOrderActionController extends Controller
         $order->update([
             'status' => 'exchange_requested',
             'notes' => $notes,
+            'return_request_data' => [
+                'type' => 'exchange',
+                'fee' => $fee,
+                'items' => $requestedItems,
+                'requested_at' => now()->toDateTimeString(),
+            ]
         ]);
 
         return response()->json([
