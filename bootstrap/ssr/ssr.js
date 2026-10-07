@@ -1564,7 +1564,7 @@ function OrderDetailsPage({ uuid }) {
   };
   const getActionBreakup = (action) => {
     if (!settings?.shipping_rules || !order) return { baseValue: 0, fee: 0, finalRefund: 0 };
-    const method = order.payment_method === "cod" ? "cod" : "prepaid";
+    const method = String(order.payment_method).toLowerCase() === "cod" ? "cod" : "prepaid";
     const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || "0");
     let baseOrderValue = 0;
     if (action === "return" || action === "exchange") {
@@ -2026,8 +2026,8 @@ function OrderDetailsPage({ uuid }) {
               /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: formatPrice(breakup.fee) })
             ] });
           })(),
-          order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold", children: "Note: The upfront shipping amount is non-refundable." }),
-          order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium", children: "Note: The fee will be automatically deducted from your refund." })
+          String(order?.payment_method).toLowerCase() === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold", children: "Note: The upfront shipping amount is non-refundable." }),
+          String(order?.payment_method).toLowerCase() === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium", children: "Note: The fee will be automatically deducted from your refund." })
         ] }),
         (actionModal === "return" || actionModal === "exchange") && !Object.values(selectedActionItems).some((q) => q > 0) && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mb-4 text-center", children: "Please select at least one item to proceed." }),
         /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [

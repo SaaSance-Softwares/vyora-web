@@ -232,7 +232,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     };
     const getActionBreakup = (action: string) => {
         if (!settings?.shipping_rules || !order) return { baseValue: 0, fee: 0, finalRefund: 0 };
-        const method = order.payment_method === 'cod' ? 'cod' : 'prepaid';
+        const method = String(order.payment_method).toLowerCase() === 'cod' ? 'cod' : 'prepaid';
         const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || '0');
         
         let baseOrderValue = 0;
@@ -790,10 +790,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                             </div>
                                         );
                                     })()}
-                                    {order?.payment_method === 'cod' && actionModal === 'cancel' && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != '1') && (
+                                    {String(order?.payment_method).toLowerCase() === 'cod' && actionModal === 'cancel' && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != '1') && (
                                         <p className="text-xs text-red-500 font-semibold">Note: The upfront shipping amount is non-refundable.</p>
                                     )}
-                                    {order?.payment_method === 'prepaid' && (
+                                    {String(order?.payment_method).toLowerCase() === 'prepaid' && (
                                         <p className="text-xs text-gray-500 font-medium">Note: The fee will be automatically deducted from your refund.</p>
                                     )}
                                 </div>
