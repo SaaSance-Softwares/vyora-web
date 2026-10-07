@@ -1487,6 +1487,10 @@ function OrderDetailsPage({ uuid }) {
   };
   const submitReview = async (e) => {
     e.preventDefault();
+    if (!user) {
+      router.visit("/login");
+      return;
+    }
     if (!reviewModalItem) return;
     setReviewLoading(true);
     setReviewImageError("");
@@ -1531,6 +1535,10 @@ function OrderDetailsPage({ uuid }) {
     }
   };
   const handleActionSubmit = async () => {
+    if (!user) {
+      router.visit("/login");
+      return;
+    }
     if (!actionModal || !order) return;
     setActionLoading(true);
     try {
@@ -1538,18 +1546,18 @@ function OrderDetailsPage({ uuid }) {
       setActionModal(null);
       fetchOrder2();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to process request.");
+      if (err.response?.status === 401) {
+        router.visit("/login");
+      } else {
+        alert(err.response?.data?.message || "Failed to process request.");
+      }
     } finally {
       setActionLoading(false);
     }
   };
   useEffect(() => {
-    if (!user) {
-      router.visit("/login");
-      return;
-    }
     fetchOrder2();
-  }, [user, uuid]);
+  }, [uuid]);
   const fetchOrder2 = async () => {
     try {
       const res = await api.get(`/api/my-orders/${uuid}`);

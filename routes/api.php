@@ -72,7 +72,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated_api'])->group(functio
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/cart', [\App\Http\Controllers\Api\CartController::class, 'get']);
     Route::get('/my-orders', [OrderController::class, 'index']);
-    Route::get('/my-orders/{uuid}', [OrderController::class, 'show']);
+
     Route::post('/my-orders/{uuid}/cancel', [\App\Http\Controllers\Api\UserOrderActionController::class, 'cancel']);
     Route::post('/my-orders/{uuid}/return', [\App\Http\Controllers\Api\UserOrderActionController::class, 'returnOrder']);
     Route::post('/my-orders/{uuid}/exchange', [\App\Http\Controllers\Api\UserOrderActionController::class, 'exchange']);
@@ -105,6 +105,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated_api'])->group(functio
 });
 
 Route::middleware('throttle:public_api')->group(function () {
+    // Orders
+    Route::get('/my-orders/{uuid}', [\App\Http\Controllers\Api\OrderController::class, 'show']);
     // Settings
     Route::get('/settings', [SettingsController::class, 'index']);
 

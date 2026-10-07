@@ -171,6 +171,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
 
         const submitReview = async (e: any) => {
         e.preventDefault();
+        if (!user) {
+            router.visit('/login');
+            return;
+        }
         if (!reviewModalItem) return;
         
         setReviewLoading(true);
@@ -227,6 +231,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     };
 
     const handleActionSubmit = async () => {
+        if (!user) {
+            router.visit('/login');
+            return;
+        }
         if (!actionModal || !order) return;
         setActionLoading(true);
         try {
@@ -234,19 +242,19 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             setActionModal(null);
             fetchOrder();
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to process request.');
+            if (err.response?.status === 401) {
+                router.visit('/login');
+            } else {
+                alert(err.response?.data?.message || 'Failed to process request.');
+            }
         } finally {
             setActionLoading(false);
         }
     };
 
     useEffect(() => {
-        if (!user) {
-            router.visit('/login');
-            return;
-        }
         fetchOrder();
-    }, [user, uuid]);
+    }, [uuid]);
 
     const fetchOrder = async () => {
         try {

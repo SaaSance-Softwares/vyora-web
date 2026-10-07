@@ -497,15 +497,7 @@ class OrderController extends Controller
 
     public function show(Request $request, $uuid)
     {
-        $user = $request->user();
-
         $order = Order::where('uuid', $uuid)
-            ->where(function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->orWhereHas('shippingAddress', function ($q) use ($user) {
-                        $q->where('email', $user->email);
-                    });
-            })
             ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress', 'posLocation'])
             ->firstOrFail();
 
