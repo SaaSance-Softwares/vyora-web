@@ -229,6 +229,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             setReviewLoading(false);
         }
     };
+    const getActionFee = (action: string) => {
+        if (!settings?.shipping_rules?.fees) return 0;
+        return parseFloat(settings.shipping_rules.fees[`${action}_fee`] || '0');
+    };
 
     const handleActionSubmit = async () => {
         if (!user) {
