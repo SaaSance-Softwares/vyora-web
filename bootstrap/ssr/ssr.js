@@ -1562,8 +1562,8 @@ function OrderDetailsPage({ uuid }) {
       setReviewLoading(false);
     }
   };
-  const getActionFee = (action) => {
-    if (!settings?.shipping_rules || !order) return 0;
+  const getActionBreakup = (action) => {
+    if (!settings?.shipping_rules || !order) return { baseValue: 0, fee: 0, finalRefund: 0 };
     const method = order.payment_method === "cod" ? "cod" : "prepaid";
     const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || "0");
     let baseOrderValue = 0;
@@ -1580,7 +1580,12 @@ function OrderDetailsPage({ uuid }) {
     } else {
       baseOrderValue = order.items?.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0) || 0;
     }
-    return feePercent / 100 * baseOrderValue;
+    const fee = feePercent / 100 * baseOrderValue;
+    return {
+      baseValue: baseOrderValue,
+      fee,
+      finalRefund: Math.max(0, baseOrderValue - fee)
+    };
   };
   const handleActionSubmit = async () => {
     if (!user) {
@@ -1992,15 +1997,37 @@ function OrderDetailsPage({ uuid }) {
           })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-medium", children: [
-            /* @__PURE__ */ jsxs("span", { className: "text-gray-700 capitalize", children: [
-              actionModal,
-              " Fee"
-            ] }),
-            /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: formatPrice(getActionFee(actionModal)) })
-          ] }),
-          order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200", children: "Note: The upfront shipping amount is non-refundable." }),
-          order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200", children: "Note: The fee will be automatically deducted from your refund." })
+          (() => {
+            const breakup = getActionBreakup(actionModal);
+            if (actionModal === "return") {
+              return /* @__PURE__ */ jsxs("div", { className: "space-y-2 mb-3 pb-3 border-b border-gray-200", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-600", children: "Total Product Value" }),
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-900 font-medium", children: formatPrice(breakup.baseValue) })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-600 capitalize", children: "Return Fee" }),
+                  /* @__PURE__ */ jsxs("span", { className: "text-red-600 font-medium", children: [
+                    "- ",
+                    formatPrice(breakup.fee)
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-bold pt-1", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: "Estimated Refund" }),
+                  /* @__PURE__ */ jsx("span", { className: "text-emerald-600", children: formatPrice(breakup.finalRefund) })
+                ] })
+              ] });
+            }
+            return /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-medium mb-3 pb-3 border-b border-gray-200", children: [
+              /* @__PURE__ */ jsxs("span", { className: "text-gray-700 capitalize", children: [
+                actionModal,
+                " Fee"
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: formatPrice(breakup.fee) })
+            ] });
+          })(),
+          order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold", children: "Note: The upfront shipping amount is non-refundable." }),
+          order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium", children: "Note: The fee will be automatically deducted from your refund." })
         ] }),
         (actionModal === "return" || actionModal === "exchange") && !Object.values(selectedActionItems).some((q) => q > 0) && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mb-4 text-center", children: "Please select at least one item to proceed." }),
         /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [

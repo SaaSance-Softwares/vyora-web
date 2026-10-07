@@ -230,8 +230,8 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             setReviewLoading(false);
         }
     };
-    const getActionFee = (action: string) => {
-        if (!settings?.shipping_rules || !order) return 0;
+    const getActionBreakup = (action: string) => {
+        if (!settings?.shipping_rules || !order) return { baseValue: 0, fee: 0, finalRefund: 0 };
         const method = order.payment_method === 'cod' ? 'cod' : 'prepaid';
         const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || '0');
         
@@ -250,7 +250,12 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             baseOrderValue = order.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0;
         }
         
-        return (feePercent / 100) * baseOrderValue;
+        const fee = (feePercent / 100) * baseOrderValue;
+        return {
+            baseValue: baseOrderValue,
+            fee: fee,
+            finalRefund: Math.max(0, baseOrderValue - fee)
+        };
     };
 
     const handleActionSubmit = async () => {
@@ -758,15 +763,38 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                 )}
 
                                 <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                                    <div className="flex justify-between items-center text-sm font-medium">
-                                        <span className="text-gray-700 capitalize">{actionModal} Fee</span>
-                                        <span className="text-gray-900">{formatPrice(getActionFee(actionModal))}</span>
-                                    </div>
+                                    {(() => {
+                                        const breakup = getActionBreakup(actionModal);
+                                        if (actionModal === 'return') {
+                                            return (
+                                                <div className="space-y-2 mb-3 pb-3 border-b border-gray-200">
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-gray-600">Total Product Value</span>
+                                                        <span className="text-gray-900 font-medium">{formatPrice(breakup.baseValue)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-gray-600 capitalize">Return Fee</span>
+                                                        <span className="text-red-600 font-medium">- {formatPrice(breakup.fee)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm font-bold pt-1">
+                                                        <span className="text-gray-900">Estimated Refund</span>
+                                                        <span className="text-emerald-600">{formatPrice(breakup.finalRefund)}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <div className="flex justify-between items-center text-sm font-medium mb-3 pb-3 border-b border-gray-200">
+                                                <span className="text-gray-700 capitalize">{actionModal} Fee</span>
+                                                <span className="text-gray-900">{formatPrice(breakup.fee)}</span>
+                                            </div>
+                                        );
+                                    })()}
                                     {order?.payment_method === 'cod' && actionModal === 'cancel' && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != '1') && (
-                                        <p className="text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200">Note: The upfront shipping amount is non-refundable.</p>
+                                        <p className="text-xs text-red-500 font-semibold">Note: The upfront shipping amount is non-refundable.</p>
                                     )}
                                     {order?.payment_method === 'prepaid' && (
-                                        <p className="text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200">Note: The fee will be automatically deducted from your refund.</p>
+                                        <p className="text-xs text-gray-500 font-medium">Note: The fee will be automatically deducted from your refund.</p>
                                     )}
                                 </div>
 
