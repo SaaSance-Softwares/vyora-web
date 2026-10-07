@@ -22,9 +22,9 @@ class UserOrderActionController extends Controller
         $settings = $this->getShippingSettings();
         $method = strtolower($order->payment_method) === 'cod' ? 'cod' : 'prepaid';
         
-        $flatFee = 0;
+        $feePercent = 0;
         if ($settings && isset($settings[$method])) {
-            $flatFee = (float) ($settings[$method][$action . '_fee'] ?? 0);
+            $feePercent = (float) ($settings[$method][$action . '_fee'] ?? 0);
         }
 
         $baseOrderValue = 0;
@@ -41,7 +41,7 @@ class UserOrderActionController extends Controller
             });
         }
 
-        return round(min($flatFee, $baseOrderValue), 2);
+        return round(($feePercent / 100) * $baseOrderValue, 2);
     }
 
     public function cancel(Request $request, $uuid)
