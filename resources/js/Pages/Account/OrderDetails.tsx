@@ -770,6 +770,10 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                     )}
                                 </div>
 
+                                {((actionModal === 'return' || actionModal === 'exchange') && !Object.values(selectedActionItems).some(q => q > 0)) && (
+                                    <p className="text-xs text-red-500 font-semibold mb-4 text-center">Please select at least one item to proceed.</p>
+                                )}
+
                                 <div className="flex gap-3">
                                     <button 
                                         onClick={() => setActionModal(null)} 
@@ -779,8 +783,8 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                     </button>
                                     <button 
                                         onClick={handleActionSubmit}
-                                        disabled={actionLoading}
-                                        className={`flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        disabled={actionLoading || ((actionModal === 'return' || actionModal === 'exchange') && !Object.values(selectedActionItems).some(q => q > 0))}
+                                        className={`flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${(actionLoading || ((actionModal === 'return' || actionModal === 'exchange') && !Object.values(selectedActionItems).some(q => q > 0))) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         {actionLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Confirm'}
                                     </button>

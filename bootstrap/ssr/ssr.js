@@ -2002,6 +2002,7 @@ function OrderDetailsPage({ uuid }) {
           order?.payment_method === "cod" && actionModal === "cancel" && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != "1") && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mt-3 pt-3 border-t border-gray-200", children: "Note: The upfront shipping amount is non-refundable." }),
           order?.payment_method === "prepaid" && /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 font-medium mt-3 pt-3 border-t border-gray-200", children: "Note: The fee will be automatically deducted from your refund." })
         ] }),
+        (actionModal === "return" || actionModal === "exchange") && !Object.values(selectedActionItems).some((q) => q > 0) && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-500 font-semibold mb-4 text-center", children: "Please select at least one item to proceed." }),
         /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
           /* @__PURE__ */ jsx(
             "button",
@@ -2015,8 +2016,8 @@ function OrderDetailsPage({ uuid }) {
             "button",
             {
               onClick: handleActionSubmit,
-              disabled: actionLoading,
-              className: `flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading ? "opacity-70 cursor-not-allowed" : ""}`,
+              disabled: actionLoading || (actionModal === "return" || actionModal === "exchange") && !Object.values(selectedActionItems).some((q) => q > 0),
+              className: `flex-1 px-4 py-2.5 text-sm font-bold text-white bg-black hover:bg-gray-900 rounded-xl transition-colors flex items-center justify-center ${actionLoading || (actionModal === "return" || actionModal === "exchange") && !Object.values(selectedActionItems).some((q) => q > 0) ? "opacity-50 cursor-not-allowed" : ""}`,
               children: actionLoading ? /* @__PURE__ */ jsx("div", { className: "w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" }) : "Confirm"
             }
           )
