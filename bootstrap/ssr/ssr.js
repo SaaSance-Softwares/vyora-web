@@ -1790,8 +1790,20 @@ function OrderDetailsPage({ uuid }) {
                   " ",
                   order.shipping_address.zip_code
                 ] }) : order.pos_location ? /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
-                  /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: "Store Pickup / POS" }),
-                  order.pos_location.name
+                  /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: "In-Store Purchase" }),
+                  order.pos_location.name,
+                  /* @__PURE__ */ jsx("br", {}),
+                  order.pos_location.address,
+                  /* @__PURE__ */ jsx("br", {}),
+                  order.pos_location.address_line_2 && /* @__PURE__ */ jsxs(Fragment, { children: [
+                    order.pos_location.address_line_2,
+                    /* @__PURE__ */ jsx("br", {})
+                  ] }),
+                  order.pos_location.city,
+                  ", ",
+                  order.pos_location.state,
+                  " ",
+                  order.pos_location.pincode
                 ] }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 italic", children: "No shipping address provided." })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [

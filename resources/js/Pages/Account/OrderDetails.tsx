@@ -535,8 +535,11 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                             </p>
                                         ) : order.pos_location ? (
                                             <p className="text-sm text-gray-800 leading-relaxed font-medium">
-                                                <span className="block text-gray-900 font-bold mb-1">Store Pickup / POS</span>
-                                                {order.pos_location.name}
+                                                <span className="block text-gray-900 font-bold mb-1">In-Store Purchase</span>
+                                                {order.pos_location.name}<br />
+                                                {order.pos_location.address}<br />
+                                                {order.pos_location.address_line_2 && <>{order.pos_location.address_line_2}<br /></>}
+                                                {order.pos_location.city}, {order.pos_location.state} {order.pos_location.pincode}
                                             </p>
                                         ) : (
                                             <p className="text-sm text-gray-500 italic">No shipping address provided.</p>
