@@ -1653,10 +1653,20 @@ function OrderDetailsPage({ uuid }) {
                 /* @__PURE__ */ jsx("div", { className: "flex justify-between items-start gap-4", children: /* @__PURE__ */ jsxs("div", { children: [
                   /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900 leading-tight", children: item.product_name }),
                   item.variant_name && /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-1 font-medium", children: item.variant_name }),
-                  item.delivery_date && /* @__PURE__ */ jsxs("p", { className: "text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100", children: [
-                    order.status === "delivered" ? "Delivered on: " : "Delivered by: ",
-                    " ",
-                    /* @__PURE__ */ jsx("span", { className: "font-bold", children: item.delivery_date })
+                  item.delivery_date && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 mt-2", children: [
+                    /* @__PURE__ */ jsxs("p", { className: "text-xs text-green-700 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100 w-fit", children: [
+                      order.status === "delivered" ? "Delivered on: " : "Delivered by: ",
+                      " ",
+                      /* @__PURE__ */ jsx("span", { className: "font-bold", children: item.delivery_date })
+                    ] }),
+                    item.exchange_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-gray-500 font-medium", children: [
+                      "Exchange valid till: ",
+                      /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-700", children: item.exchange_valid_till })
+                    ] }),
+                    item.return_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-gray-500 font-medium", children: [
+                      "Return valid till: ",
+                      /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-700", children: item.return_valid_till })
+                    ] })
                   ] })
                 ] }) }),
                 /* @__PURE__ */ jsxs("div", { className: "mt-4 flex flex-wrap items-center gap-4", children: [
@@ -3763,7 +3773,8 @@ function CartRow$1({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.exchangeDays,
               " days"
-            ] })
+            ] }),
+            " from the date of delivery"
           ] }),
           item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
             /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
@@ -3771,7 +3782,8 @@ function CartRow$1({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.returnDays,
               " days"
-            ] })
+            ] }),
+            " from the date of delivery"
           ] })
         ] })
       ] })
@@ -5204,7 +5216,8 @@ function CartRow({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.exchangeDays,
               " days"
-            ] })
+            ] }),
+            " from the date of delivery"
           ] }),
           item.returnDays !== null && item.returnDays !== void 0 && /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
             /* @__PURE__ */ jsx(RotateCcw, { size: 12, className: "text-gray-400" }),
@@ -5212,7 +5225,8 @@ function CartRow({ item, update, remove }) {
             /* @__PURE__ */ jsxs("span", { className: "font-medium text-gray-800", children: [
               item.returnDays,
               " days"
-            ] })
+            ] }),
+            " from the date of delivery"
           ] })
         ] })
       ] })

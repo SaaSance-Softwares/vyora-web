@@ -78,13 +78,13 @@ function CartRow({ item, update, remove }: {
                                 {item.exchangeDays !== null && item.exchangeDays !== undefined && (
                                     <span className="flex items-center gap-1">
                                         <RefreshCcw size={12} className="text-gray-400" />
-                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span>
+                                        Exchange within <span className="font-medium text-gray-800">{item.exchangeDays} days</span> from the date of delivery
                                     </span>
                                 )}
                                 {item.returnDays !== null && item.returnDays !== undefined && (
                                     <span className="flex items-center gap-1">
                                         <RotateCcw size={12} className="text-gray-400" />
-                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span>
+                                        Return within <span className="font-medium text-gray-800">{item.returnDays} days</span> from the date of delivery
                                     </span>
                                 )}
                             </div>

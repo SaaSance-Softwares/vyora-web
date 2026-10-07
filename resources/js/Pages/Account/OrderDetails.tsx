@@ -380,9 +380,21 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                             <p className="text-sm text-gray-500 mt-1 font-medium">{item.variant_name}</p>
                                                         )}
                                                         {item.delivery_date && (
-                                                            <p className="text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100">
-                                                                {order.status === 'delivered' ? 'Delivered on: ' : 'Delivered by: '} <span className="font-bold">{item.delivery_date}</span>
-                                                            </p>
+                                                            <div className="flex flex-col gap-1 mt-2">
+                                                                <p className="text-xs text-green-700 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100 w-fit">
+                                                                    {order.status === 'delivered' ? 'Delivered on: ' : 'Delivered by: '} <span className="font-bold">{item.delivery_date}</span>
+                                                                </p>
+                                                                {(item as any).exchange_valid_till && (
+                                                                    <p className="text-[11px] text-gray-500 font-medium">
+                                                                        Exchange valid till: <span className="font-bold text-gray-700">{(item as any).exchange_valid_till}</span>
+                                                                    </p>
+                                                                )}
+                                                                {(item as any).return_valid_till && (
+                                                                    <p className="text-[11px] text-gray-500 font-medium">
+                                                                        Return valid till: <span className="font-bold text-gray-700">{(item as any).return_valid_till}</span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
