@@ -445,9 +445,19 @@ function AddressesSection() {
         setShowForm(true);
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Remove this address?')) return;
-        try { await api.delete(`/api/account/addresses/${id}`); load(); } catch {}
+    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+    const handleDeleteClick = (id: number) => {
+        setDeleteConfirmId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteConfirmId === null) return;
+        try { 
+            await api.delete(`/api/account/addresses/${deleteConfirmId}`); 
+            setDeleteConfirmId(null);
+            load(); 
+        } catch {}
     };
     const handleDefault = async (id: number) => {
         try { await api.put(`/api/account/addresses/${id}/default`); load(); } catch {}
@@ -464,7 +474,7 @@ function AddressesSection() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {addresses.map(a => (
-                        <AddressCard key={a.id} addr={a} onDelete={handleDelete} onSetDefault={handleDefault} onEdit={handleEdit} />
+                        <AddressCard key={a.id} addr={a} onDelete={handleDeleteClick} onSetDefault={handleDefault} onEdit={handleEdit} />
                     ))}
                 </div>
             )}
@@ -512,6 +522,28 @@ function AddressesSection() {
                     className="mt-4 flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-gray-900 border border-dashed border-gray-300 hover:border-gray-500 px-4 py-2.5 rounded-xl w-full justify-center transition-all">
                     <Plus className="w-4 h-4" /> Add New Address
                 </button>
+            )}
+
+            {/* Delete Address Confirmation Modal */}
+            {deleteConfirmId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Address</h3>
+                            <p className="text-sm text-gray-500 mb-6">Are you sure you want to remove this address? This action cannot be undone.</p>
+                            <div className="flex gap-3 justify-end">
+                                <button onClick={() => setDeleteConfirmId(null)}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={confirmDelete}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </SectionCard>
     );

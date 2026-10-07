@@ -890,10 +890,15 @@ function AddressesSection() {
     setEditingId(addr.id);
     setShowForm(true);
   };
-  const handleDelete = async (id) => {
-    if (!confirm("Remove this address?")) return;
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const handleDeleteClick = (id) => {
+    setDeleteConfirmId(id);
+  };
+  const confirmDelete = async () => {
+    if (deleteConfirmId === null) return;
     try {
-      await api.delete(`/api/account/addresses/${id}`);
+      await api.delete(`/api/account/addresses/${deleteConfirmId}`);
+      setDeleteConfirmId(null);
       load();
     } catch {
     }
@@ -907,7 +912,7 @@ function AddressesSection() {
   };
   const f = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   return /* @__PURE__ */ jsxs(SectionCard, { title: "Saved Addresses", icon: MapPin, children: [
-    loading ? /* @__PURE__ */ jsx("div", { className: "space-y-3", children: [1, 2].map((i) => /* @__PURE__ */ jsx("div", { className: "h-24 rounded-xl bg-gray-50 animate-pulse" }, i)) }) : addresses.length === 0 && !showForm ? /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 text-center py-6", children: "No saved addresses yet." }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: addresses.map((a) => /* @__PURE__ */ jsx(AddressCard, { addr: a, onDelete: handleDelete, onSetDefault: handleDefault, onEdit: handleEdit }, a.id)) }),
+    loading ? /* @__PURE__ */ jsx("div", { className: "space-y-3", children: [1, 2].map((i) => /* @__PURE__ */ jsx("div", { className: "h-24 rounded-xl bg-gray-50 animate-pulse" }, i)) }) : addresses.length === 0 && !showForm ? /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 text-center py-6", children: "No saved addresses yet." }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: addresses.map((a) => /* @__PURE__ */ jsx(AddressCard, { addr: a, onDelete: handleDeleteClick, onSetDefault: handleDefault, onEdit: handleEdit }, a.id)) }),
     showForm && /* @__PURE__ */ jsxs("div", { className: "mt-4 p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3", children: [
       /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-gray-700 uppercase tracking-wider mb-2", children: editingId ? "Edit Address" : "New Address" }),
       /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
@@ -968,7 +973,29 @@ function AddressesSection() {
           " Add New Address"
         ]
       }
-    )
+    ),
+    deleteConfirmId !== null && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4", children: /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200", children: /* @__PURE__ */ jsxs("div", { className: "p-6", children: [
+      /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-gray-900 mb-2", children: "Delete Address" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mb-6", children: "Are you sure you want to remove this address? This action cannot be undone." }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-3 justify-end", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setDeleteConfirmId(null),
+            className: "px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: confirmDelete,
+            className: "px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors",
+            children: "Delete"
+          }
+        )
+      ] })
+    ] }) }) })
   ] });
 }
 function DpdpSection({ user, onSaved }) {
