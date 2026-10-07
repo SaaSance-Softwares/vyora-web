@@ -17,7 +17,7 @@ class UserOrderActionController extends Controller
         return $setting ? json_decode($setting->value, true) : null;
     }
 
-    private function calculateFee($order, $action)
+    private function calculateFee($order, $action, $requestedItems = null)
     {
         $settings = $this->getShippingSettings();
         $method = strtolower($order->payment_method) === 'cod' ? 'cod' : 'prepaid';
@@ -27,10 +27,20 @@ class UserOrderActionController extends Controller
             $feePercent = (float) ($settings[$method][$action . '_fee'] ?? 0);
         }
 
-        // Calculate fee as percentage of the base order value (items total, excluding shipping/COD fees)
-        $baseOrderValue = $order->items->sum(function ($item) {
-            return $item->price * $item->quantity;
-        });
+        $baseOrderValue = 0;
+        if ($requestedItems && is_array($requestedItems) && count($requestedItems) > 0) {
+            foreach ($requestedItems as $reqItem) {
+                $orderItem = $order->items->where('id', $reqItem['id'])->first();
+                if ($orderItem) {
+                    $baseOrderValue += $orderItem->price * $reqItem['quantity'];
+                }
+            }
+        } else {
+            // Calculate fee as percentage of the base order value (items total, excluding shipping/COD fees)
+            $baseOrderValue = $order->items->sum(function ($item) {
+                return $item->price * ($item->quantity - ($item->returned_quantity ?? 0));
+            });
+        }
 
         return round(($feePercent / 100) * $baseOrderValue, 2);
     }
@@ -72,12 +82,12 @@ class UserOrderActionController extends Controller
             return response()->json(['success' => false, 'message' => 'This order contains non-returnable items and cannot be returned.'], 400);
         }
 
-        $fee = $this->calculateFee($order, 'return');
+        $requestedItems = $request->input('items');
+        $fee = $this->calculateFee($order, 'return', $requestedItems);
 
         $notes = $order->notes ? $order->notes . "\n\n" : "";
         $notes .= "--- Return Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
         
-        $requestedItems = $request->input('items');
         if (is_array($requestedItems) && count($requestedItems) > 0) {
             $notes .= "User wants to return specific items:\n";
             foreach ($requestedItems as $reqItem) {
@@ -89,6 +99,8 @@ class UserOrderActionController extends Controller
         } else {
             $notes .= "User wants to return the entire order.\n";
         }
+        
+        $notes .= "\n* Estimated Return Fee: ₹" . number_format($fee, 2) . "\n";
 
         $order->update([
             'status' => 'return_requested',
@@ -110,12 +122,12 @@ class UserOrderActionController extends Controller
             return response()->json(['success' => false, 'message' => 'Only delivered orders can be exchanged.'], 400);
         }
 
-        $fee = $this->calculateFee($order, 'exchange');
+        $requestedItems = $request->input('items');
+        $fee = $this->calculateFee($order, 'exchange', $requestedItems);
 
         $notes = $order->notes ? $order->notes . "\n\n" : "";
         $notes .= "--- Exchange Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
         
-        $requestedItems = $request->input('items');
         if (is_array($requestedItems) && count($requestedItems) > 0) {
             $notes .= "User wants to exchange specific items:\n";
             foreach ($requestedItems as $reqItem) {
@@ -127,6 +139,8 @@ class UserOrderActionController extends Controller
         } else {
             $notes .= "User wants to exchange the entire order.\n";
         }
+        
+        $notes .= "\n* Estimated Exchange Fee: ₹" . number_format($fee, 2) . "\n";
 
         $order->update([
             'status' => 'exchange_requested',

@@ -1,0 +1,18 @@
+--- resources/js/Pages/Account/OrderDetails.tsx
++++ resources/js/Pages/Account/OrderDetails.tsx
+@@ -230,8 +230,11 @@
+         }
+     };
+     const getActionFee = (action: string) => {
+-        if (!settings?.shipping_rules?.fees) return 0;
+-        return parseFloat(settings.shipping_rules.fees[`${action}_fee`] || '0');
++        if (!settings?.shipping_rules || !order) return 0;
++        const method = order.payment_method === 'cod' ? 'cod' : 'prepaid';
++        const feeVal = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || '0');
++        // The backend treats this value as a flat fee or percentage? Wait. 
++        // The backend does (feeVal / 100) * baseOrderValue. Let's replicate backend logic exactly.
++        const baseOrderValue = order.items.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
++        return (feeVal / 100) * baseOrderValue;
+     };
+ 
+     const handleActionSubmit = async () => {

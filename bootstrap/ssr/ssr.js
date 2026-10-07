@@ -1563,8 +1563,24 @@ function OrderDetailsPage({ uuid }) {
     }
   };
   const getActionFee = (action) => {
-    if (!settings?.shipping_rules?.fees) return 0;
-    return parseFloat(settings.shipping_rules.fees[`${action}_fee`] || "0");
+    if (!settings?.shipping_rules || !order) return 0;
+    const method = order.payment_method === "cod" ? "cod" : "prepaid";
+    const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || "0");
+    let baseOrderValue = 0;
+    if (action === "return" || action === "exchange") {
+      const itemsToCalculate = Object.entries(selectedActionItems).filter(([_, qty]) => qty > 0);
+      if (itemsToCalculate.length > 0) {
+        itemsToCalculate.forEach(([id, qty]) => {
+          const item = order.items?.find((i) => i.id === Number(id));
+          if (item) baseOrderValue += Number(item.price) * qty;
+        });
+      } else {
+        baseOrderValue = order.items?.reduce((sum, item) => sum + Number(item.price) * (item.quantity - (item.returned_quantity || 0)), 0) || 0;
+      }
+    } else {
+      baseOrderValue = order.items?.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0) || 0;
+    }
+    return feePercent / 100 * baseOrderValue;
   };
   const handleActionSubmit = async () => {
     if (!user) {
