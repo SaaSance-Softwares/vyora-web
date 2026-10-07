@@ -1831,15 +1831,21 @@ function OrderDetailsPage({ uuid }) {
               (order.status === "pending" || order.status === "processing") && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("cancel"), className: "w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors", children: "Cancel Order" }),
               order.status === "delivered" && /* @__PURE__ */ jsxs(Fragment, { children: [
                 order.order_exchange_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-gray-500 mb-1", children: [
-                  "Exchange available till ",
+                  "Exchange ",
+                  order.can_exchange ? "available till" : "was available till",
+                  " ",
                   /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: order.order_exchange_valid_till })
                 ] }),
                 order.order_return_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-gray-500 mb-2", children: [
-                  "Return available till ",
+                  "Return ",
+                  order.can_return ? "available till" : "was available till",
+                  " ",
                   /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: order.order_return_valid_till })
                 ] }),
-                !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("return"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }),
-                /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("exchange"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
+                (order.can_return || order.can_exchange) && /* @__PURE__ */ jsxs("div", { className: "space-y-2 mt-4", children: [
+                  order.can_return && !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("return"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : order.can_exchange ? /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }) : null,
+                  order.can_exchange && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("exchange"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
+                ] })
               ] })
             ] })
           ] }) })

@@ -573,6 +573,8 @@ class OrderController extends Controller
         $data = $order->toArray();
         $data['order_return_valid_till'] = $orderReturnTill ? $orderReturnTill->format('jS M Y') : null;
         $data['order_exchange_valid_till'] = $orderExchangeTill ? $orderExchangeTill->format('jS M Y') : null;
+        $data['can_return'] = $orderReturnTill ? $orderReturnTill->endOfDay()->isFuture() : false;
+        $data['can_exchange'] = $orderExchangeTill ? $orderExchangeTill->endOfDay()->isFuture() : false;
         $data['tracking_url'] = $order->tracking_url;
         $data['tracking_number'] = $order->tracking_number;
         $data['courier_partner'] = $order->courier_partner;

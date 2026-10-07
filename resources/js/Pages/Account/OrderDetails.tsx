@@ -606,28 +606,36 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                             <>
                                                 {order.order_exchange_valid_till && (
                                                     <p className="text-xs font-semibold text-gray-500 mb-1">
-                                                        Exchange available till <span className="text-gray-900">{order.order_exchange_valid_till}</span>
+                                                        Exchange {order.can_exchange ? 'available till' : 'was available till'} <span className="text-gray-900">{order.order_exchange_valid_till}</span>
                                                     </p>
                                                 )}
                                                 {order.order_return_valid_till && (
                                                     <p className="text-xs font-semibold text-gray-500 mb-2">
-                                                        Return available till <span className="text-gray-900">{order.order_return_valid_till}</span>
+                                                        Return {order.can_return ? 'available till' : 'was available till'} <span className="text-gray-900">{order.order_return_valid_till}</span>
                                                     </p>
                                                 )}
-                                                {!hasNonReturnableItems ? (
-                                                    <button onClick={() => setActionModal('return')} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
-                                                        Return Order
-                                                    </button>
-                                                ) : (
-                                                    <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1">
-                                                        <p className="text-xs text-orange-800 font-semibold text-center">
-                                                            This order contains non-returnable items. You can only exchange this order.
-                                                        </p>
+                                                
+                                                {(order.can_return || order.can_exchange) && (
+                                                    <div className="space-y-2 mt-4">
+                                                        {order.can_return && !hasNonReturnableItems ? (
+                                                            <button onClick={() => setActionModal('return')} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
+                                                                Return Order
+                                                            </button>
+                                                        ) : order.can_exchange ? (
+                                                            <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1">
+                                                                <p className="text-xs text-orange-800 font-semibold text-center">
+                                                                    This order contains non-returnable items. You can only exchange this order.
+                                                                </p>
+                                                            </div>
+                                                        ) : null}
+                                                        
+                                                        {order.can_exchange && (
+                                                            <button onClick={() => setActionModal('exchange')} className="w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors">
+                                                                Exchange Order
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
-                                                <button onClick={() => setActionModal('exchange')} className="w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors">
-                                                    Exchange Order
-                                                </button>
                                             </>
                                         )}
                                     </div>
