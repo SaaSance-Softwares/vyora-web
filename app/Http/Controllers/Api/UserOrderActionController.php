@@ -74,8 +74,25 @@ class UserOrderActionController extends Controller
 
         $fee = $this->calculateFee($order, 'return');
 
+        $notes = $order->notes ? $order->notes . "\n\n" : "";
+        $notes .= "--- Return Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
+        
+        $requestedItems = $request->input('items');
+        if (is_array($requestedItems) && count($requestedItems) > 0) {
+            $notes .= "User wants to return specific items:\n";
+            foreach ($requestedItems as $reqItem) {
+                $orderItem = $order->items->where('id', $reqItem['id'])->first();
+                if ($orderItem) {
+                    $notes .= "- " . $reqItem['quantity'] . "x " . $orderItem->product_name . ($orderItem->variant_name ? ' (' . $orderItem->variant_name . ')' : '') . "\n";
+                }
+            }
+        } else {
+            $notes .= "User wants to return the entire order.\n";
+        }
+
         $order->update([
             'status' => 'return_requested',
+            'notes' => $notes,
         ]);
 
         return response()->json([
@@ -87,7 +104,7 @@ class UserOrderActionController extends Controller
 
     public function exchange(Request $request, $uuid)
     {
-        $order = Order::where('uuid', $uuid)->where('user_id', Auth::id())->firstOrFail();
+        $order = Order::with('items')->where('uuid', $uuid)->where('user_id', Auth::id())->firstOrFail();
 
         if ($order->status !== 'delivered') {
             return response()->json(['success' => false, 'message' => 'Only delivered orders can be exchanged.'], 400);
@@ -95,8 +112,25 @@ class UserOrderActionController extends Controller
 
         $fee = $this->calculateFee($order, 'exchange');
 
+        $notes = $order->notes ? $order->notes . "\n\n" : "";
+        $notes .= "--- Exchange Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
+        
+        $requestedItems = $request->input('items');
+        if (is_array($requestedItems) && count($requestedItems) > 0) {
+            $notes .= "User wants to exchange specific items:\n";
+            foreach ($requestedItems as $reqItem) {
+                $orderItem = $order->items->where('id', $reqItem['id'])->first();
+                if ($orderItem) {
+                    $notes .= "- " . $reqItem['quantity'] . "x " . $orderItem->product_name . ($orderItem->variant_name ? ' (' . $orderItem->variant_name . ')' : '') . "\n";
+                }
+            }
+        } else {
+            $notes .= "User wants to exchange the entire order.\n";
+        }
+
         $order->update([
             'status' => 'exchange_requested',
+            'notes' => $notes,
         ]);
 
         return response()->json([

@@ -73,6 +73,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
 
     const [actionModal, setActionModal] = useState<'cancel' | 'return' | 'exchange' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [selectedActionItems, setSelectedActionItems] = useState<Record<number, number>>({});
     
     // Review Modal State
     const [reviewModalItem, setReviewModalItem] = useState<OrderItem | null>(null);
@@ -242,7 +243,16 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
         if (!actionModal || !order) return;
         setActionLoading(true);
         try {
-            await api.post(`/api/my-orders/${order.uuid}/${actionModal}`);
+            const payload: any = {};
+            if (actionModal === 'return' || actionModal === 'exchange') {
+                const items = Object.entries(selectedActionItems)
+                    .filter(([_, qty]) => qty > 0)
+                    .map(([id, qty]) => ({ id: Number(id), quantity: qty }));
+                if (items.length > 0) {
+                    payload.items = items;
+                }
+            }
+            await api.post(`/api/my-orders/${order.uuid}/${actionModal}`, payload);
             setActionModal(null);
             fetchOrder();
         } catch (err: any) {
@@ -625,7 +635,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                     <h2 className="text-lg font-bold text-gray-900 mb-4">Order Actions</h2>
                                     <div className="flex flex-col gap-3">
                                         {(order.status === 'pending' || order.status === 'processing') && (
-                                            <button onClick={() => setActionModal('cancel')} className="w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">
+                                            <button onClick={() => { setSelectedActionItems({}); setActionModal('cancel'); }} className="w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors">
                                                 Cancel Order
                                             </button>
                                         )}
@@ -645,7 +655,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                 {(order.can_return || order.can_exchange) && (
                                                     <div className="space-y-2 mt-4">
                                                         {order.can_return && !hasNonReturnableItems ? (
-                                                            <button onClick={() => setActionModal('return')} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
+                                                            <button onClick={() => { setSelectedActionItems({}); setActionModal('return'); }} className="w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors">
                                                                 Return Order
                                                             </button>
                                                         ) : order.can_exchange ? (
@@ -657,7 +667,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                         ) : null}
                                                         
                                                         {order.can_exchange && (
-                                                            <button onClick={() => setActionModal('exchange')} className="w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors">
+                                                            <button onClick={() => { setSelectedActionItems({}); setActionModal('exchange'); }} className="w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors">
                                                                 Exchange Order
                                                             </button>
                                                         )}
@@ -681,6 +691,47 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                 <h3 className="text-xl font-bold text-gray-900 capitalize mb-2">{actionModal} Order</h3>
                                 <p className="text-sm text-gray-600 mb-6">Are you sure you want to {actionModal} this order?</p>
                                 
+                                {(actionModal === 'return' || actionModal === 'exchange') && order?.items && (
+                                    <div className="mb-6 space-y-3 max-h-60 overflow-y-auto pr-2">
+                                        <p className="text-xs font-bold text-gray-500 uppercase">Select items to {actionModal}:</p>
+                                        {order.items.map(item => {
+                                            const maxQty = item.quantity - (item.returned_quantity || 0);
+                                            if (maxQty <= 0) return null;
+                                            const selectedQty = selectedActionItems[item.id] || 0;
+                                            
+                                            return (
+                                                <div key={item.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-gray-50">
+                                                    <div className="flex items-center gap-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedQty > 0}
+                                                            onChange={(e) => {
+                                                                setSelectedActionItems(prev => ({ ...prev, [item.id]: e.target.checked ? maxQty : 0 }));
+                                                            }}
+                                                            className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-bold text-gray-900 line-clamp-1">{item.product_name}</span>
+                                                            {item.variant_name && <span className="text-xs text-gray-500">{item.variant_name}</span>}
+                                                        </div>
+                                                    </div>
+                                                    {selectedQty > 0 && maxQty > 1 && (
+                                                        <select 
+                                                            value={selectedQty}
+                                                            onChange={(e) => setSelectedActionItems(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                                                            className="ml-2 text-sm border-gray-200 rounded-lg py-1 px-2 pr-8 focus:ring-0 focus:border-gray-300"
+                                                        >
+                                                            {Array.from({ length: maxQty }, (_, i) => i + 1).map(num => (
+                                                                <option key={num} value={num}>{num}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
                                 <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
                                     <div className="flex justify-between items-center text-sm font-medium">
                                         <span className="text-gray-700 capitalize">{actionModal} Fee</span>

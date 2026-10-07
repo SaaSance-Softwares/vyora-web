@@ -1433,6 +1433,7 @@ function OrderDetailsPage({ uuid }) {
   const [loading, setLoading] = useState(true);
   const [actionModal, setActionModal] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedActionItems, setSelectedActionItems] = useState({});
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -1573,7 +1574,14 @@ function OrderDetailsPage({ uuid }) {
     if (!actionModal || !order) return;
     setActionLoading(true);
     try {
-      await api.post(`/api/my-orders/${order.uuid}/${actionModal}`);
+      const payload = {};
+      if (actionModal === "return" || actionModal === "exchange") {
+        const items = Object.entries(selectedActionItems).filter(([_, qty]) => qty > 0).map(([id, qty]) => ({ id: Number(id), quantity: qty }));
+        if (items.length > 0) {
+          payload.items = items;
+        }
+      }
+      await api.post(`/api/my-orders/${order.uuid}/${actionModal}`, payload);
       setActionModal(null);
       fetchOrder2();
     } catch (err) {
@@ -1889,7 +1897,10 @@ function OrderDetailsPage({ uuid }) {
           (order.status === "pending" || order.status === "processing" || order.status === "delivered") && /* @__PURE__ */ jsx("div", { className: "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden", children: /* @__PURE__ */ jsxs("div", { className: "p-6 sm:p-8", children: [
             /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold text-gray-900 mb-4", children: "Order Actions" }),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3", children: [
-              (order.status === "pending" || order.status === "processing") && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("cancel"), className: "w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors", children: "Cancel Order" }),
+              (order.status === "pending" || order.status === "processing") && /* @__PURE__ */ jsx("button", { onClick: () => {
+                setSelectedActionItems({});
+                setActionModal("cancel");
+              }, className: "w-full py-3 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-colors", children: "Cancel Order" }),
               order.status === "delivered" && /* @__PURE__ */ jsxs(Fragment, { children: [
                 order.order_exchange_valid_till && /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-gray-500 mb-1", children: [
                   "Exchange ",
@@ -1904,8 +1915,14 @@ function OrderDetailsPage({ uuid }) {
                   /* @__PURE__ */ jsx("span", { className: "text-gray-900", children: order.order_return_valid_till })
                 ] }),
                 (order.can_return || order.can_exchange) && /* @__PURE__ */ jsxs("div", { className: "space-y-2 mt-4", children: [
-                  order.can_return && !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("return"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : order.can_exchange ? /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }) : null,
-                  order.can_exchange && /* @__PURE__ */ jsx("button", { onClick: () => setActionModal("exchange"), className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
+                  order.can_return && !hasNonReturnableItems ? /* @__PURE__ */ jsx("button", { onClick: () => {
+                    setSelectedActionItems({});
+                    setActionModal("return");
+                  }, className: "w-full py-3 text-sm font-bold text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors", children: "Return Order" }) : order.can_exchange ? /* @__PURE__ */ jsx("div", { className: "bg-orange-50 border border-orange-100 p-3 rounded-xl mb-1", children: /* @__PURE__ */ jsx("p", { className: "text-xs text-orange-800 font-semibold text-center", children: "This order contains non-returnable items. You can only exchange this order." }) }) : null,
+                  order.can_exchange && /* @__PURE__ */ jsx("button", { onClick: () => {
+                    setSelectedActionItems({});
+                    setActionModal("exchange");
+                  }, className: "w-full py-3 text-sm font-bold text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors", children: "Exchange Order" })
                 ] })
               ] })
             ] })
@@ -1921,6 +1938,46 @@ function OrderDetailsPage({ uuid }) {
           "Are you sure you want to ",
           actionModal,
           " this order?"
+        ] }),
+        (actionModal === "return" || actionModal === "exchange") && order?.items && /* @__PURE__ */ jsxs("div", { className: "mb-6 space-y-3 max-h-60 overflow-y-auto pr-2", children: [
+          /* @__PURE__ */ jsxs("p", { className: "text-xs font-bold text-gray-500 uppercase", children: [
+            "Select items to ",
+            actionModal,
+            ":"
+          ] }),
+          order.items.map((item) => {
+            const maxQty = item.quantity - (item.returned_quantity || 0);
+            if (maxQty <= 0) return null;
+            const selectedQty = selectedActionItems[item.id] || 0;
+            return /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-gray-50", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: selectedQty > 0,
+                    onChange: (e) => {
+                      setSelectedActionItems((prev) => ({ ...prev, [item.id]: e.target.checked ? maxQty : 0 }));
+                    },
+                    className: "w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  }
+                ),
+                /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 line-clamp-1", children: item.product_name }),
+                  item.variant_name && /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: item.variant_name })
+                ] })
+              ] }),
+              selectedQty > 0 && maxQty > 1 && /* @__PURE__ */ jsx(
+                "select",
+                {
+                  value: selectedQty,
+                  onChange: (e) => setSelectedActionItems((prev) => ({ ...prev, [item.id]: Number(e.target.value) })),
+                  className: "ml-2 text-sm border-gray-200 rounded-lg py-1 px-2 pr-8 focus:ring-0 focus:border-gray-300",
+                  children: Array.from({ length: maxQty }, (_, i) => i + 1).map((num) => /* @__PURE__ */ jsx("option", { value: num, children: num }, num))
+                }
+              )
+            ] }, item.id);
+          })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-sm font-medium", children: [
