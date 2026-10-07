@@ -506,7 +506,7 @@ class OrderController extends Controller
                         $q->where('email', $user->email);
                     });
             })
-            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress'])
+            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress', 'posLocation'])
             ->firstOrFail();
 
         $orderReturnTill = null;
@@ -578,6 +578,7 @@ class OrderController extends Controller
         $data['courier_partner'] = $order->courier_partner;
         $data['has_tracking'] = $order->has_tracking;
         $data['shipping_address'] = $order->shippingAddress;
+        $data['pos_location'] = $order->posLocation;
         $data['tax_breakdown'] = json_decode($order->tax_breakdown ?? '{}', true);
 
         return response()->json($data);

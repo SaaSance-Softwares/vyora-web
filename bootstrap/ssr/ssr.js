@@ -1789,6 +1789,9 @@ function OrderDetailsPage({ uuid }) {
                   order.shipping_address.state,
                   " ",
                   order.shipping_address.zip_code
+                ] }) : order.pos_location ? /* @__PURE__ */ jsxs("p", { className: "text-sm text-gray-800 leading-relaxed font-medium", children: [
+                  /* @__PURE__ */ jsx("span", { className: "block text-gray-900 font-bold mb-1", children: "Store Pickup / POS" }),
+                  order.pos_location.name
                 ] }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 italic", children: "No shipping address provided." })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
@@ -1801,6 +1804,12 @@ function OrderDetailsPage({ uuid }) {
                   /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }) }),
                     order.shipping_address.phone
+                  ] })
+                ] }) : order.customer_phone || order.customer_name ? /* @__PURE__ */ jsxs("div", { className: "text-sm text-gray-800 font-medium space-y-1.5", children: [
+                  order.customer_name && /* @__PURE__ */ jsx("p", { className: "flex items-center gap-2 font-bold", children: order.customer_name }),
+                  order.customer_phone && /* @__PURE__ */ jsxs("p", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }) }),
+                    order.customer_phone
                   ] })
                 ] }) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 italic", children: "No contact details provided." })
               ] }),

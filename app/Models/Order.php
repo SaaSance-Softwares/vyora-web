@@ -71,6 +71,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function posLocation()
+    {
+        return $this->belongsTo(PosLocation::class, 'pos_location_id');
+    }
+
     public function orderStatus()
     {
         return $this->belongsTo(OrderStatus::class, 'order_status_id');
