@@ -4,7 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
 import { Link, usePage, router, useForm, Head, useRemember, createInertiaApp } from "@inertiajs/react";
-import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, Minus, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
+import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Minus, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
 import clsx$1, { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Confetti from "react-confetti";
@@ -1949,33 +1949,29 @@ function OrderDetailsPage({ uuid }) {
             const maxQty = item.quantity - (item.returned_quantity || 0);
             if (maxQty <= 0) return null;
             const selectedQty = selectedActionItems[item.id] || 0;
-            return /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-gray-50", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: selectedQty > 0,
-                    onChange: (e) => {
-                      setSelectedActionItems((prev) => ({ ...prev, [item.id]: e.target.checked ? maxQty : 0 }));
-                    },
-                    className: "w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
-                  }
-                ),
-                /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
-                  /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 line-clamp-1", children: item.product_name }),
-                  item.variant_name && /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-500", children: item.variant_name })
-                ] })
-              ] }),
-              selectedQty > 0 && maxQty > 1 && /* @__PURE__ */ jsx(
-                "select",
+            return /* @__PURE__ */ jsxs("div", { className: "flex items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm gap-3", children: [
+              /* @__PURE__ */ jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsx(
+                "input",
                 {
-                  value: selectedQty,
-                  onChange: (e) => setSelectedActionItems((prev) => ({ ...prev, [item.id]: Number(e.target.value) })),
-                  className: "ml-2 text-sm border-gray-200 rounded-lg py-1 px-2 pr-8 focus:ring-0 focus:border-gray-300",
-                  children: Array.from({ length: maxQty }, (_, i) => i + 1).map((num) => /* @__PURE__ */ jsx("option", { value: num, children: num }, num))
+                  type: "checkbox",
+                  checked: selectedQty > 0,
+                  onChange: (e) => {
+                    setSelectedActionItems((prev) => ({ ...prev, [item.id]: e.target.checked ? 1 : 0 }));
+                  },
+                  className: "w-5 h-5 text-black border-gray-300 rounded focus:ring-black cursor-pointer"
                 }
-              )
+              ) }),
+              /* @__PURE__ */ jsx("div", { className: "w-14 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200", children: item.image_url && /* @__PURE__ */ jsx("img", { src: item.image_url, alt: item.product_name, className: "w-full h-full object-cover" }) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0 flex flex-col justify-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-gray-900 line-clamp-1 leading-tight", children: item.product_name }),
+                item.variant_name && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-medium text-gray-500 mt-0.5", children: item.variant_name }),
+                /* @__PURE__ */ jsx("span", { className: "text-xs font-semibold text-gray-900 mt-1", children: formatPrice(item.price) })
+              ] }),
+              selectedQty > 0 && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 border border-gray-200 rounded-lg shrink-0 h-8 self-center ml-2", children: [
+                /* @__PURE__ */ jsx("button", { onClick: () => setSelectedActionItems((prev) => ({ ...prev, [item.id]: Math.max(1, selectedQty - 1) })), className: "px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center", children: /* @__PURE__ */ jsx(Minus, { size: 12, strokeWidth: 3 }) }),
+                /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-gray-900 w-5 text-center", children: selectedQty }),
+                /* @__PURE__ */ jsx("button", { onClick: () => setSelectedActionItems((prev) => ({ ...prev, [item.id]: Math.min(maxQty, selectedQty + 1) })), className: "px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center", children: /* @__PURE__ */ jsx(Plus, { size: 12, strokeWidth: 3 }) })
+              ] })
             ] }, item.id);
           })
         ] }),
