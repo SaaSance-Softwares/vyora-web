@@ -381,7 +381,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                         )}
                                                         {item.delivery_date && (
                                                             <p className="text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100">
-                                                                Delivered by: <span className="font-bold">{item.delivery_date}</span>
+                                                                {order.status === 'delivered' ? 'Delivered on: ' : 'Delivered by: '} <span className="font-bold">{item.delivery_date}</span>
                                                             </p>
                                                         )}
                                                     </div>

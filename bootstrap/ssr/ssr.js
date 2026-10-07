@@ -1654,7 +1654,8 @@ function OrderDetailsPage({ uuid }) {
                   /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900 leading-tight", children: item.product_name }),
                   item.variant_name && /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-1 font-medium", children: item.variant_name }),
                   item.delivery_date && /* @__PURE__ */ jsxs("p", { className: "text-xs text-green-700 mt-2 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100", children: [
-                    "Delivered by: ",
+                    order.status === "delivered" ? "Delivered on: " : "Delivered by: ",
+                    " ",
                     /* @__PURE__ */ jsx("span", { className: "font-bold", children: item.delivery_date })
                   ] })
                 ] }) }),
@@ -2249,7 +2250,7 @@ function MyOrdersPage() {
                 order.items_count === 1 ? "Item" : "Items"
               ] })
             ] }),
-            /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto overflow-hidden", children: order.items?.slice(0, 4).map((item, idx) => /* @__PURE__ */ jsxs("div", { title: item.delivery_date ? `Delivered by: ${item.delivery_date}` : item.product_name, className: "relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto overflow-hidden", children: order.items?.slice(0, 4).map((item, idx) => /* @__PURE__ */ jsxs("div", { title: item.delivery_date ? `${order.status === "delivered" ? "Delivered on" : "Delivered by"}: ${item.delivery_date}` : item.product_name, className: "relative w-14 h-18 md:w-16 md:h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform hover:scale-105", children: [
               item.image_url ? /* @__PURE__ */ jsx("img", { src: item.image_url, alt: item.product_name, fill: true, className: "object-cover", unoptimized: true }) : /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center h-full text-[10px] text-gray-300", children: "NA" }),
               idx === 3 && order.items.length > 4 && /* @__PURE__ */ jsxs("div", { className: "absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center text-white text-xs font-bold", children: [
                 "+",
