@@ -1565,7 +1565,7 @@ function OrderDetailsPage({ uuid }) {
   const getActionFee = (action) => {
     if (!settings?.shipping_rules || !order) return 0;
     const method = order.payment_method === "cod" ? "cod" : "prepaid";
-    const feePercent = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || "0");
+    const flatFee = parseFloat(settings.shipping_rules[method]?.[`${action}_fee`] || "0");
     let baseOrderValue = 0;
     if (action === "return" || action === "exchange") {
       const itemsToCalculate = Object.entries(selectedActionItems).filter(([_, qty]) => qty > 0);
@@ -1580,7 +1580,7 @@ function OrderDetailsPage({ uuid }) {
     } else {
       baseOrderValue = order.items?.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0) || 0;
     }
-    return feePercent / 100 * baseOrderValue;
+    return Math.min(flatFee, baseOrderValue);
   };
   const handleActionSubmit = async () => {
     if (!user) {

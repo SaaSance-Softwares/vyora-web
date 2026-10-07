@@ -194,15 +194,15 @@
                                 <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Note: Return & Exchange fees are calculated as a percentage of the base Order Value (subtotal of items, excluding shipping fees). Cancel fees apply during Pending/Processing.</p>
                                 <div class="grid grid-cols-3 gap-4">
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[prepaid][cancel_fee]" value="{{ $settings['shipping_rules']['prepaid']['cancel_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[prepaid][return_fee]" value="{{ $settings['shipping_rules']['prepaid']['return_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[prepaid][exchange_fee]" value="{{ $settings['shipping_rules']['prepaid']['exchange_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                 </div>
@@ -361,15 +361,15 @@
                                 <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Note: Return & Exchange fees are calculated as a percentage of the base Order Value (e.g., applied on ₹2000, excluding the COD fee). Cancel fees apply during Pending/Processing.</p>
                                 <div class="grid grid-cols-3 gap-4">
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Cancel Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[cod][cancel_fee]" value="{{ $settings['shipping_rules']['cod']['cancel_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Return Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[cod][return_fee]" value="{{ $settings['shipping_rules']['cod']['return_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (%)</label>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">Exchange Fee (₹)</label>
                                         <input type="number" step="0.01" name="shipping_rules[cod][exchange_fee]" value="{{ $settings['shipping_rules']['cod']['exchange_fee'] ?? '0' }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     </div>
                                 </div>

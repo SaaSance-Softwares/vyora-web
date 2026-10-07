@@ -22,9 +22,9 @@ class UserOrderActionController extends Controller
         $settings = $this->getShippingSettings();
         $method = strtolower($order->payment_method) === 'cod' ? 'cod' : 'prepaid';
         
-        $feePercent = 0;
+        $flatFee = 0;
         if ($settings && isset($settings[$method])) {
-            $feePercent = (float) ($settings[$method][$action . '_fee'] ?? 0);
+            $flatFee = (float) ($settings[$method][$action . '_fee'] ?? 0);
         }
 
         $baseOrderValue = 0;
@@ -36,13 +36,12 @@ class UserOrderActionController extends Controller
                 }
             }
         } else {
-            // Calculate fee as percentage of the base order value (items total, excluding shipping/COD fees)
             $baseOrderValue = $order->items->sum(function ($item) {
                 return $item->price * ($item->quantity - ($item->returned_quantity ?? 0));
             });
         }
 
-        return round(($feePercent / 100) * $baseOrderValue, 2);
+        return round(min($flatFee, $baseOrderValue), 2);
     }
 
     public function cancel(Request $request, $uuid)
