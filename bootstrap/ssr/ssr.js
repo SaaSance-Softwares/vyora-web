@@ -5436,8 +5436,8 @@ function CheckoutPage() {
     setOrderErr("");
     let addrPayload, custPayload;
     if (user && selectedAddr) {
-      addrPayload = { line1: selectedAddr.address_line1, line2: selectedAddr.address_line2 || "", city: selectedAddr.city, state: selectedAddr.state, zip: selectedAddr.zip_code };
-      custPayload = { name: selectedAddr.name, email: user.email, phone: selectedAddr.phone };
+      addrPayload = { address_id: selectedAddr.id, line1: selectedAddr.address_line1, line2: selectedAddr.address_line2 || "", city: selectedAddr.city, state: selectedAddr.state, zip: selectedAddr.zip_code, country: selectedAddr.country, district: selectedAddr.district };
+      custPayload = { name: selectedAddr.name, email: selectedAddr.email || user.email, phone: selectedAddr.phone };
     } else {
       const { name, email, phone, line1, city, state, zip } = guest;
       if (!name || !email || !phone || !line1 || !city || !state || !zip) {

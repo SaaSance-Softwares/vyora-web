@@ -121,20 +121,26 @@ class OrderController extends Controller
                 $addressData = $request->input('address');
                 $customerData = $request->input('customer');
 
-                $address = Address::firstOrCreate([
-                    'user_id' => $request->user()?->id, // If authenticated
-                    'name' => $customerData['name'],
-                    'email' => $customerData['email'],
-                    'phone' => $customerData['phone'],
-                    'address_line1' => $addressData['line1'],
-                    'address_line2' => $addressData['line2'] ?? null,
-                    'city' => $addressData['city'],
-                    'district' => $addressData['district'] ?? null,
-                    'state' => $addressData['state'],
-                    'zip_code' => $addressData['zip'],
-                    'country' => $addressData['country'] ?? 'India',
-                    'type' => 'shipping',
-                ]);
+                if (isset($addressData['address_id']) && $addressData['address_id']) {
+                    $address = Address::where('id', $addressData['address_id'])
+                        ->where('user_id', $request->user()?->id)
+                        ->firstOrFail();
+                } else {
+                    $address = Address::firstOrCreate([
+                        'user_id' => $request->user()?->id, // If authenticated
+                        'name' => $customerData['name'],
+                        'email' => $customerData['email'],
+                        'phone' => $customerData['phone'],
+                        'address_line1' => $addressData['line1'],
+                        'address_line2' => $addressData['line2'] ?? null,
+                        'city' => $addressData['city'],
+                        'district' => $addressData['district'] ?? null,
+                        'state' => $addressData['state'],
+                        'zip_code' => $addressData['zip'],
+                        'country' => $addressData['country'] ?? 'India',
+                        'type' => 'shipping',
+                    ]);
+                }
                 \Log::info('Created address after firstOrCreate:', ['address' => $address->toArray(), 'id' => $address->id]);
 
                 // 2. Calculate Total & Create Order
