@@ -23,5 +23,10 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 release-*.zip
+*.zip
+*.patch
+*.orig
+*.rej
+*.bak
 
 brain.md
