@@ -81,8 +81,12 @@
             
             <div class="flex items-center gap-3 w-full sm:w-auto">
                 {{-- Bulk Actions --}}
-                <div x-show="selectedSkus.length > 0" x-transition class="flex items-center gap-2 mr-2">
+                <div x-show="selectedSkus.length > 0" x-transition class="flex items-center gap-2 mr-2 flex-wrap">
                     <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded" x-text="selectedSkus.length + ' selected'"></span>
+                    <button @click="openBulkEditModal()" type="button" class="text-sm font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-900 border border-blue-200 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Edit Price &amp; Stock
+                    </button>
                     <button @click="bulkPrintTags" type="button" class="text-sm font-medium bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded-md transition-colors shadow-sm flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                         Print Tags
@@ -184,11 +188,11 @@
                         </td>
                         
                         <td class="px-6 py-4 text-right">
-                            <form id="update-form-{{ $sku->sku_id }}" action="{{ route('admin.pos-markets.updateProduct', [$market->id, $sku->sku_id]) }}" method="POST" class="hidden">
+                            <form id="update-form-{{ $sku->sku_id }}" action="{{ route('admin.pos-markets.updateProduct', [$market->slug, $sku->sku_id]) }}" method="POST" class="hidden">
                                 @csrf @method('PUT')
                             </form>
                             
-                            <form id="remove-form-{{ $sku->sku_id }}" action="{{ route('admin.pos-markets.removeProduct', [$market->id, $sku->sku_id]) }}" method="POST" class="hidden">
+                            <form id="remove-form-{{ $sku->sku_id }}" action="{{ route('admin.pos-markets.removeProduct', [$market->slug, $sku->sku_id]) }}" method="POST" class="hidden">
                                 @csrf @method('DELETE')
                             </form>
 
@@ -228,6 +232,60 @@
                     @endif
                 </tbody>
             </table>
+        </div>
+
+        {{-- ── BULK EDIT STORE PRICE & STOCK MODAL ─────────────── --}}
+        <div x-show="showBulkEditModal" @keydown.escape.window="closeBulkEditModal()" style="display: none;" class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
+            <div x-show="showBulkEditModal" x-transition.opacity class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" @click="closeBulkEditModal()"></div>
+
+            <div x-show="showBulkEditModal" class="relative bg-white rounded-xl text-left shadow-2xl transform transition-all w-full max-w-md flex flex-col overflow-hidden border border-gray-100">
+                <form action="{{ route('admin.pos-markets.bulkUpdateProducts', $market->slug) }}" method="POST" @submit="submitBulkEdit($event)">
+                    @csrf
+                    <template x-for="skuId in selectedSkus" :key="skuId">
+                        <input type="hidden" name="sku_ids[]" :value="skuId">
+                    </template>
+
+                    <div class="bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Bulk Edit Price &amp; Stock</h3>
+                            <p class="text-xs text-gray-500">Updating <span class="font-bold text-indigo-600" x-text="selectedSkus.length"></span> selected product(s)</p>
+                        </div>
+                        <button type="button" @click="closeBulkEditModal()" class="text-gray-400 hover:text-gray-500 p-1.5 rounded-md hover:bg-gray-100 transition">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Store Price (₹)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 font-medium">₹</span>
+                                </div>
+                                <input type="number" name="override_price" x-model="bulkEditPrice" step="0.01" min="0" placeholder="Leave blank to keep current prices" class="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-black focus:border-black outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Stock Quantity</label>
+                            <input type="number" name="stock" x-model="bulkEditStock" min="0" placeholder="Leave blank to keep current stock" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-black focus:border-black outline-none">
+                        </div>
+
+                        <p class="text-xs text-gray-400">You can fill in either Store Price, Stock Quantity, or both. Any field left blank will remain unchanged.</p>
+                    </div>
+
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                        <button type="button" @click="closeBulkEditModal()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" :disabled="isUpdatingBulk || (bulkEditPrice === '' && bulkEditStock === '')" class="bg-black text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors disabled:opacity-50">
+                            <span x-text="isUpdatingBulk ? 'Updating...' : 'Apply Changes'">Apply Changes</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     @endif
@@ -1102,7 +1160,33 @@
             selectedSkus: [],
             selectAll: false,
             isDeleting: false,
+            showBulkEditModal: false,
+            bulkEditPrice: '',
+            bulkEditStock: '',
+            isUpdatingBulk: false,
             
+            openBulkEditModal() {
+                if (this.selectedSkus.length === 0) return;
+                this.bulkEditPrice = '';
+                this.bulkEditStock = '';
+                this.isUpdatingBulk = false;
+                this.showBulkEditModal = true;
+            },
+
+            closeBulkEditModal() {
+                if (this.isUpdatingBulk) return;
+                this.showBulkEditModal = false;
+            },
+
+            submitBulkEdit(e) {
+                if (this.bulkEditPrice === '' && this.bulkEditStock === '') {
+                    e.preventDefault();
+                    alert('Please enter a Store Price or Stock quantity to update.');
+                    return;
+                }
+                this.isUpdatingBulk = true;
+            },
+
             toggleAll() {
                 if (this.selectAll) {
                     // Select all visible skus that match search

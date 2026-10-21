@@ -3,9 +3,8 @@ import { usePage, Head } from '@inertiajs/react';
 import PageRenderer from "../Components/PageRenderer";
 
 export default function Home({ page, content, layout }) {
-    const { settings, app_url } = usePage().props;
-    const baseUrl = app_url || 'https://dopestyle.in';
-    const storeName = settings?.general?.store_name || 'Dope Style';
+    const { settings } = usePage().props as any;
+    const storeName = settings?.store_name || settings?.general?.store_name || 'Dope Style';
 
     if (!page || !content) {
         return (
@@ -17,39 +16,10 @@ export default function Home({ page, content, layout }) {
         );
     }
 
-    const getHomeSchema = () => {
-        return {
-            "@context": "https://schema.org",
-            "@graph": [
-                {
-                    "@type": "WebSite",
-                    "@id": `${baseUrl}/#website`,
-                    "url": baseUrl,
-                    "name": storeName,
-                    "potentialAction": {
-                        "@type": "SearchAction",
-                        "target": `${baseUrl}/search?q={search_term_string}`,
-                        "query-input": "required name=search_term_string"
-                    }
-                },
-                {
-                    "@type": "Organization",
-                    "@id": `${baseUrl}/#organization`,
-                    "name": storeName,
-                    "url": baseUrl,
-                    "logo": settings?.general?.favicon ? `${baseUrl}/${settings.general.favicon}` : `${baseUrl}/favicon.ico`
-                }
-            ]
-        };
-    };
-
     return (
         <main className="min-h-screen bg-gray-50">
             <Head>
-                <title>{page.title ? `${page.title} - ${storeName}` : storeName}</title>
-                <script type="application/ld+json" head-key="jsonld">
-                    {JSON.stringify(getHomeSchema())}
-                </script>
+                <title>{page.meta_title || page.title ? `${page.meta_title || page.title}` : storeName}</title>
             </Head>
             <PageRenderer content={content} layout={layout} settings={settings} />
         </main>

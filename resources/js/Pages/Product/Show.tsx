@@ -80,7 +80,7 @@ export default function ProductPage({ product }) {
         <div className="w-full pb-12">
             <Head>
                 <title>{product.seo?.title || product.name}</title>
-                <meta name="description" content={product.seo?.description || product.short_description?.replace(/<[^>]*>?/gm, '') || product.name} />
+                <meta head-key="description" name="description" content={product.seo?.description || product.short_description?.replace(/<[^>]*>?/gm, '') || product.name} />
                 {product.seo?.keywords && <meta name="keywords" content={product.seo.keywords} />}
                 <script type="application/ld+json" head-key="jsonld">
                     {JSON.stringify(getProductSchema())}

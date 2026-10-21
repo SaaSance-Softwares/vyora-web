@@ -404,11 +404,18 @@ class WhatsAppService
             $body = preg_replace('/[0-9]{4,8}/', '******', $body);
         }
 
+        $resolvedName = WhatsappConversation::resolveCustomerNameByPhone($to);
+
         $conversation = WhatsappConversation::firstOrCreate(
             ['phone_number' => $to],
-            ['last_message_at' => now()]
+            ['customer_name' => $resolvedName, 'last_message_at' => now()]
         );
-        $conversation->update(['last_message_at' => now()]);
+
+        $updateData = ['last_message_at' => now()];
+        if ($resolvedName && ! WhatsappConversation::isValidCustomerName($conversation->customer_name)) {
+            $updateData['customer_name'] = $resolvedName;
+        }
+        $conversation->update($updateData);
 
         WhatsappMessage::create([
             'conversation_id' => $conversation->id,
@@ -636,6 +643,185 @@ class WhatsAppService
         return $this->sendTemplate($phone, $template->name, $template->language, $components);
     }
 
+    /**
+     * Send a template manually from the Admin WhatsApp Chat window using the template's actual language and resolved parameters.
+     */
+    public function sendConversationTemplate(WhatsappConversation $conversation, string $templateName): bool
+    {
+        if (! $this->isEnabled()) {
+            return false;
+        }
+
+        $template = \App\Models\WhatsappTemplate::where('name', $templateName)->first();
+        $language = $template && ! empty($template->language) ? $template->language : 'en_US';
+
+        if (! $template) {
+            return $this->sendTemplate($conversation->phone_number, $templateName, $language, []);
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', (string) $conversation->phone_number);
+        $last10 = strlen($digits) >= 10 ? substr($digits, -10) : $digits;
+
+        $user = User::whereNotNull('phone')
+            ->where(function ($q) use ($digits, $last10) {
+                $q->where('phone', $digits)->orWhere('phone', 'like', '%' . $last10);
+            })
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $cart = $user
+            ? \App\Models\Cart::with(['items.sku.product.categoryMasterImages', 'user'])
+                ->where('user_id', $user->id)
+                ->latest()
+                ->first()
+            : null;
+
+        // If this is the abandoned_cart template and the user has an active cart with items, use sendAbandonedCartWhatsApp
+        if ($template->name === 'abandoned_cart' && $cart && $cart->items->isNotEmpty()) {
+            return $this->sendAbandonedCartWhatsApp($cart, $template);
+        }
+
+        $order = Order::with(['items', 'user', 'shippingAddress'])
+            ->where(function ($q) use ($user, $digits, $last10) {
+                if ($user) {
+                    $q->where('user_id', $user->id)->orWhere('customer_phone', $digits)->orWhere('customer_phone', 'like', '%' . $last10);
+                } else {
+                    $q->where('customer_phone', $digits)->orWhere('customer_phone', 'like', '%' . $last10);
+                }
+            })
+            ->latest()
+            ->first();
+
+        $customerName = $conversation->customer_name
+            ?: ($user->name ?? ($order->customer_name ?? WhatsappConversation::resolveCustomerNameByPhone($conversation->phone_number) ?? 'Customer'));
+
+        $resolveManualVar = function (string $varName) use ($cart, $order, $user, $customerName, $conversation): string {
+            if ($cart && in_array($varName, ['product_name', 'cart_token'], true)) {
+                $val = $this->resolveVariable($varName, $cart);
+                if ($val !== '') {
+                    return $val;
+                }
+            }
+            if ($order && in_array($varName, ['order_number', 'order_total', 'product_names', 'tracking_number', 'tracking_url'], true)) {
+                $val = $this->resolveVariable($varName, $order);
+                if ($val !== '') {
+                    return $val;
+                }
+            }
+            return match ($varName) {
+                'customer_name' => $customerName ?: 'Customer',
+                'customer_email' => $user->email ?? ($order->customer_email ?? ''),
+                'customer_phone' => $conversation->phone_number,
+                'product_name', 'product_names' => ($order && $order->items->isNotEmpty()) ? $order->items->pluck('product_name')->implode(', ') : 'your selected items',
+                'order_number' => $order->order_number ?? 'ORD-0000',
+                'order_total' => $order && $order->total ? number_format($order->total, 2) : '0.00',
+                'tracking_number' => $order->tracking_number ?? 'N/A',
+                'tracking_url' => $order->tracking_url ?? url('/orders'),
+                'cart_token' => $cart->cart_token ?? '',
+                default => $customerName ?: 'Customer',
+            };
+        };
+
+        $components = [];
+        $mapping = $template->variables_mapping ?? [];
+
+        // 1. Check if template has an IMAGE header
+        $hasImageHeader = false;
+        if (is_array($template->components)) {
+            foreach ($template->components as $c) {
+                if (($c['type'] ?? '') === 'HEADER' && ($c['format'] ?? '') === 'IMAGE') {
+                    $hasImageHeader = true;
+                    break;
+                }
+            }
+        }
+
+        if ($hasImageHeader) {
+            $imageUrl = null;
+            if ($cart && $cart->items->isNotEmpty()) {
+                $firstItem = $cart->items->first();
+                if (! empty($firstItem->image)) {
+                    $imageUrl = str_starts_with($firstItem->image, 'http') ? $firstItem->image : asset($firstItem->image);
+                } elseif ($firstItem->sku && $firstItem->sku->product) {
+                    $imgObj = $firstItem->sku->product->categoryMasterImages->first();
+                    if ($imgObj) {
+                        $imageUrl = $imgObj->image_url;
+                    }
+                }
+            }
+
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [
+                    [
+                        'type' => 'image',
+                        'image' => ['link' => $this->resolveWhatsAppImageUrl($imageUrl)],
+                    ],
+                ],
+            ];
+        }
+
+        // 2. Build text/button parameters from variables_mapping or component {{n}} placeholders
+        if (! empty($mapping) && is_array($mapping)) {
+            if (! $hasImageHeader && ! empty($mapping['header']) && is_array($mapping['header'])) {
+                $params = [];
+                foreach ($mapping['header'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => $resolveManualVar((string) $varName)];
+                }
+                if (! empty($params)) {
+                    $components[] = ['type' => 'header', 'parameters' => $params];
+                }
+            }
+
+            if (! empty($mapping['body']) && is_array($mapping['body'])) {
+                $params = [];
+                foreach ($mapping['body'] as $varName) {
+                    $params[] = ['type' => 'text', 'text' => $resolveManualVar((string) $varName)];
+                }
+                if (! empty($params)) {
+                    $components[] = ['type' => 'body', 'parameters' => $params];
+                }
+            }
+
+            if (! empty($mapping['buttons']) && is_array($mapping['buttons'])) {
+                foreach ($mapping['buttons'] as $btnIndex => $vars) {
+                    $params = [];
+                    foreach ($vars as $varName) {
+                        $params[] = ['type' => 'text', 'text' => $resolveManualVar((string) $varName)];
+                    }
+                    if (! empty($params)) {
+                        $components[] = [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => (string) $btnIndex,
+                            'parameters' => $params,
+                        ];
+                    }
+                }
+            }
+        } elseif (is_array($template->components)) {
+            // Fallback: inspect raw Meta components for {{1}}, {{2}} placeholders if variables_mapping was not saved
+            foreach ($template->components as $c) {
+                $cType = strtoupper($c['type'] ?? '');
+                if (in_array($cType, ['HEADER', 'BODY'], true) && ! empty($c['text'])) {
+                    if ($cType === 'HEADER' && $hasImageHeader) {
+                        continue;
+                    }
+                    if (preg_match_all('/\{\{(\d+)\}\}/', $c['text'], $matches)) {
+                        $count = count(array_unique($matches[1]));
+                        $params = [];
+                        for ($i = 1; $i <= $count; $i++) {
+                            $params[] = ['type' => 'text', 'text' => $i === 1 ? $customerName : 'Dope Style'];
+                        }
+                        $components[] = ['type' => strtolower($cType), 'parameters' => $params];
+                    }
+                }
+            }
+        }
+
+        return $this->sendTemplate($conversation->phone_number, $template->name, $language, $components);
+    }
+
     public function sendAbandonedCartWhatsApp(\App\Models\Cart $cart, \App\Models\WhatsappTemplate $template): bool
     {
         if (! $this->isEnabled()) {
@@ -683,51 +869,13 @@ class WhatsAppService
                 }
             }
             
-            // Fallback image if product has no image
-            if (! $imageUrl) {
-                $imageUrl = asset('pwa-icon-512.png'); // generic fallback
-            }
-            
-            // Meta WhatsApp API strictly blocks .webp images. Convert to .jpg on the fly and cache it.
-            if (str_ends_with(strtolower($imageUrl), '.webp')) {
-                $filename = md5($imageUrl) . '.jpg';
-                $waCachePath = public_path('storage/wa-cache');
-                if (!file_exists($waCachePath)) {
-                    @mkdir($waCachePath, 0755, true);
-                }
-                
-                $localPath = $waCachePath . '/' . $filename;
-                
-                if (!file_exists($localPath)) {
-                    try {
-                        // We must fetch it and convert it. Encode spaces to %20 to prevent 400 Bad Request.
-                        $fetchUrl = str_replace(' ', '%20', $imageUrl);
-                        $contents = file_get_contents($fetchUrl);
-                        if ($contents) {
-                            $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
-                            $img = $manager->read($contents);
-                            $img->toJpeg(90)->save($localPath);
-                        }
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("Failed to convert WebP for WhatsApp: " . $e->getMessage());
-                    }
-                }
-                
-                if (file_exists($localPath)) {
-                    $imageUrl = asset('storage/wa-cache/' . $filename);
-                } else {
-                    // Ultimate fallback if conversion fails
-                    $imageUrl = asset('pwa-icon-512.png');
-                }
-            }
-
             $components[] = [
                 'type' => 'header',
                 'parameters' => [
                     [
                         'type' => 'image',
                         'image' => [
-                            'link' => $imageUrl
+                            'link' => $this->resolveWhatsAppImageUrl($imageUrl)
                         ]
                     ]
                 ]
@@ -776,6 +924,49 @@ class WhatsAppService
         }
 
         return $this->sendTemplate($phone, $template->name, $template->language, $components);
+    }
+
+    private function resolveWhatsAppImageUrl(?string $imageUrl): string
+    {
+        // Fallback image if product has no image
+        if (! $imageUrl) {
+            $imageUrl = asset('pwa-icon-512.png'); // generic fallback
+        }
+
+        // Meta WhatsApp API strictly blocks .webp images. Convert to .jpg on the fly and cache it.
+        if (str_ends_with(strtolower($imageUrl), '.webp')) {
+            $filename = md5($imageUrl) . '.jpg';
+            $waCachePath = public_path('storage/wa-cache');
+            if (! file_exists($waCachePath)) {
+                @mkdir($waCachePath, 0755, true);
+            }
+
+            $localPath = $waCachePath . '/' . $filename;
+
+            if (! file_exists($localPath)) {
+                try {
+                    // We must fetch it and convert it. Encode spaces to %20 to prevent 400 Bad Request.
+                    $fetchUrl = str_replace(' ', '%20', $imageUrl);
+                    $contents = file_get_contents($fetchUrl);
+                    if ($contents) {
+                        $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                        $img = $manager->read($contents);
+                        $img->toJpeg(90)->save($localPath);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to convert WebP for WhatsApp: ' . $e->getMessage());
+                }
+            }
+
+            if (file_exists($localPath)) {
+                $imageUrl = asset('storage/wa-cache/' . $filename);
+            } else {
+                // Ultimate fallback if conversion fails
+                $imageUrl = asset('pwa-icon-512.png');
+            }
+        }
+
+        return $imageUrl;
     }
 
     private function formatPhoneNumber(string $number): string

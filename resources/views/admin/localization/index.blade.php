@@ -58,6 +58,11 @@
                         <span class="inline-block px-2 py-1 bg-green-100 text-green-800 rounded font-bold">{{ number_format($country->postal_codes_count) }}</span> rows
                     </td>
                     <td class="p-4 text-right space-x-2">
+                        <!-- Export CSV Button -->
+                        <a href="{{ route('admin.online-store.localization.country.export', $country->id) }}" class="inline-block px-3 py-1.5 bg-green-50 text-green-700 rounded font-semibold text-sm hover:bg-green-100 transition-colors">
+                            Export CSV
+                        </a>
+
                         <!-- Upload Button triggers Alpine state -->
                         <button type="button" @click="startUpload({{ $country->id }}, '{{ $country->name }}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded font-semibold text-sm hover:bg-blue-100 transition-colors">
                             Upload CSV

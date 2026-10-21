@@ -51,6 +51,11 @@ class Order extends Model
     /*  Relations */
     /* ------------------------------------------------------------------ */
 
+    public function returnRequests()
+    {
+        return $this->hasMany(ReturnRequest::class);
+    }
+
     public function items()
     {
         return $this->hasMany(OrderItem::class);
@@ -93,6 +98,30 @@ class Order extends Model
         return $this->items->sum(function ($item) {
             return $item->price * $item->quantity;
         });
+    }
+
+    /**
+     * Hide incomplete tracking URLs (e.g. "https://courierupdates.com/?awb=" with no AWB).
+     */
+    public function getTrackingUrlAttribute($value): ?string
+    {
+        if (empty($value) || str_ends_with(trim($value), '=')) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Normalize empty tracking numbers to null.
+     */
+    public function getTrackingNumberAttribute($value): ?string
+    {
+        if (empty($value) || trim($value) === '') {
+            return null;
+        }
+
+        return $value;
     }
 
     /**

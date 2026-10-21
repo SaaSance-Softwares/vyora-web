@@ -229,6 +229,23 @@ class PaymentController extends Controller
             \Log::error('Failed to send Order Confirmed Email: '.$e->getMessage());
         }
 
+        try {
+            if ($order->user_id) {
+                \App\Models\Cart::where('user_id', $order->user_id)
+                    ->whereIn('status', ['active', 'abandoned'])
+                    ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+            } else {
+                $guestEmail = $order->shippingAddress?->email;
+                if ($guestEmail) {
+                    \App\Models\Cart::where('guest_email', $guestEmail)
+                        ->whereIn('status', ['active', 'abandoned'])
+                        ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to clear cart after successful payment: ' . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'Payment verified successfully.']);
     }
 
@@ -242,5 +259,61 @@ class PaymentController extends Controller
             ]);
         }
         return response()->json(['success' => true]);
+    }
+
+    public function initiateRmaPayment(Request $request, \App\Models\ReturnRequest $rma)
+    {
+        if ($rma->fee_deducted <= 0) {
+            return response()->json(['success' => false, 'message' => 'No fee required.'], 400);
+        }
+
+        try {
+            $razorpayOrder = $this->razorpay()->order->create([
+                'receipt' => 'rma_' . $rma->id,
+                'amount' => round($rma->fee_deducted * 100),
+                'currency' => 'INR'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'key' => $this->razorpayKeyId(),
+                'amount' => $razorpayOrder['amount'],
+                'order_id' => $razorpayOrder['id'],
+                'name' => config('app.name'),
+                'description' => 'Return/Exchange Fee'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Razorpay RMA Initiate Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Payment initiation failed.'], 500);
+        }
+    }
+
+    public function verifyRmaPayment(Request $request, \App\Models\ReturnRequest $rma)
+    {
+        $request->validate([
+            'razorpay_payment_id' => 'required|string|max:255',
+            'razorpay_order_id' => 'required|string|max:255',
+            'razorpay_signature' => 'required|string|max:255',
+        ]);
+
+        try {
+            $attributes = [
+                'razorpay_order_id' => $request->razorpay_order_id,
+                'razorpay_payment_id' => $request->razorpay_payment_id,
+                'razorpay_signature' => $request->razorpay_signature,
+            ];
+
+            $this->razorpay()->utility->verifyPaymentSignature($attributes);
+
+            $rma->update([
+                'payment_status' => 'paid',
+                'payment_id' => $request->razorpay_payment_id
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Payment verified successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('Razorpay RMA Verification Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Payment verification failed.'], 400);
+        }
     }
 }

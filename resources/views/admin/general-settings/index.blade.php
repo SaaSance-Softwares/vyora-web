@@ -25,14 +25,35 @@
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Store Email (System/Sender)</label>
-                    <input type="email" name="store_email" value="{{ $settings['store_email'] }}"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tax ID / GST Number</label>
+                    <input type="text" name="tax_id" id="general_tax_id_input" value="{{ $settings['tax_id'] ?? '' }}"
+                        placeholder="e.g. 29AAAAA0000A1Z5"
+                        oninput="autoDetectGstState(this.value, 'general_gst_state_select')"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tax ID / GST Number</label>
-                    <input type="text" name="tax_id" value="{{ $settings['tax_id'] ?? '' }}"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Registered Business State (for GST)</label>
+                    @php
+                        $stateList = $indianStates ?? [
+                            'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+                            'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa',
+                            'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka',
+                            'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
+                            'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim',
+                            'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+                        ];
+                        $selectedGstState = $settings['gst_registered_state'] ?? '';
+                    @endphp
+                    <select name="gst_registered_state" id="general_gst_state_select"
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                        <option value="">— Select Registered GST State —</option>
+                        @foreach($stateList as $stateOption)
+                            <option value="{{ $stateOption }}" {{ strcasecmp($selectedGstState, $stateOption) === 0 ? 'selected' : '' }}>
+                                {{ $stateOption }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Used to determine Intra-state (CGST+SGST) vs Inter-state (IGST) on online orders.</p>
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Store Description (SEO/Footer)</label>
@@ -45,6 +66,28 @@
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">{{ $settings['store_address'] }}</textarea>
                 </div>
             </div>
+            <script>
+                function autoDetectGstState(gstin, selectId) {
+                    const map = {
+                        '01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh',
+                        '05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh',
+                        '10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur',
+                        '15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal',
+                        '20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat',
+                        '26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','28':'Andhra Pradesh',
+                        '29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu',
+                        '34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh'
+                    };
+                    const clean = (gstin || '').trim();
+                    if (clean.length >= 2) {
+                        const code = clean.substring(0, 2);
+                        const el = document.getElementById(selectId);
+                        if (map[code] && el) {
+                            el.value = map[code];
+                        }
+                    }
+                }
+            </script>
         </div>
 
         {{-- ── CUSTOMER SUPPORT & CONTACTS ───────────────── --}}

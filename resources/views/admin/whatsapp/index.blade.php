@@ -37,13 +37,13 @@
                 <button @click="openConversation(conv.id, conv.customer_name || conv.phone_number, conv.phone_number)"
                         class="w-full text-left p-4 border-b border-gray-100 hover:bg-white transition-colors focus:outline-none relative"
                         :class="activeConvId === conv.id ? 'bg-white border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'">
-                    <div class="flex justify-between items-start mb-1">
+                    <div class="flex justify-between items-start mb-0.5">
                         <span class="font-bold text-gray-900 text-sm truncate" x-text="conv.customer_name || conv.phone_number"></span>
                         <div class="flex items-center gap-1.5">
                             <span x-show="conv.messages_count > 0" class="bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full" x-text="conv.messages_count"></span>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 truncate" x-text="conv.phone_number"></p>
+                    <p x-show="conv.customer_name && conv.customer_name !== conv.phone_number" class="text-xs text-gray-500 truncate" x-text="conv.phone_number"></p>
                 </button>
             </template>
             <div x-show="conversations.length === 0" style="display: none;" class="p-8 text-center text-gray-500 text-sm">
@@ -71,8 +71,8 @@
                     <span x-text="activeName ? activeName.charAt(0).toUpperCase() : '?'"></span>
                 </div>
                 <div>
-                    <h3 class="font-bold text-gray-900" x-text="activeName"></h3>
-                    <p class="text-xs text-gray-500" x-text="activePhone"></p>
+                    <h3 class="font-bold text-gray-900" x-text="activeName || activePhone"></h3>
+                    <p x-show="activeName && activeName !== activePhone" class="text-xs text-gray-500" x-text="activePhone"></p>
                 </div>
             </div>
             <div class="flex items-center gap-4">
@@ -217,6 +217,13 @@ document.addEventListener('alpine:init', () => {
                 const res = await fetch(`${BASE_URL}/conversations`);
                 const data = await res.json();
                 this.conversations = data.conversations;
+                if (this.activeConvId) {
+                    const active = this.conversations.find(c => c.id === this.activeConvId);
+                    if (active) {
+                        this.activeName = active.customer_name || active.phone_number;
+                        this.activePhone = active.phone_number;
+                    }
+                }
             } catch (err) {
                 console.error('Failed to fetch conversations', err);
             }

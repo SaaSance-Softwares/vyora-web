@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Cookie, X, Check, Settings } from 'lucide-react';
+import { Cookie, X, Check, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
@@ -109,9 +109,12 @@ export default function CookieConsent() {
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                        <div className="flex items-center gap-2">
-                            <Settings className="w-5 h-5 text-gray-700" />
-                            <h3 className="font-bold text-gray-900">Privacy Preferences</h3>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <Settings className="w-5 h-5 text-gray-700" />
+                                <h3 className="font-bold text-gray-900 leading-tight">Digital Personal Data Protection (DPDP)</h3>
+                            </div>
+                            <span className="text-[11px] text-gray-500 font-medium ml-7 mt-0.5 uppercase tracking-wider">Privacy Preferences</span>
                         </div>
                         <button onClick={() => {setShowCustomize(false); setShowBanner(true);}} className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
                             <X className="w-5 h-5" />
@@ -119,12 +122,21 @@ export default function CookieConsent() {
                     </div>
                     <div className="p-6 space-y-6">
                         <div className="space-y-4">
-                            <div className="flex justify-between items-center p-3 rounded-lg border border-gray-100">
-                                <div>
-                                    <span className="text-sm font-semibold text-gray-900 block">Strictly Necessary</span>
-                                    <span className="text-xs text-gray-500">Required for site functionality</span>
+                            <div className="p-3 rounded-lg border border-gray-100 flex flex-col gap-2">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className="text-sm font-semibold text-gray-900 block">Strictly Necessary</span>
+                                        <span className="text-xs text-gray-500">Required for site functionality</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded uppercase tracking-wider shrink-0 ml-2">Always On</span>
                                 </div>
-                                <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded uppercase tracking-wider">Always On</span>
+                                <details className="group">
+                                    <summary className="text-xs font-medium text-gray-900 cursor-pointer outline-none hover:underline select-none inline-block">View Details</summary>
+                                    <div className="mt-2 text-[11px] text-gray-600 bg-gray-50 p-3 rounded leading-relaxed border border-gray-100 space-y-2">
+                                        <p>These local storage items and cookies are fundamental to our website's core operations. They securely maintain your shopping cart, preserve your active login session, and protect against security threats.</p>
+                                        <p><strong>Transparency Note:</strong> If you are browsing as a guest (not logged in), your privacy and data protection preferences—including these very settings—must be stored directly on your local device's storage. This is the only technical way for our system to remember and respect your choices during your future visits.</p>
+                                    </div>
+                                </details>
                             </div>
                             
                             <div className="flex justify-between items-center p-3 rounded-lg border border-gray-100">
@@ -204,14 +216,17 @@ export default function CookieConsent() {
 
     if (isFloating) {
         return (
-            <button 
-                onClick={() => { setShowBanner(true); setIsFloating(false); }}
-                className={`fixed bottom-6 ${position === 'right' ? 'right-6' : 'left-6'} z-[9999] w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform`}
-                style={{ backgroundColor: themeColor }}
-                aria-label="Cookie Preferences"
-            >
-                <Cookie className="w-5 h-5 text-white" />
-            </button>
+            <>
+                {/* Desktop Floating Button */}
+                <button 
+                    onClick={() => { setShowBanner(true); setIsFloating(false); }}
+                    className={`hidden md:flex fixed bottom-6 ${position === 'right' ? 'right-6' : 'left-6'} z-[9999] w-12 h-12 rounded-full shadow-lg items-center justify-center hover:scale-110 transition-transform`}
+                    style={{ backgroundColor: themeColor }}
+                    aria-label="Cookie Preferences"
+                >
+                    <Cookie className="w-5 h-5 text-white" />
+                </button>
+            </>
         );
     }
 

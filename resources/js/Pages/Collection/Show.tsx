@@ -38,7 +38,7 @@ export default function CollectionPage({ collection }) {
         <>
             <Head>
                 <title>{collection.social_title || collection.name}</title>
-                <meta name="description" content={collection.social_description || (collection.description ? collection.description.replace(/<[^>]*>?/gm, '') : `Shop the latest ${collection.name}`)} />
+                <meta head-key="description" name="description" content={collection.social_description || (collection.description ? collection.description.replace(/<[^>]*>?/gm, '') : `Shop the latest ${collection.name}`)} />
                 {collection.meta_keywords && <meta name="keywords" content={collection.meta_keywords} />}
                 <script type="application/ld+json" head-key="jsonld">
                     {JSON.stringify(getCollectionSchema())}

@@ -36,6 +36,7 @@ class PosMarketController extends Controller
             'district' => 'nullable|string',
             'country' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',
+            'gst_registered_state' => 'nullable|string|max:100',
             'contact_phone' => 'nullable|string|max:20',
             'contact_email' => 'nullable|email|max:255',
             'open_time' => 'nullable|date_format:H:i',
@@ -53,7 +54,12 @@ class PosMarketController extends Controller
             $imagePath = $request->file('store_image')->store('pos_locations', 'public');
         }
 
-        DB::table('pos_locations')->insert([
+        $gstRegisteredState = trim((string) $request->input('gst_registered_state', ''));
+        if ($gstRegisteredState === '' && $request->filled('gst_number')) {
+            $gstRegisteredState = GeneralSettingsController::detectStateFromGstin($request->input('gst_number')) ?? '';
+        }
+
+        $insertData = [
             'name' => $request->name,
             'slug' => \Illuminate\Support\Str::slug($request->slug ?? $request->name),
             'type' => $request->type,
@@ -81,7 +87,13 @@ class PosMarketController extends Controller
             'receipt_barcode_type' => $request->receipt_barcode_type ?? 'QR',
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pos_locations', 'gst_registered_state')) {
+            $insertData['gst_registered_state'] = $gstRegisteredState ?: null;
+        }
+
+        DB::table('pos_locations')->insert($insertData);
         return redirect()->route('admin.pos-markets.index')->with('success', 'Store created successfully.');
     }
 
@@ -89,6 +101,10 @@ class PosMarketController extends Controller
     {
         $location = DB::table('pos_locations')->where('slug', $slug)->first();
         if (!$location) abort(404);
+
+        if (empty($location->gst_registered_state) && !empty($location->gst_number)) {
+            $location->gst_registered_state = GeneralSettingsController::detectStateFromGstin($location->gst_number);
+        }
         
         $logoSetting = DB::table('theme_settings')->where('group', 'logos')->where('key', 'main_logo')->first();
         $mainLogoUrl = $logoSetting && $logoSetting->value ? asset($logoSetting->value) : null;
@@ -113,6 +129,7 @@ class PosMarketController extends Controller
             'district' => 'nullable|string',
             'country' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',
+            'gst_registered_state' => 'nullable|string|max:100',
             'contact_phone' => 'nullable|string|max:20',
             'contact_email' => 'nullable|email|max:255',
             'open_time' => 'nullable|date_format:H:i',
@@ -160,7 +177,12 @@ class PosMarketController extends Controller
             $tagWashing = $request->file('tag_washing_instruction')->store('pos_tags', 'public');
         }
 
-        DB::table('pos_locations')->where('slug', $slug)->update([
+        $gstRegisteredState = trim((string) $request->input('gst_registered_state', ''));
+        if ($gstRegisteredState === '' && $request->filled('gst_number')) {
+            $gstRegisteredState = GeneralSettingsController::detectStateFromGstin($request->input('gst_number')) ?? '';
+        }
+
+        $updateData = [
             'name' => $request->name,
             'slug' => \Illuminate\Support\Str::slug($request->slug ?? $request->name),
             'type' => $request->type,
@@ -198,7 +220,13 @@ class PosMarketController extends Controller
             'tag_icon' => $tagIcon,
             'tag_washing_instruction' => $tagWashing,
             'updated_at' => now(),
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pos_locations', 'gst_registered_state')) {
+            $updateData['gst_registered_state'] = $gstRegisteredState ?: null;
+        }
+
+        DB::table('pos_locations')->where('slug', $slug)->update($updateData);
         return back()->with('success', 'Store updated successfully.');
     }
 
@@ -425,6 +453,39 @@ class PosMarketController extends Controller
             ]);
 
         return back()->with('success', 'Product details updated successfully.');
+    }
+
+    public function bulkUpdateProducts(Request $request, $slug)
+    {
+        $location = DB::table('pos_locations')->where('slug', $slug)->first();
+        if (!$location) abort(404);
+        $id = $location->id;
+
+        $request->validate([
+            'sku_ids' => 'required|array|min:1',
+            'sku_ids.*' => 'required|integer',
+            'override_price' => 'nullable|numeric|min:0',
+            'stock' => 'nullable|integer|min:0',
+        ]);
+
+        $updateData = ['updated_at' => now()];
+        if ($request->filled('override_price')) {
+            $updateData['override_price'] = $request->override_price;
+        }
+        if ($request->filled('stock')) {
+            $updateData['stock'] = $request->stock;
+        }
+
+        if (count($updateData) <= 1) {
+            return back()->with('error', 'Please enter a Store Price or Stock quantity to update.');
+        }
+
+        $updated = DB::table('pos_market_pricing')
+            ->where('pos_location_id', $id)
+            ->whereIn('sku_id', $request->sku_ids)
+            ->update($updateData);
+
+        return back()->with('success', "Updated {$updated} product variant(s) successfully.");
     }
 
     public function removeProduct($slug, $skuId)

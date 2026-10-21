@@ -54,6 +54,33 @@ export default function Footer() {
 
     const availableSocials = socialLinks.filter(s => settings.general && settings.general[s.key]);
 
+    const isExternalUrl = (url?: string) => {
+        if (!url) return false;
+        const trimmed = url.trim();
+        if (/^(https?:)?\/\//i.test(trimmed) || /^(mailto:|tel:|whatsapp:)/i.test(trimmed)) {
+            return true;
+        }
+        if (!trimmed.startsWith('/') && !trimmed.startsWith('#') && !trimmed.startsWith('?')) {
+            const firstSegment = trimmed.split('/')[0];
+            if (firstSegment.includes('.')) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const formatExternalUrl = (url?: string) => {
+        if (!url) return '#';
+        const trimmed = url.trim();
+        if (/^(https?:)?\/\//i.test(trimmed) || /^(mailto:|tel:|whatsapp:)/i.test(trimmed)) {
+            return trimmed;
+        }
+        if (!trimmed.startsWith('/') && !trimmed.startsWith('#') && !trimmed.startsWith('?')) {
+            return `https://${trimmed}`;
+        }
+        return trimmed;
+    };
+
     return (
         <footer style={{ backgroundColor: bgColor, color: textColor }} className="mt-auto border-t border-gray-100">
             {showNewsletter && (
@@ -95,11 +122,23 @@ export default function Footer() {
                             <ul className="space-y-4">
                                 {col.items.map((item: any) => {
                                     if (item.type === 'link') {
+                                        const external = isExternalUrl(item.url);
                                         return (
                                             <li key={item.id}>
-                                                <Link href={item.url} className="opacity-80 hover:opacity-100 hover:underline transition-all">
-                                                    {item.label}
-                                                </Link>
+                                                {external ? (
+                                                    <a
+                                                        href={formatExternalUrl(item.url)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="opacity-80 hover:opacity-100 hover:underline transition-all"
+                                                    >
+                                                        {item.label}
+                                                    </a>
+                                                ) : (
+                                                    <Link href={item.url || '#'} className="opacity-80 hover:opacity-100 hover:underline transition-all">
+                                                        {item.label}
+                                                    </Link>
+                                                )}
                                             </li>
                                         );
                                     } else if (item.type === 'phone') {
@@ -147,14 +186,14 @@ export default function Footer() {
                                             <li key={item.id} className="opacity-80">
                                                 {imgElement && (
                                                     item.image_link ? (
-                                                        <a href={item.image_link} target="_blank" rel="noreferrer" className="block hover:opacity-90 transition-opacity">
+                                                        <a href={formatExternalUrl(item.image_link)} target="_blank" rel="noopener noreferrer" className="block hover:opacity-90 transition-opacity">
                                                             {imgElement}
                                                         </a>
                                                     ) : imgElement
                                                 )}
                                                 {txtElement && (
                                                     item.text_link ? (
-                                                        <a href={item.text_link} target="_blank" rel="noreferrer" className="block hover:underline hover:opacity-100 transition-all">
+                                                        <a href={formatExternalUrl(item.text_link)} target="_blank" rel="noopener noreferrer" className="block hover:underline hover:opacity-100 transition-all">
                                                             {txtElement}
                                                         </a>
                                                     ) : txtElement
@@ -205,12 +244,12 @@ export default function Footer() {
                                         return (
                                             <li key={item.id} className="mt-2 flex flex-col gap-2">
                                                 {item.ios_url && (
-                                                    <a href={item.ios_url} target="_blank" rel="noreferrer" className="inline-block transition-opacity hover:opacity-80">
+                                                    <a href={formatExternalUrl(item.ios_url)} target="_blank" rel="noopener noreferrer" className="inline-block transition-opacity hover:opacity-80">
                                                         <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="Download on the App Store" className="h-10 w-auto" />
                                                     </a>
                                                 )}
                                                 {item.android_url && (
-                                                    <a href={item.android_url} target="_blank" rel="noreferrer" className="inline-block transition-opacity hover:opacity-80">
+                                                    <a href={formatExternalUrl(item.android_url)} target="_blank" rel="noopener noreferrer" className="inline-block transition-opacity hover:opacity-80">
                                                         <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" className="h-10 w-auto" />
                                                     </a>
                                                 )}
@@ -222,7 +261,7 @@ export default function Footer() {
                                                 {item.label && <div className="opacity-80 mb-1">{item.label}</div>}
                                                 {item.content && <p className="opacity-80 whitespace-pre-line leading-relaxed mb-2">{item.content}</p>}
                                                 {item.url && (
-                                                    <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:underline opacity-80 hover:opacity-100 transition-all">
+                                                    <a href={formatExternalUrl(item.url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:underline opacity-80 hover:opacity-100 transition-all">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                                         Get Directions
                                                     </a>
@@ -258,13 +297,13 @@ export default function Footer() {
                     {showSocial && (
                         <div className="flex space-x-4 mb-4 md:mb-0">
                             {availableSocials.map(social => (
-                                <a key={social.key} href={settings.general[social.key]} target="_blank" rel="noreferrer" className="opacity-80 hover:opacity-100 transition-opacity">
+                                <a key={social.key} href={formatExternalUrl(settings.general[social.key])} target="_blank" rel="noopener noreferrer" className="opacity-80 hover:opacity-100 transition-opacity">
                                     {social.icon}
                                 </a>
                             ))}
                             {settings.general?.social_custom_links?.map((customLink: any, idx: number) => (
                                 customLink.url && (
-                                    <a key={`custom-${idx}`} href={customLink.url} target="_blank" rel="noreferrer" className="opacity-80 hover:opacity-100 transition-opacity flex items-center group relative" title={customLink.label}>
+                                    <a key={`custom-${idx}`} href={formatExternalUrl(customLink.url)} target="_blank" rel="noopener noreferrer" className="opacity-80 hover:opacity-100 transition-opacity flex items-center group relative" title={customLink.label}>
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                                         <span className="sr-only">{customLink.label}</span>
                                     </a>

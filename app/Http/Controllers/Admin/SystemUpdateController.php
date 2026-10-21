@@ -116,9 +116,15 @@ class SystemUpdateController extends Controller
                 // Cleanup
                 File::deleteDirectory($tempExtractDir);
 
-                // Run database migrations and clear cache via Artisan
-                Artisan::call('migrate', ['--force' => true]);
+                // 1. Clear old cache so new configs/classes are recognized
                 Artisan::call('optimize:clear');
+                
+                // 2. Run database migrations safely
+                Artisan::call('migrate', ['--force' => true]);
+                
+                // 3. Rebuild cache for performance
+                Artisan::call('optimize');
+                
                 $message = 'System updated successfully. Cache cleared and migrations run!';
 
                 File::delete($tempZipPath);

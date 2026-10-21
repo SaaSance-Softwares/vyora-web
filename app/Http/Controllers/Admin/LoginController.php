@@ -56,9 +56,18 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        $isAdminOrPos = $user && in_array($user->role, ['administrator', 'editor', 'manager', 'customer_service', 'pos', 'pos_cashier']);
+        $referer = (string) $request->headers->get('referer', '');
+        $isFromPosOrAdmin = $isAdminOrPos || str_contains($referer, '/pos') || str_contains($referer, config('app.admin_path', 'admin'));
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($isFromPosOrAdmin) {
+            return redirect()->route('admin.login');
+        }
 
         return redirect('/login');
     }

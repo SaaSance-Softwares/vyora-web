@@ -15,7 +15,7 @@ class PushZohoBooksOrders extends Command
      *
      * @var string
      */
-    protected $signature = 'zoho-books:push-orders';
+    protected $signature = 'zoho-books:push-orders {--retry-failed : Reset and retry orders that previously failed after 3 attempts}';
 
     /**
      * The console command description.
@@ -43,14 +43,33 @@ class PushZohoBooksOrders extends Command
             return;
         }
 
+        // Automatically recover orders that failed due to item/contact collision bugs or when --retry-failed is passed
+        $failedQuery = Order::whereNull('zoho_books_id')->where('zoho_sync_attempts', '>=', 3);
+        if (!$this->option('retry-failed')) {
+            $failedQuery->where(function ($q) {
+                $q->where('zoho_sync_error', 'like', '%1001%')
+                  ->orWhere('zoho_sync_error', 'like', '%3032%')
+                  ->orWhere('zoho_sync_error', 'like', '%interstate%')
+                  ->orWhere('zoho_sync_error', 'like', '%already exists%')
+                  ->orWhere('zoho_sync_error', 'like', '%contact_name%')
+                  ->orWhere('zoho_sync_error', 'like', '%null%');
+            });
+        }
+        $resetCount = $failedQuery->update([
+            'zoho_sync_attempts' => 0,
+            'zoho_sync_error' => null,
+        ]);
+        if ($resetCount > 0) {
+            $this->info("Reset {$resetCount} previously failed order(s) for retry.");
+        }
+
         // Find orders that:
         // 1. Don't have a Zoho Books ID
         // 2. Have attempts < 3
-        // 3. Status is processing, shipped, delivered, or completed
-        
+        // 3. Status is active/paid (not pending, cancelled, or failed)
         $orders = Order::whereNull('zoho_books_id')
             ->where('zoho_sync_attempts', '<', 3)
-            ->whereIn('status', ['processing', 'shipped', 'delivered', 'completed'])
+            ->whereNotIn('status', ['pending', 'cancelled', 'failed'])
             ->orderBy('id', 'desc')
             ->take(20) // Limit to avoid rate limits
             ->get();

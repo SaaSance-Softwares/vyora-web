@@ -1,6 +1,6 @@
 import { ProductList, ProductDetail } from "@/types";
 import { formatPrice } from "@/lib/utils";
-import { trackAddToWishlist } from "@/lib/tracking";
+import { trackAddToWishlist, trackAddToCart } from "@/lib/tracking";
 import { Link, usePage, router } from '@inertiajs/react';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -52,6 +52,7 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                     exchangeDays: data.is_exchangeable ? data.exchange_days : null,
                     returnDays: data.is_returnable ? data.return_days : null,
                 });
+                trackAddToCart(data, 1);
                 if (action === 'buy') {
                     router.visit('/checkout');
                 }

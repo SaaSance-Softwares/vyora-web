@@ -37,17 +37,78 @@ class GeneralSettingsController extends Controller
         'social_custom_links',
         'business_name',
         'tax_id',
+        'gst_registered_state',
         'customer_support_hours',
         'store_description',
         'cookie_widget_position',
         'cookie_widget_color',
     ];
 
+    public const GST_STATE_CODE_MAP = [
+        '01' => 'Jammu and Kashmir',
+        '02' => 'Himachal Pradesh',
+        '03' => 'Punjab',
+        '04' => 'Chandigarh',
+        '05' => 'Uttarakhand',
+        '06' => 'Haryana',
+        '07' => 'Delhi',
+        '08' => 'Rajasthan',
+        '09' => 'Uttar Pradesh',
+        '10' => 'Bihar',
+        '11' => 'Sikkim',
+        '12' => 'Arunachal Pradesh',
+        '13' => 'Nagaland',
+        '14' => 'Manipur',
+        '15' => 'Mizoram',
+        '16' => 'Tripura',
+        '17' => 'Meghalaya',
+        '18' => 'Assam',
+        '19' => 'West Bengal',
+        '20' => 'Jharkhand',
+        '21' => 'Odisha',
+        '22' => 'Chhattisgarh',
+        '23' => 'Madhya Pradesh',
+        '24' => 'Gujarat',
+        '26' => 'Dadra and Nagar Haveli and Daman and Diu',
+        '27' => 'Maharashtra',
+        '28' => 'Andhra Pradesh',
+        '29' => 'Karnataka',
+        '30' => 'Goa',
+        '31' => 'Lakshadweep',
+        '32' => 'Kerala',
+        '33' => 'Tamil Nadu',
+        '34' => 'Puducherry',
+        '35' => 'Andaman and Nicobar Islands',
+        '36' => 'Telangana',
+        '37' => 'Andhra Pradesh',
+        '38' => 'Ladakh',
+    ];
+
+    public static function detectStateFromGstin(?string $gstin): ?string
+    {
+        $clean = strtoupper(trim((string) $gstin));
+        if (strlen($clean) >= 2) {
+            $code = substr($clean, 0, 2);
+            if (isset(self::GST_STATE_CODE_MAP[$code])) {
+                return self::GST_STATE_CODE_MAP[$code];
+            }
+        }
+        return null;
+    }
+
     public function index()
     {
         // Load general settings
         $rows = ThemeSetting::where('group', self::GROUP)->get()->keyBy('key');
         $settings = collect(self::KEYS)->mapWithKeys(fn ($k) => [$k => $rows->get($k)?->value ?? '']);
+
+        // Auto-populate gst_registered_state from tax_id prefix if not yet saved
+        if (empty($settings['gst_registered_state']) && !empty($settings['tax_id'])) {
+            $detected = self::detectStateFromGstin($settings['tax_id']);
+            if ($detected) {
+                $settings['gst_registered_state'] = $detected;
+            }
+        }
 
         // Load all theme settings (for colors, typography, logos)
         $themeSettings = ThemeSetting::all()->groupBy('group');
@@ -96,24 +157,42 @@ class GeneralSettingsController extends Controller
             'AED' => 'UAE Dirham (د.إ)',
         ];
 
-        return view('admin.general-settings.index', compact('settings', 'themeSettings', 'timezones', 'currencies', 'googleFonts'));
+        $indianStates = array_values(array_unique(self::GST_STATE_CODE_MAP));
+        sort($indianStates);
+
+        return view('admin.general-settings.index', compact('settings', 'themeSettings', 'timezones', 'currencies', 'googleFonts', 'indianStates'));
     }
 
     public function update(Request $request)
     {
-        // 1. Save standard general settings (KEYS)
-        foreach (self::KEYS as $key) {
-            ThemeSetting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $request->input($key, ''), 'group' => self::GROUP]
-            );
+        // Auto-detect gst_registered_state from tax_id if state not explicitly chosen
+        $gstState = trim((string) $request->input('gst_registered_state', ''));
+        if ($gstState === '' && $request->filled('tax_id')) {
+            $gstState = self::detectStateFromGstin($request->input('tax_id')) ?? '';
+            $request->merge(['gst_registered_state' => $gstState]);
         }
 
-        // Sync tax_id to tax_shipping's store_tax_number
+        // 1. Save standard general settings (KEYS)
+        foreach (self::KEYS as $key) {
+            if ($request->has($key)) {
+                ThemeSetting::updateOrCreate(
+                    ['key' => $key],
+                    ['value' => $request->input($key, ''), 'group' => self::GROUP]
+                );
+            }
+        }
+
+        // Sync tax_id and gst_registered_state to tax_shipping
         if ($request->has('tax_id')) {
             ThemeSetting::updateOrCreate(
                 ['key' => 'store_tax_number'],
                 ['value' => $request->input('tax_id', ''), 'group' => 'tax_shipping']
+            );
+        }
+        if ($request->has('gst_registered_state') || $gstState !== '') {
+            ThemeSetting::updateOrCreate(
+                ['key' => 'store_tax_state'],
+                ['value' => $gstState, 'group' => 'tax_shipping']
             );
         }
 

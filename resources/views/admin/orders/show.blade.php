@@ -215,16 +215,37 @@ $shipping = $order->shippingAddress;
             @if($item->variant_name)
               <p class="text-xs text-gray-500 mt-0.5">{{ $item->variant_name }}</p>
             @endif
-            @if($attrs->count())
-              <div class="flex flex-wrap gap-1 mt-1">
-                @foreach($attrs as $av)
-                  <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">{{ $av->attribute->name }}: {{ $av->value }}</span>
-                @endforeach
-              </div>
-            @endif
+
+            <div class="flex flex-wrap gap-1 mt-1">
+                @if($item->sku && $item->sku->color)
+                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">Color: {{ $item->sku->color->name }}</span>
+                @endif
+                @if($item->sku && $item->sku->size)
+                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">Size: {{ $item->sku->size->name }}</span>
+                @endif
+                @if($attrs->count())
+                    @foreach($attrs as $av)
+                        @if($av->attribute)
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">{{ $av->attribute->name }}: {{ $av->value }}</span>
+                        @endif
+                    @endforeach
+                @endif
+            </div>
             @if($item->sku)
               <p class="text-[10px] text-gray-400 mt-1 font-mono">SKU: {{ $item->sku->code }}</p>
             @endif
+            
+            <div class="mt-1 flex items-center gap-2">
+                @if($order->status === 'delivered' || str_contains($order->status, 'returned') || str_contains($order->status, 'exchanged'))
+                    <span class="text-[10px] text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">
+                        Delivered on {{ $order->delivered_at ? $order->delivered_at->format('M d, Y') : 'Unknown Date' }}
+                    </span>
+                @elseif($order->status === 'shipped')
+                    <span class="text-[10px] text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        Shipped on {{ $order->shipped_at ? $order->shipped_at->format('M d, Y') : 'Unknown Date' }}
+                    </span>
+                @endif
+            </div>
             @if($item->returned_quantity > 0)
               <div class="mt-2">
                 <span class="px-2 py-1 bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold rounded-md">
@@ -484,38 +505,65 @@ $shipping = $order->shippingAddress;
     {{-- PAYMENT STATUS UPDATE --}}
     <div class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
       <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Update Payment</h2>
-      <form action="{{ route('admin.orders.updatePayment', $order) }}" method="POST" x-data="{ saving: false }" @submit="saving = true">
+      @php
+          $defVia = $order->payment_received_via ?: 'Cash';
+          $isOtherVia = !in_array(strtolower($defVia), ['cash', 'upi', 'bank transfer', 'bank']);
+          $valVia = $isOtherVia ? 'Other' : (strtolower($defVia) === 'bank' ? 'Bank Transfer' : ucfirst(strtolower($defVia)));
+          
+          $defBy = $order->payment_received_by ?: 'Delivery Agent';
+          $isOtherBy = !in_array(strtolower($defBy), ['delivery agent']);
+          $valBy = $isOtherBy ? 'Other' : 'Delivery Agent';
+      @endphp
+      <form action="{{ route('admin.orders.updatePayment', $order) }}" method="POST" x-data="{ saving: false, status: '{{ $order->payment_status }}', viaType: '{{ $valVia }}', byType: '{{ $valBy }}' }" @submit="saving = true">
         @csrf @method('PATCH')
         <div class="space-y-3">
           <div>
             <label class="text-xs font-semibold text-gray-600 mb-1 block">Payment Status</label>
-            <select name="payment_status" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+            <select name="payment_status" x-model="status" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
               @foreach(['pending', 'paid', 'failed'] as $ps)
-                <option value="{{ $ps }}" {{ $order->payment_status === $ps ? 'selected' : '' }}>{{ ucfirst($ps) }}</option>
+                <option value="{{ $ps }}">{{ ucfirst($ps) }}</option>
               @endforeach
             </select>
           </div>
-          <div>
-            <label class="text-xs font-semibold text-gray-600 mb-1 block">Received Via (e.g. Bank, Cash, UPI)</label>
-            <input type="text" name="payment_received_via" value="{{ $order->payment_received_via }}" placeholder="Cash, Bank Transfer..."
-              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-gray-600 mb-1 block">Received By / Remarks</label>
-            <input type="text" name="payment_received_by" value="{{ $order->payment_received_by }}" placeholder="e.g. Collected by Delivery Agent"
-              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
-          </div>
-          
-          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-            <div>
-              <label class="text-xs font-semibold text-gray-600 mb-1 block">Amount Paid</label>
-              <input type="number" step="0.01" name="amount_paid" value="{{ $order->amount_paid }}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          @if($order->payment_status === 'paid' && strtoupper($order->payment_method) !== 'COD')
+            <div class="bg-gray-50 p-4 rounded-xl border border-emerald-200 mt-2">
+              <p class="text-xs text-emerald-600 mb-1 uppercase tracking-wider font-bold">Pre-Paid Order</p>
+              <p class="font-bold text-gray-900 text-sm">Paid via {{ $order->payment_received_via ?? 'Payment Gateway' }}</p>
+              <p class="font-black text-emerald-700 text-xl mt-1">₹{{ number_format($order->amount_paid ?: $order->total_amount, 2) }}</p>
             </div>
-            <div>
-              <label class="text-xs font-bold text-red-600 mb-1 block">Refunded Amount</label>
-              <input type="number" step="0.01" name="amount_refunded" value="{{ $order->amount_refunded }}" placeholder="e.g. 500" class="w-full border border-red-200 bg-red-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-bold text-red-700">
-            </div>
-          </div>
+          @else
+            <template x-if="status === 'paid'">
+              <div class="space-y-3 mt-3">
+                <div>
+                  <label class="text-xs font-semibold text-gray-600 mb-1 block">Received Via</label>
+                  <select x-model="viaType" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white mb-2">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other (Specify)</option>
+                  </select>
+                  <input x-show="viaType === 'Other'" type="text" name="payment_received_via" value="{{ $isOtherVia ? $order->payment_received_via : '' }}" placeholder="Specify payment method..."
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" x-bind:disabled="viaType !== 'Other'">
+                  <input type="hidden" name="payment_received_via" x-bind:value="viaType" x-bind:disabled="viaType === 'Other'">
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-gray-600 mb-1 block">Received By / Remarks</label>
+                  <select x-model="byType" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white mb-2">
+                    <option value="Delivery Agent">Delivery Agent</option>
+                    <option value="Other">Other (Specify)</option>
+                  </select>
+                  <input x-show="byType === 'Other'" type="text" name="payment_received_by" value="{{ $isOtherBy ? $order->payment_received_by : '' }}" placeholder="Specify person or remarks..."
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" x-bind:disabled="byType !== 'Other'">
+                  <input type="hidden" name="payment_received_by" x-bind:value="byType" x-bind:disabled="byType === 'Other'">
+                </div>
+                
+                <div class="pt-3 border-t border-gray-100">
+                  <label class="text-xs font-semibold text-gray-600 mb-1 block">Amount Paid (Expected: ₹{{ number_format(max(0, $order->total_amount - $order->amount_paid), 2) }})</label>
+                  <input type="number" step="0.01" name="amount_paid" value="{{ $order->amount_paid > 0 ? $order->amount_paid : $order->total_amount }}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+              </div>
+            </template>
+          @endif
           <button type="submit" 
                   x-bind:disabled="saving"
                   x-bind:class="{ 'opacity-75 cursor-not-allowed': saving }"

@@ -119,8 +119,14 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                 // Password logic
                 const res = await api.post('/api/login', { identifier: finalIdentifier, password });
                 login(res.data.access_token, res.data.user);
-                if (onSuccess) onSuccess();
-                else router.visit('/');
+                
+                if (!res.data.user.has_consented_to_terms) {
+                    window.location.href = '/consent';
+                } else if (onSuccess) {
+                    onSuccess();
+                } else {
+                    router.visit('/');
+                }
             }
         } catch (err: any) {
             setError(err.response?.data?.message || err.response?.data?.error || err.response?.data?.errors?.identifier?.[0] || err.response?.data?.errors?.phone?.[0] || 'Authentication failed');
@@ -143,8 +149,14 @@ export default function LoginForm({ settings, onSuccess, onSwitchToRegister, isM
                 otp: finalOtp,
             });
             login(res.data.access_token, res.data.user);
-            if (onSuccess) onSuccess();
-            else router.visit('/');
+            
+            if (!res.data.user.has_consented_to_terms) {
+                window.location.href = '/consent';
+            } else if (onSuccess) {
+                onSuccess();
+            } else {
+                router.visit('/');
+            }
         } catch (err: any) {
             if (err.response?.data?.errors) {
                 const firstError = Object.values(err.response.data.errors)[0] as string[];

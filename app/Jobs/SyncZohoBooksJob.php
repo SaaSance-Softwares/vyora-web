@@ -37,8 +37,20 @@ class SyncZohoBooksJob implements ShouldQueue
             }
 
             Log::info('Starting Zoho Books sync for order: ' . $this->order->id);
-            $response = $zohoBooksService->pushOrder($this->order);
-            Log::info('Successfully synced order to Zoho Books.', ['response' => $response]);
+            $result = $zohoBooksService->pushOrder($this->order);
+
+            if (!empty($result['success'])) {
+                $this->order->update([
+                    'zoho_books_id' => $result['id'] ?? 'synced',
+                    'zoho_sync_error' => null,
+                    'zoho_sync_attempts' => 0,
+                ]);
+                Log::info('Successfully synced order to Zoho Books.', ['order_id' => $this->order->id, 'zoho_id' => $result['id'] ?? null]);
+            } else {
+                Log::warning('Zoho Books job sync returned error (will retry via cron): ' . ($result['error'] ?? 'Unknown'), [
+                    'order_id' => $this->order->id,
+                ]);
+            }
 
         } catch (\Exception $e) {
             Log::error('Failed to sync order to Zoho Books: ' . $e->getMessage(), [

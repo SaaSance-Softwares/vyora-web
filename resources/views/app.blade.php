@@ -79,11 +79,14 @@
                         
                         $orgSameAs = array_filter([$socialInsta, $socialFb, $socialYt]);
                         
+                        $homeUrl = rtrim(url('/'), '/') . '/';
+                        $hostName = request()->getHost();
+
                         $globalOrgSchema = [
                             "@context" => "https://schema.org",
                             "@type" => "Organization",
                             "name" => $storeName,
-                            "url" => url('/'),
+                            "url" => $homeUrl,
                             "logo" => $faviconUrl
                         ];
 
@@ -91,7 +94,16 @@
                             "@context" => "https://schema.org",
                             "@type" => "WebSite",
                             "name" => $storeName,
-                            "url" => url('/')
+                            "alternateName" => array_values(array_unique(array_filter([
+                                str_replace(' ', '', $storeName),
+                                $hostName,
+                            ]))),
+                            "url" => $homeUrl,
+                            "potentialAction" => [
+                                "@type" => "SearchAction",
+                                "target" => rtrim(url('/'), '/') . '/search?q={search_term_string}',
+                                "query-input" => "required name=search_term_string"
+                            ]
                         ];
                         if ($orgEmail) $globalOrgSchema['email'] = $orgEmail;
                         if ($orgPhone) $globalOrgSchema['telephone'] = $orgPhone;
@@ -103,19 +115,21 @@
             }
         @endphp
 
-        <title inertia>{{ $storeName }}</title>
+        <title inertia>{{ isset($og_title) && $og_title && !str_contains($og_title, $storeName) ? $og_title . ' - ' . $storeName : ($og_title ?? $storeName) }}</title>
         
         <link rel="canonical" href="{{ url()->current() }}" />
         
-        <meta name="description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        <meta head-key="description" name="description" inertia content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
         @if(isset($meta_keywords) && $meta_keywords)
             <meta name="keywords" content="{{ $meta_keywords }}" />
         @endif
         
         <meta property="og:site_name" content="{{ $storeName }}" />
-        <meta property="og:title" content="{{ $og_title ?? $storeName }}" />
-        <meta property="og:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
-        <meta name="twitter:description" content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        <meta name="application-name" content="{{ $storeName }}" />
+        <meta name="apple-mobile-web-app-title" content="{{ $storeName }}" />
+        <meta head-key="og:title" property="og:title" inertia content="{{ $og_title ?? $storeName }}" />
+        <meta head-key="og:description" property="og:description" inertia content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
+        <meta head-key="twitter:description" name="twitter:description" inertia content="{{ $og_description ?? 'Shop the latest streetwear and fashion at ' . $storeName }}" />
         
         @if(isset($og_image) && $og_image)
             <meta property="og:image" content="{{ $og_image }}" />
@@ -240,9 +254,6 @@
             <noscript>
                 {!! $bot_html !!}
             </noscript>
-            <div id="seo-bot-content" style="display: none !important; opacity: 0; position: absolute; left: -9999px;">
-                {!! $bot_html !!}
-            </div>
         @endif
 
         @inertia

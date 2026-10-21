@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCartStore, CartItem } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
@@ -225,12 +225,31 @@ export default function CheckoutPage() {
     const [gcApplied, setGcApplied] = useState<{ code: string; balance: number } | null>(null);
     const [gcValidating, setGcValidating] = useState(false);
     const [gcErr, setGcErr] = useState('');
+    const hasFiredTrackingRef = useRef(false);
+
+    useEffect(() => {
+        if (cart.items && cart.items.length > 0 && !hasFiredTrackingRef.current) {
+            hasFiredTrackingRef.current = true;
+            const customerData = user ? {
+                email: user.email,
+                phone: user.phone,
+                name: user.name,
+            } : (guest.email || guest.phone ? {
+                email: guest.email,
+                phone: guest.phone,
+                name: guest.name,
+                city: guest.city,
+                state: guest.state,
+                zip: guest.zip,
+            } : undefined);
+
+            const cartTotal = cart.items.reduce((acc, i) => acc + (parseFloat(String(i.price)) || 0) * (i.quantity || 1), 0);
+            trackInitiateCheckout(cartTotal, cart.items, customerData);
+        }
+    }, [cart.items, user]);
 
     useEffect(() => {
         setMounted(true);
-        if (cart.items && cart.items.length > 0) {
-            trackInitiateCheckout(cart.totalPrice, cart.items);
-        }
         api.get('/api/settings').then(r => setSettings(r.data)).catch(() => { });
 
         api.get('/api/localization/countries').then(res => {
@@ -372,11 +391,9 @@ export default function CheckoutPage() {
                 const orderUUID = r.data.order_uuid;
                 const upfrontAmount = r.data.upfront_amount || 0;
 
-                // Clear cart immediately since order is placed (backend already marked it completed)
-                cart.clearCart();
-
                 // If COD (without upfront payment) or Total is 0, we are done
                 if ((paymentMethod === 'cod' && upfrontAmount <= 0) || total <= 0) {
+                    cart.clearCart(); // Clear only when order is finalized
                     setOrderUUID(orderUUID);
                     window.location.href = `/checkout/thank-you/${orderUUID}`;
                     return;
@@ -399,6 +416,7 @@ export default function CheckoutPage() {
                                     order_uuid: orderUUID
                                 });
                                 if (verifyRes.data.success) {
+                                    cart.clearCart(); // Clear only on successful payment
                                     setOrderUUID(orderUUID);
                                     window.location.href = `/checkout/thank-you/${orderUUID}`;
                                 } else {

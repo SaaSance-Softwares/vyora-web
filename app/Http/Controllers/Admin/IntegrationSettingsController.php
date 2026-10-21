@@ -1128,9 +1128,9 @@ class IntegrationSettingsController extends Controller
 
     public function syncZohoPastOrders(Request $request)
     {
-        $count = \App\Models\Order::whereIn('status', ['processing', 'shipped', 'delivered', 'completed'])
+        $count = \App\Models\Order::whereNull('zoho_books_id')
+            ->whereNotIn('status', ['pending', 'cancelled', 'failed'])
             ->update([
-                'zoho_books_id' => null,
                 'zoho_sync_attempts' => 0,
                 'zoho_sync_error' => null
             ]);

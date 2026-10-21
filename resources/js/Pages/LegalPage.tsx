@@ -44,7 +44,7 @@ export default function LegalPage({ page }: LegalPageProps) {
         <main className="min-h-screen bg-white py-16 md:py-24">
             <Head>
                 <title>{page.meta_title || page.title}</title>
-                {page.meta_description && <meta name="description" content={page.meta_description} />}
+                {page.meta_description && <meta head-key="description" name="description" content={page.meta_description} />}
                 <script type="application/ld+json" head-key="jsonld">
                     {JSON.stringify(getArticleSchema())}
                 </script>

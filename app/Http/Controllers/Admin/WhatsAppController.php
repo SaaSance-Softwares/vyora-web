@@ -15,6 +15,7 @@ class WhatsAppController extends Controller
     public function index()
     {
         $conversations = WhatsappConversation::orderBy('last_message_at', 'desc')->get();
+        WhatsappConversation::enrichConversations($conversations);
         $templates = WhatsappTemplate::where('status', 'APPROVED')->get();
 
         return view('admin.whatsapp.index', compact('conversations', 'templates'));
@@ -25,6 +26,8 @@ class WhatsAppController extends Controller
         $conversations = WhatsappConversation::withCount(['messages' => function ($query) {
             $query->where('direction', 'inbound')->where('status', '!=', 'read');
         }])->orderBy('last_message_at', 'desc')->get();
+
+        WhatsappConversation::enrichConversations($conversations);
 
         return response()->json(['conversations' => $conversations]);
     }
@@ -115,9 +118,7 @@ class WhatsAppController extends Controller
         ]);
 
         $service = app(WhatsAppService::class);
-        // By default, manual templates are sent in en_US without components.
-        // More complex manual templates would require a form to fill variables.
-        $success = $service->sendTemplate($conversation->phone_number, $request->template_name, 'en_US', []);
+        $success = $service->sendConversationTemplate($conversation, $request->template_name);
 
         if ($success) {
             return response()->json(['success' => true]);

@@ -59,6 +59,15 @@ export default function PosLayout({
         }
     };
 
+    const handleLogout = (e: React.MouseEvent) => {
+        if (syncCount > 0) {
+            if (!confirm(`You have ${syncCount} pending offline order(s) that have not synced yet. Are you sure you want to log out?`)) {
+                e.preventDefault();
+                return;
+            }
+        }
+    };
+
     const handleHardRefresh = async () => {
         if (confirm("This will refresh the POS app and update to the latest version. Proceed?")) {
             if ('serviceWorker' in navigator) {
@@ -164,6 +173,7 @@ export default function PosLayout({
                                     href="/logout" 
                                     method="post" 
                                     as="button" 
+                                    onClick={handleLogout}
                                     className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-4 rounded-lg font-bold text-lg shadow-sm transition block text-center"
                                 >
                                     Exit POS (Log Out)

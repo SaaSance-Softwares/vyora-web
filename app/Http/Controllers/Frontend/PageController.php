@@ -160,7 +160,7 @@ class PageController extends Controller
         $productResource = (new ProductResource($product))->resolve(request());
         $productData = json_decode(json_encode($productResource), true);
 
-        $botHtml = "<h1>{$product->name}</h1>";
+        $botHtml = "<h2>{$product->name}</h2>";
         if (!empty($productData['brand'])) {
             $botHtml .= "<p>Brand: {$productData['brand']}</p>";
         }
@@ -307,7 +307,7 @@ class PageController extends Controller
 
     public function thankYou($uuid)
     {
-        $order = Order::with(['items.product', 'items.sku.color', 'items.sku.size'])
+        $order = Order::with(['items.product', 'items.sku.color', 'items.sku.size', 'shippingAddress', 'user'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 

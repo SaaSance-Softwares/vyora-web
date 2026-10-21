@@ -72,10 +72,19 @@ export default function MyOrdersPage() {
 
     const handleReviewClick = (order: any, e: any) => {
         e.preventDefault();
-        if (order.items && order.items.length === 1) {
-            openReviewModal(order.items[0]);
-        } else {
-            setReviewOrder(order);
+        
+        // Filter out items that have been fully returned or have a pending return/exchange
+        const eligibleItems = order.items?.filter((item: any) => {
+            const itemRma = order.return_requests?.find((rma: any) => 
+                rma.items?.some((i: any) => i.order_item_id === item.id)
+            );
+            return !itemRma || itemRma.status === 'rejected';
+        }) || [];
+
+        if (eligibleItems.length === 1) {
+            openReviewModal(eligibleItems[0]);
+        } else if (eligibleItems.length > 1) {
+            setReviewOrder({...order, items: eligibleItems});
         }
     };
 
@@ -348,14 +357,42 @@ export default function MyOrdersPage() {
                                             <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
                                                 <div className="flex-1 w-full lg:w-auto">
                                                     <div className="flex items-center justify-between lg:justify-start gap-4 mb-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>
-                                                            {order.status}
-                                                            {order.status === 'delivered' && (
-                                                                <span className="ml-1 opacity-80 font-medium">
-                                                                    (On {new Date(order.updated_at || order.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
-                                                                </span>
-                                                            )}
-                                                        </span>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>
+                                                                {order.status}
+                                                                {order.status === 'delivered' && (
+                                                                    <span className="ml-1 opacity-80 font-medium">
+                                                                        (On {new Date(order.updated_at || order.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            {order.return_requests && order.return_requests.length > 0 && (() => {
+                                                                const rmas = order.return_requests;
+                                                                const hasReturn = rmas.some((r: any) => r.type === 'return');
+                                                                const hasExchange = rmas.some((r: any) => r.type === 'exchange');
+                                                                const typeText = (hasReturn && hasExchange) ? 'Return/Exchange' : hasExchange ? 'Exchange' : 'Return';
+                                                                
+                                                                let statusText = 'Requested';
+                                                                if (rmas.some((r: any) => r.status === 'pending')) statusText = 'Requested';
+                                                                else if (rmas.some((r: any) => r.status === 'approved')) statusText = 'Approved';
+                                                                else if (rmas.some((r: any) => r.status === 'received')) statusText = 'Received';
+                                                                else if (rmas.every((r: any) => r.status === 'completed')) statusText = 'Completed';
+                                                                else if (rmas.every((r: any) => r.status === 'rejected')) statusText = 'Rejected';
+                                                                else statusText = 'Processing';
+
+                                                                let colorClasses = 'bg-amber-50 text-amber-700 border-amber-200';
+                                                                if (statusText === 'Completed') colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                                                else if (statusText === 'Rejected') colorClasses = 'bg-red-50 text-red-700 border-red-200';
+                                                                else if (statusText === 'Approved') colorClasses = 'bg-blue-50 text-blue-700 border-blue-200';
+                                                                else if (statusText === 'Received') colorClasses = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+
+                                                                return (
+                                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${colorClasses}`}>
+                                                                        {typeText} {statusText}
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </div>
                                                         <span className="text-xs text-gray-400 font-medium">
                                                             {new Date(order.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                         </span>
@@ -382,19 +419,26 @@ export default function MyOrdersPage() {
                                                     ))}
                                                 </div>
                                                 <div className="w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50 flex gap-2">
-                                                    {order.tracking_url && (
+                                                    {order.tracking_url && !order.tracking_url.trim().endsWith('=') && (
                                                         <a href={order.tracking_url} target="_blank" rel="noopener noreferrer"
                                                            className="flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-indigo-200">
                                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                                                             Track
                                                         </a>
                                                     )}
-                                                    {order.status === 'delivered' && (
-                                                        <button onClick={(e) => handleReviewClick(order, e)} className="flex items-center justify-center gap-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-500 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-yellow-200">
-                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
-                                                            Review
-                                                        </button>
-                                                    )}
+                                                    {(order.status === 'delivered' || order.status === 'partially_returned') && (() => {
+                                                        const hasEligible = order.items?.some((item: any) => {
+                                                            const itemRma = order.return_requests?.find((rma: any) => rma.items?.some((i: any) => i.order_item_id === item.id));
+                                                            return !itemRma || itemRma.status === 'rejected';
+                                                        });
+                                                        if (!hasEligible) return null;
+                                                        return (
+                                                            <button onClick={(e) => handleReviewClick(order, e)} className="flex items-center justify-center gap-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-500 hover:text-white px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border border-yellow-200">
+                                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                                                                Review
+                                                            </button>
+                                                        );
+                                                    })()}
                                                     <Link href={`/orders/${order.uuid}`} className="flex items-center justify-center gap-2 bg-gray-50 text-gray-900 hover:bg-primary hover:text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all">
                                                         Details
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>

@@ -87,7 +87,7 @@ class HandleInertiaRequests extends Middleware
                 }
 
                 $policyKeys = ['cod_charges', 'prepaid_charges', 'delivery_timeline', 'return_policy', 'exchange_policy', 'refund_method', 'extra_sections', 'mega_deal_label', 'mega_deal_icon', 'mega_deal_badge', 'mega_deal_bg_from', 'mega_deal_bg_to', 'mega_deal_text_color', 'mega_deal_subtext_color'];
-                $generalKeys = ['store_name', 'store_email', 'support_phone', 'store_address', 'default_currency', 'currency_symbol', 'time_zone', 'date_format', 'weight_unit', 'length_unit', 'social_instagram', 'social_facebook', 'social_twitter', 'social_youtube', 'social_tiktok', 'social_pinterest', 'social_whatsapp', 'social_arattai', 'social_linkedin', 'social_custom_links'];
+                $generalKeys = ['store_name', 'store_email', 'support_email', 'support_phone', 'store_address', 'default_currency', 'currency_symbol', 'time_zone', 'date_format', 'weight_unit', 'length_unit', 'social_instagram', 'social_facebook', 'social_twitter', 'social_youtube', 'social_tiktok', 'social_pinterest', 'social_whatsapp', 'social_arattai', 'social_linkedin', 'social_custom_links'];
 
                 $settings = array_merge($allData, [
                     'integrations' => $integrationSettings,

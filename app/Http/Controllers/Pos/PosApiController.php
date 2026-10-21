@@ -197,6 +197,51 @@ class PosApiController extends Controller
                     }
                 }
 
+                // Calculate inclusive GST breakdown for POS items
+                $taxSettings = \App\Models\ThemeSetting::where('group', 'tax_shipping')->pluck('value', 'key');
+                $isTaxEnabled = ($taxSettings->get('is_tax_enabled') ?? '1') === '1';
+                $configuredTaxes = json_decode($taxSettings->get('taxes') ?? '[{"id":"t1","name":"GST 5%","rate":5},{"id":"t2","name":"GST 18%","rate":18}]', true) ?: [];
+                $taxClassMap = [];
+                $defaultTaxRate = 0;
+                foreach ($configuredTaxes as $t) {
+                    if (isset($t['id'], $t['rate'])) {
+                        $r = (float) $t['rate'];
+                        $taxClassMap[$t['id']] = $r;
+                        if ($defaultTaxRate <= 0 && $r > 0) {
+                            $defaultTaxRate = $r;
+                        }
+                    }
+                }
+
+                $posSubtotal = 0;
+                foreach ($posOrder['items'] as $item) {
+                    $posSubtotal += ((float) $item['price']) * ((int) $item['qty']);
+                }
+                $posDiscount = (float) ($posOrder['discount_amount'] ?? 0);
+                $posTaxBreakdown = [];
+                $posTotalTax = 0;
+
+                if ($isTaxEnabled) {
+                    foreach ($posOrder['items'] as $item) {
+                        $itemTotal = ((float) $item['price']) * ((int) $item['qty']);
+                        $itemDisc = $posSubtotal > 0 ? ($itemTotal / $posSubtotal) * $posDiscount : 0;
+                        $itemFinal = max(0, $itemTotal - $itemDisc);
+
+                        $prodTaxClass = DB::table('products')->where('id', $item['product_id'])->value('tax_class');
+                        $taxRate = ($prodTaxClass && isset($taxClassMap[$prodTaxClass]))
+                            ? $taxClassMap[$prodTaxClass]
+                            : $defaultTaxRate;
+
+                        if ($taxRate > 0 && $itemFinal > 0) {
+                            $baseAmount = $itemFinal / (1 + ($taxRate / 100));
+                            $itemTax = round($itemFinal - $baseAmount, 2);
+                            $rateKey = (string) $taxRate;
+                            $posTaxBreakdown[$rateKey] = round(($posTaxBreakdown[$rateKey] ?? 0) + $itemTax, 2);
+                            $posTotalTax = round($posTotalTax + $itemTax, 2);
+                        }
+                    }
+                }
+
                 $orderId = DB::table('orders')->insertGetId([
                     'uuid' => $uuid,
                     'user_id' => $userId,
@@ -212,6 +257,8 @@ class PosApiController extends Controller
                     'amount_upi' => $posOrder['amount_upi'] ?? 0,
                     'total_amount' => $posOrder['total_amount'],
                     'amount_paid' => $posOrder['total_amount'],
+                    'tax_amount' => $posTotalTax,
+                    'tax_breakdown' => !empty($posTaxBreakdown) ? json_encode($posTaxBreakdown) : null,
                     'discount_amount' => $posOrder['discount_amount'] ?? 0,
                     'coupon_discount_amount' => $posOrder['discount_amount'] ?? 0,
                     'coupon_code' => $posOrder['coupon_code'] ?? null,
@@ -280,7 +327,7 @@ class PosApiController extends Controller
                     }
                     
                     // Dispatch Zoho Books Sync if enabled
-                    if (\App\Models\ThemeSetting::where('group', 'integration.zohobooks')->where('key', 'enabled')->value('value') == '1') {
+                    if (\App\Models\ThemeSetting::where('group', 'integration.zoho-books')->where('key', 'enabled')->value('value') == '1') {
                         \App\Jobs\SyncZohoBooksJob::dispatch($orderModel);
                     }
                 } catch (\Exception $e) {

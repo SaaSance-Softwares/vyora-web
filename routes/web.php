@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminSettingController;
+use App\Http\Controllers\Admin\AnalysisController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeImportExportController;
 use App\Http\Controllers\Admin\AuthSettingsController;
@@ -314,6 +315,8 @@ Route::get('/login', function () {
     return Inertia::render('Auth/Login');
 })->name('login');
 
+Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->name('logout');
+
 Route::get('/reset-password', function (\Illuminate\Http\Request $request) {
     return Inertia::render('Auth/ResetPassword', [
         'token' => $request->token,
@@ -345,6 +348,10 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
 
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard'); // Explicit admin dashboard
         Route::get('/dashboard/charts', [DashboardController::class, 'chartsData'])->name('dashboard.charts');
+
+        // Analysis (Beta) Module
+        Route::get('/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
+        Route::get('/analysis/export', [AnalysisController::class, 'export'])->name('analysis.export');
 
         // Products Management Group
         Route::prefix('products')->name('products.')->group(function () {
@@ -419,6 +426,14 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
         Route::post('/orders/{order}/shiprocket', [OrderController::class, 'sendToShiprocket'])->name('orders.shiprocket');
         Route::post('/orders/{order}/retry-qikink', [OrderController::class, 'retryQikink'])->name('orders.retryQikink');
 
+        // Return Requests (RMA)
+        Route::get('/returns', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('returns.index');
+        Route::get('/returns/create', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'create'])->name('returns.create');
+        Route::get('/returns/search-order', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'searchOrder'])->name('returns.searchOrder');
+        Route::post('/returns', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'store'])->name('returns.store');
+        Route::get('/returns/{id}', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'show'])->name('returns.show');
+        Route::patch('/returns/{id}/status', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'updateStatus'])->name('returns.updateStatus');
+
         // Order Statuses
         Route::resource('order-statuses', \App\Http\Controllers\Admin\OrderStatusController::class)->except(['show']);
         // WhatsApp Chat & Templates
@@ -466,6 +481,7 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
             Route::get('/{slug}', [\App\Http\Controllers\Admin\PosMarketController::class, 'show'])->name('show');
             Route::get('/{slug}/search-products', [\App\Http\Controllers\Admin\PosMarketController::class, 'searchProducts'])->name('searchProducts');
             Route::post('/{slug}/products', [\App\Http\Controllers\Admin\PosMarketController::class, 'addProduct'])->name('addProduct');
+            Route::post('/{slug}/products/bulk-update', [\App\Http\Controllers\Admin\PosMarketController::class, 'bulkUpdateProducts'])->name('bulkUpdateProducts');
             Route::put('/{slug}/products/{skuId}', [\App\Http\Controllers\Admin\PosMarketController::class, 'updateProduct'])->name('updateProduct');
 
             Route::delete('/{slug}/products/{skuId}', [\App\Http\Controllers\Admin\PosMarketController::class, 'removeProduct'])->name('removeProduct');
@@ -494,6 +510,7 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
             // Localization Settings
             Route::get('/localization', [\App\Http\Controllers\Admin\LocalizationController::class, 'index'])->name('localization.index');
             Route::post('/localization/country', [\App\Http\Controllers\Admin\LocalizationController::class, 'storeCountry'])->name('localization.country.store');
+            Route::get('/localization/country/{country}/export', [\App\Http\Controllers\Admin\LocalizationController::class, 'exportCountry'])->name('localization.country.export');
             Route::post('/localization/country/{country}/upload-chunk', [\App\Http\Controllers\Admin\LocalizationController::class, 'uploadChunk'])->name('localization.country.upload-chunk');
             Route::delete('/localization/country/{country}/truncate', [\App\Http\Controllers\Admin\LocalizationController::class, 'truncateCountry'])->name('localization.country.truncate');
             Route::delete('/localization/country/{country}', [\App\Http\Controllers\Admin\LocalizationController::class, 'destroyCountry'])->name('localization.country.destroy');

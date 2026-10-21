@@ -38,7 +38,7 @@ export default function CategoryPage({ category }) {
         <>
             <Head>
                 <title>{category.meta_title || category.name}</title>
-                <meta name="description" content={category.meta_description || category.description || `Shop the latest ${category.name}`} />
+                <meta head-key="description" name="description" content={category.meta_description || category.description || `Shop the latest ${category.name}`} />
                 {category.meta_keywords && <meta name="keywords" content={category.meta_keywords} />}
                 <script type="application/ld+json" head-key="jsonld">
                     {JSON.stringify(getCategorySchema())}

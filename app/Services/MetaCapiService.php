@@ -46,11 +46,37 @@ class MetaCapiService
             $hashedUserData['em'] = hash('sha256', strtolower(trim($userData['email'])));
         }
         if (! empty($userData['phone'])) {
-            // Meta expects phone numbers without leading zeros or + signs, but typically just numbers
+            // Meta expects phone numbers without leading zeros or + signs, but with country code
             $phone = preg_replace('/[^0-9]/', '', $userData['phone']);
             if ($phone) {
+                // If 10-digit Indian number without country code, prepend 91
+                if (strlen($phone) === 10) {
+                    $phone = '91' . $phone;
+                }
                 $hashedUserData['ph'] = hash('sha256', $phone);
             }
+        }
+        if (! empty($userData['first_name'])) {
+            $hashedUserData['fn'] = hash('sha256', strtolower(trim($userData['first_name'])));
+        }
+        if (! empty($userData['last_name'])) {
+            $hashedUserData['ln'] = hash('sha256', strtolower(trim($userData['last_name'])));
+        }
+        if (! empty($userData['city'])) {
+            $hashedUserData['ct'] = hash('sha256', strtolower(preg_replace('/[^a-z]/', '', $userData['city'])));
+        }
+        if (! empty($userData['state'])) {
+            $hashedUserData['st'] = hash('sha256', strtolower(preg_replace('/[^a-z]/', '', $userData['state'])));
+        }
+        if (! empty($userData['zip'])) {
+            $hashedUserData['zp'] = hash('sha256', strtolower(trim((string)$userData['zip'])));
+        }
+        if (! empty($userData['country'])) {
+            $country = strtolower(trim($userData['country']));
+            if ($country === 'india') {
+                $country = 'in';
+            }
+            $hashedUserData['country'] = hash('sha256', $country);
         }
         if (! empty($userData['client_ip_address'])) {
             $hashedUserData['client_ip_address'] = $userData['client_ip_address'];

@@ -44,6 +44,8 @@ Route::middleware('throttle:public_api')->group(function () {
     Route::post('/payment/initiate', [PaymentController::class, 'initiate']);
     Route::post('/payment/verify', [PaymentController::class, 'verify']);
     Route::post('/payment/failed', [PaymentController::class, 'failed']);
+    Route::post('/payment/rma/{rma}/initiate', [PaymentController::class, 'initiateRmaPayment']);
+    Route::post('/payment/rma/{rma}/verify', [PaymentController::class, 'verifyRmaPayment']);
 });
 
 // Auth
@@ -76,6 +78,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated_api'])->group(functio
     Route::post('/my-orders/{uuid}/cancel', [\App\Http\Controllers\Api\UserOrderActionController::class, 'cancel']);
     Route::post('/my-orders/{uuid}/return', [\App\Http\Controllers\Api\UserOrderActionController::class, 'returnOrder']);
     Route::post('/my-orders/{uuid}/exchange', [\App\Http\Controllers\Api\UserOrderActionController::class, 'exchange']);
+    Route::delete('/return-requests/{id}', [\App\Http\Controllers\Api\UserOrderActionController::class, 'cancelReturnRequest']);
+
 
     // Wishlist
     Route::get('/wishlist', [\App\Http\Controllers\Api\WishlistController::class, 'get']);

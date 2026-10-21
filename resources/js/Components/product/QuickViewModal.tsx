@@ -3,6 +3,7 @@ import { useUIStore } from '@/store/ui';
 import { useCartStore } from '@/store/cart';
 import { router, Link } from '@inertiajs/react';
 import { formatPrice } from '@/lib/utils';
+import { trackAddToCart } from '@/lib/tracking';
 import { X, Ruler } from 'lucide-react';
 
 export default function QuickViewModal() {
@@ -101,6 +102,8 @@ export default function QuickViewModal() {
             exchangeDays: product.is_exchangeable ? product.exchange_days : null,
             returnDays: product.is_returnable ? product.return_days : null,
         });
+
+        trackAddToCart(product, 1);
         
         closeQuickView();
         

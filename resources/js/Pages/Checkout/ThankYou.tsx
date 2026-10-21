@@ -19,10 +19,26 @@ export default function ThankYouPage({ order }: { order: any }) {
         if (order && order.id) {
             const firedKey = `purchase_fired_${order.id}`;
             if (!sessionStorage.getItem(firedKey)) {
+                const addr = order.shipping_address || order.billing_address;
+                const customerData = addr ? {
+                    email: addr.email || order.user?.email,
+                    phone: addr.phone || order.user?.phone,
+                    name: addr.name || order.user?.name,
+                    city: addr.city,
+                    state: addr.state,
+                    zip: addr.zip_code,
+                    country: addr.country,
+                } : (order.user ? {
+                    email: order.user.email,
+                    phone: order.user.phone,
+                    name: order.user.name,
+                } : undefined);
+
                 trackPurchase(
                     order.order_number || order.uuid,
                     parseFloat(order.total_amount || "0"),
-                    order.items || []
+                    order.items || [],
+                    customerData
                 );
                 sessionStorage.setItem(firedKey, 'true');
             }

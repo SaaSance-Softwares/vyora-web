@@ -84,33 +84,25 @@ class UserOrderActionController extends Controller
         $requestedItems = $request->input('items');
         $fee = $this->calculateFee($order, 'return', $requestedItems);
 
-        $notes = $order->notes ? $order->notes . "\n\n" : "";
-        $notes .= "--- Return Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
-        
-        if (is_array($requestedItems) && count($requestedItems) > 0) {
-            $notes .= "User wants to return specific items:\n";
-            foreach ($requestedItems as $reqItem) {
-                $orderItem = $order->items->where('id', $reqItem['id'])->first();
-                if ($orderItem) {
-                    $notes .= "- " . $reqItem['quantity'] . "x " . $orderItem->product_name . ($orderItem->variant_name ? ' (' . $orderItem->variant_name . ')' : '') . "\n";
-                }
-            }
-        } else {
-            $notes .= "User wants to return the entire order.\n";
-        }
-        
-        $notes .= "\n* Estimated Return Fee: ₹" . number_format($fee, 2) . "\n";
-
-        $order->update([
-            'status' => 'return_requested',
-            'notes' => $notes,
-            'return_request_data' => [
-                'type' => 'return',
-                'fee' => $fee,
-                'items' => $requestedItems,
-                'requested_at' => now()->toDateTimeString(),
-            ]
+        $rma = \App\Models\ReturnRequest::create([
+            'order_id' => $order->id,
+            'user_id' => $order->user_id,
+            'type' => 'return',
+            'status' => 'pending',
+            'fee_deducted' => $fee,
+            'reason' => $request->input('reason', ''),
+            'comments' => $request->input('comments', ''),
         ]);
+
+        if (is_array($requestedItems)) {
+            foreach ($requestedItems as $reqItem) {
+                \App\Models\ReturnRequestItem::create([
+                    'return_request_id' => $rma->id,
+                    'order_item_id' => $reqItem['id'],
+                    'quantity' => $reqItem['quantity'],
+                ]);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -130,38 +122,52 @@ class UserOrderActionController extends Controller
         $requestedItems = $request->input('items');
         $fee = $this->calculateFee($order, 'exchange', $requestedItems);
 
-        $notes = $order->notes ? $order->notes . "\n\n" : "";
-        $notes .= "--- Exchange Requested on " . now()->format('Y-m-d H:i:s') . " ---\n";
-        
-        if (is_array($requestedItems) && count($requestedItems) > 0) {
-            $notes .= "User wants to exchange specific items:\n";
-            foreach ($requestedItems as $reqItem) {
-                $orderItem = $order->items->where('id', $reqItem['id'])->first();
-                if ($orderItem) {
-                    $notes .= "- " . $reqItem['quantity'] . "x " . $orderItem->product_name . ($orderItem->variant_name ? ' (' . $orderItem->variant_name . ')' : '') . "\n";
-                }
-            }
-        } else {
-            $notes .= "User wants to exchange the entire order.\n";
-        }
-        
-        $notes .= "\n* Estimated Exchange Fee: ₹" . number_format($fee, 2) . "\n";
-
-        $order->update([
-            'status' => 'exchange_requested',
-            'notes' => $notes,
-            'return_request_data' => [
-                'type' => 'exchange',
-                'fee' => $fee,
-                'items' => $requestedItems,
-                'requested_at' => now()->toDateTimeString(),
-            ]
+        $rma = \App\Models\ReturnRequest::create([
+            'order_id' => $order->id,
+            'user_id' => $order->user_id,
+            'type' => 'exchange',
+            'status' => 'pending',
+            'payment_status' => $fee > 0 ? 'pending' : null,
+            'fee_deducted' => $fee,
+            'reason' => $request->input('reason', ''),
+            'comments' => $request->input('comments', ''),
         ]);
+
+        if (is_array($requestedItems)) {
+            foreach ($requestedItems as $reqItem) {
+                \App\Models\ReturnRequestItem::create([
+                    'return_request_id' => $rma->id,
+                    'order_item_id' => $reqItem['id'],
+                    'quantity' => $reqItem['quantity'],
+                    'exchange_variant_id' => $reqItem['exchange_variant_id'] ?? null,
+                ]);
+            }
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Exchange requested successfully.',
+            'message' => $fee > 0 ? 'Exchange requested. Payment required.' : 'Exchange requested successfully.',
             'fee_applied' => $fee,
+            'requires_payment' => $fee > 0,
+            'rma_id' => $rma->id
+        ]);
+    }
+
+    public function cancelReturnRequest(Request $request, $id)
+    {
+        $rma = \App\Models\ReturnRequest::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if ($rma->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Only pending requests can be cancelled.'], 400);
+        }
+
+        $rma->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request cancelled successfully.',
         ]);
     }
 }

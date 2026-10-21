@@ -471,9 +471,10 @@ export default function Dashboard() {
                                         <label className="block text-xs font-bold text-gray-900 mb-1 uppercase tracking-wide">Customer Phone (Optional)</label>
                                         <input 
                                             type="tel" 
+                                            inputMode="numeric"
                                             placeholder="Send WhatsApp Receipt"
                                             value={customerPhone}
-                                            onChange={(e) => setCustomerPhone(e.target.value)}
+                                            onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9]/g, ''))}
                                             className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
                                         />
                                     </div>
@@ -483,7 +484,7 @@ export default function Dashboard() {
                                             type="text" 
                                             placeholder="For receipt"
                                             value={customerName}
-                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            onChange={(e) => setCustomerName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                                             className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-black bg-white"
                                         />
                                     </div>
@@ -993,7 +994,7 @@ export default function Dashboard() {
                                     type="text"
                                     placeholder="Customer name"
                                     value={customerNameDraft}
-                                    onChange={e => setCustomerNameDraft(e.target.value)}
+                                    onChange={e => setCustomerNameDraft(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-black focus:border-black outline-none"
                                     autoFocus
                                 />
@@ -1009,6 +1010,7 @@ export default function Dashboard() {
                                     </div>
                                     <input
                                         type="tel"
+                                        inputMode="numeric"
                                         placeholder="Mobile number"
                                         value={customerPhoneDraft}
                                         onChange={e => setCustomerPhoneDraft(e.target.value.replace(/[^0-9]/g, ''))}
@@ -1018,7 +1020,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                         <div className="p-5 pt-0 flex gap-3">
-                            {customerName && (
+                            {(customerName || customerPhone) && (
                                 <button
                                     onClick={() => { setCustomerName(''); setCustomerPhone(''); setCustomerCountryCode('+91'); setShowCustomerModal(false); }}
                                     className="flex-1 border border-red-200 text-red-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-red-50 transition"

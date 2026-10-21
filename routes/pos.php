@@ -17,6 +17,7 @@ Route::middleware(['auth', 'pos_access'])->group(function () {
     Route::get('/', [PosDashboardController::class, 'index'])->name('dashboard');
     Route::get('/receipt-builder', [PosDashboardController::class, 'receiptBuilder'])->name('receipt-builder');
     Route::get('/returns', [PosDashboardController::class, 'returns'])->name('returns');
+    Route::match(['get', 'post'], '/logout', [\App\Http\Controllers\Admin\LoginController::class, 'logout'])->name('logout');
     
     // API Endpoints for the Offline React App
     Route::get('/api/locations', [PosApiController::class, 'getLocations']);

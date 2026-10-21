@@ -65,6 +65,36 @@ class LocalizationController extends Controller
         return response()->json(['status' => 'success', 'message' => count($insertData) . ' rows inserted']);
     }
 
+    public function exportCountry(Country $country)
+    {
+        $fileName = 'postal_codes_' . strtolower($country->code) . '_' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($country) {
+            $handle = fopen('php://output', 'w');
+
+            // CSV Header matching required import format
+            fputcsv($handle, ['postal_code', 'city', 'district', 'state']);
+
+            PostalCode::where('country_id', $country->id)
+                ->select(['postal_code', 'city', 'district', 'state'])
+                ->orderBy('postal_code')
+                ->chunk(2000, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->postal_code,
+                            $row->city ?? '',
+                            $row->district ?? '',
+                            $row->state,
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function truncateCountry(Country $country)
     {
         // Delete all postal codes for this country

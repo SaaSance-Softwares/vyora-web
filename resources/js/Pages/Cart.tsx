@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCartStore, CartItem } from '@/store/cart';
 import { useWishlistStore, WishlistItem } from '@/store/wishlist';
 import { formatPrice } from '@/lib/utils';
+import { trackAddToCart } from '@/lib/tracking';
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye, RefreshCcw, RotateCcw } from 'lucide-react';
@@ -124,6 +125,8 @@ function WishlistRow({ item, remove }: { item: WishlistItem; remove: (id: number
             deliveryDate: item.deliveryDate
         });
         
+        trackAddToCart({ id: item.productId, price: item.price, name: item.name }, 1);
+
         remove(item.productId);
     };
 

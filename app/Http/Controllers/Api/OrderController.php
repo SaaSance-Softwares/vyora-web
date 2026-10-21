@@ -34,7 +34,7 @@ class OrderController extends Controller
             ->with(['items' => function ($query) {
                 $query->select(['id', 'order_id', 'product_name', 'variant_name', 'image_url', 'quantity', 'price', 'product_id', 'sku_id'])
                     ->with(['product.deliveryTimeline', 'product.images', 'sku.product.images', 'sku.product.deliveryTimeline']);
-            }])
+            }, 'returnRequests.items'])
             ->latest()
             ->paginate(10);
 
@@ -121,11 +121,14 @@ class OrderController extends Controller
                 $addressData = $request->input('address');
                 $customerData = $request->input('customer');
 
+                $address = null;
                 if (isset($addressData['address_id']) && $addressData['address_id']) {
                     $address = Address::where('id', $addressData['address_id'])
                         ->where('user_id', $request->user()?->id)
-                        ->firstOrFail();
-                } else {
+                        ->first();
+                }
+
+                if (!$address) {
                     $address = Address::firstOrCreate([
                         'user_id' => $request->user()?->id, // If authenticated
                         'name' => $customerData['name'],
@@ -480,13 +483,23 @@ class OrderController extends Controller
                 }
             }
 
-            if ($request->filled('cart_token')) {
-                \App\Models\Cart::where('cart_token', $request->input('cart_token'))
-                    ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
-            } elseif ($request->user()) {
-                \App\Models\Cart::where('user_id', $request->user()->id)
-                    ->whereIn('status', ['active', 'abandoned'])
-                    ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+            $requiresOnlinePayment = false;
+            $paymentMethod = $request->input('payment_method');
+            if (in_array($paymentMethod, ['online', 'prepaid'])) {
+                $requiresOnlinePayment = true;
+            } elseif ($paymentMethod === 'cod' && ($order->upfront_amount ?? 0) > 0) {
+                $requiresOnlinePayment = true;
+            }
+
+            if (!$requiresOnlinePayment) {
+                if ($request->filled('cart_token')) {
+                    \App\Models\Cart::where('cart_token', $request->input('cart_token'))
+                        ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+                } elseif ($request->user()) {
+                    \App\Models\Cart::where('user_id', $request->user()->id)
+                        ->whereIn('status', ['active', 'abandoned'])
+                        ->update(['status' => 'completed', 'abandoned_email_sent_at' => null]);
+                }
             }
 
             return response()->json([
@@ -504,7 +517,7 @@ class OrderController extends Controller
     public function show(Request $request, $uuid)
     {
         $order = Order::where('uuid', $uuid)
-            ->with(['items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'shippingAddress', 'posLocation'])
+            ->with(['items.sku.color', 'items.sku.size', 'items.sku.product.deliveryTimeline', 'items.product.deliveryTimeline', 'items.product.images', 'items.product.skus.color', 'items.product.skus.size', 'items.product.sizeChart.data', 'shippingAddress', 'posLocation', 'returnRequests.items'])
             ->firstOrFail();
 
         $orderReturnTill = null;

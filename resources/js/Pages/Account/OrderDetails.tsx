@@ -64,6 +64,237 @@ interface Order {
     tax_breakdown?: any;
 }
 
+const getVariantName = (item: any) => {
+    return item.variant_name || (item.sku ? [item.sku.color?.name, item.sku.size?.name].filter(Boolean).join(' - ') : null) || item.sku?.code;
+};
+
+const ExchangeVariantModal = ({ item, selectedSkuId, onSelect, onClose }: { item: any, selectedSkuId?: number, onSelect: (id: number) => void, onClose: () => void }) => {
+    // Extract unique colors and sizes
+    const colors = Array.from(new Map(item.product?.skus?.filter((s:any) => s.color).map((s:any) => [s.color.id, s.color])).values()) as any[];
+    const sizes = Array.from(new Map(item.product?.skus?.filter((s:any) => s.size).map((s:any) => [s.size.id, s.size])).values()) as any[];
+
+    const initialSku = item.product?.skus?.find((s:any) => s.id === selectedSkuId);
+    const [selectedColor, setSelectedColor] = useState<number | null>(initialSku?.color_id || (colors.length > 0 ? colors[0].id : null));
+    const [selectedSize, setSelectedSize] = useState<number | null>(initialSku?.size_id || (sizes.length > 0 ? sizes[0].id : null));
+    const [showSizeChart, setShowSizeChart] = useState(false);
+
+    const currentSku = item.product?.skus?.find((s:any) => 
+        (colors.length === 0 || s.color_id === selectedColor) && 
+        (sizes.length === 0 || s.size_id === selectedSize)
+    );
+
+    const sizeChart = item.product?.size_chart?.[0] || item.product?.size_chart;
+    let sizeChartHeaders: string[] = [];
+    let sizeChartRows: any[] = [];
+    if (sizeChart?.data?.table_data) {
+        try {
+            const tableData = typeof sizeChart.data.table_data === 'string' ? JSON.parse(sizeChart.data.table_data) : sizeChart.data.table_data;
+            if (tableData.headers) sizeChartHeaders = tableData.headers;
+            if (tableData.rows) {
+                const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+                sizeChartRows = [...tableData.rows].sort((a: any, b: any) => {
+                    let iA = order.indexOf(a.size_code?.toUpperCase());
+                    let iB = order.indexOf(b.size_code?.toUpperCase());
+                    return (iA !== -1 ? iA : 99) - (iB !== -1 ? iB : 99);
+                });
+            }
+        } catch (e) {}
+    }
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-auto max-h-[90vh] relative">
+                
+                {/* Size Chart Overlay */}
+                {showSizeChart && sizeChart && (
+                    <div className="absolute inset-0 bg-white z-[70] flex flex-col p-6 overflow-hidden rounded-3xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-black text-gray-900">Size Chart</h3>
+                            <button onClick={() => setShowSizeChart(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto rounded-xl border border-gray-100">
+                            <table className="w-full text-sm text-center">
+                                <thead>
+                                    <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                                        <th className="py-4 px-4 text-left">Size</th>
+                                        {sizeChartHeaders.map((header: string, i: number) => (
+                                            <th key={i} className="py-4 px-4">{header}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sizeChartRows.map((row: any, i: number) => (
+                                        <tr key={i} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-4 font-bold text-gray-900 text-left">{row.size_code}</td>
+                                            {sizeChartHeaders.map((header: string, j: number) => (
+                                                <td key={j} className="py-4 px-4 font-medium text-gray-700">{row.measurements?.[header] || '-'}</td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Left Side - Image */}
+                <div className="w-full md:w-1/2 p-6 pb-0 md:pb-6 flex flex-col relative bg-gray-50/50">
+                    <button onClick={onClose} className="absolute top-6 left-6 p-2 bg-white rounded-full shadow-md z-10 block md:hidden">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <div className="flex-1 rounded-2xl overflow-hidden bg-gray-100 mb-4 h-64 md:h-auto border border-gray-200">
+                        {item.image_url ? (
+                            <img src={item.image_url} alt="Product" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Side - Content */}
+                <div className="w-full md:w-1/2 flex flex-col pt-4 md:pt-6 relative">
+                    <div className="px-6 flex justify-between items-start mb-6">
+                        <div>
+                            <h2 className="text-2xl font-black text-gray-900 leading-tight">{item.product_name}</h2>
+                            {getVariantName(item) && (
+                                <p className="text-sm font-medium text-gray-500 mt-1">Currently returning: {getVariantName(item)}</p>
+                            )}
+                        </div>
+                        <button onClick={onClose} className="hidden md:flex p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <div className="flex-1 px-6 overflow-y-auto pb-6 space-y-6">
+                        
+                        {/* SIZE */}
+                        {sizes.length > 0 && (
+                            <div>
+                                <div className="flex justify-between items-center mb-3">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Size</span>
+                                    {sizeChart && (
+                                        <button onClick={(e) => {
+                                            e.preventDefault();
+                                            setShowSizeChart(true);
+                                        }} className="text-[10px] font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1 hover:underline">
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                                            View Size Chart
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {sizes.map(size => {
+                                        // Check if this size is available for the selected color
+                                        const skuForThisSize = item.product?.skus?.find((s:any) => s.size_id === size.id && (colors.length === 0 || s.color_id === selectedColor));
+                                        const isOutOfStock = !skuForThisSize || skuForThisSize.stock <= 0;
+                                        const isSelected = selectedSize === size.id;
+                                        
+                                        return (
+                                            <button 
+                                                key={size.id} 
+                                                disabled={isOutOfStock}
+                                                onClick={() => setSelectedSize(size.id)}
+                                                className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all relative overflow-hidden ${
+                                                    isSelected ? 'border-black bg-black text-white shadow-md scale-[1.02]' : 
+                                                    isOutOfStock ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed' : 
+                                                    'border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {size.name}
+                                                {isOutOfStock && (
+                                                    <span className="absolute w-full border-t border-gray-300 -rotate-[35deg]" style={{ top: '50%', left: '0' }} />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* INLINE SIZE CHART ROW */}
+                                {(() => {
+                                    if (!selectedSize || sizeChartRows.length === 0) return null;
+                                    const selectedSizeName = sizes.find(s => s.id === selectedSize)?.name;
+                                    const row = sizeChartRows.find((r: any) => r.size_code?.toUpperCase() === selectedSizeName?.toUpperCase());
+                                    if (!row) return null;
+
+                                    return (
+                                        <div className="bg-gray-50 rounded-xl p-3 text-xs font-medium text-gray-600 flex flex-wrap gap-x-4 gap-y-2 border border-gray-100">
+                                            {sizeChartHeaders.map((header: string, j: number) => {
+                                                const val = row.measurements?.[header];
+                                                if (!val) return null;
+                                                return (
+                                                    <div key={j} className="flex gap-1.5">
+                                                        <span className="text-gray-400 font-semibold">{header}:</span>
+                                                        <span className="text-gray-900 font-bold">{val}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
+                        {/* COLOR */}
+                        {colors.length > 0 && (
+                            <div>
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 block">Color</span>
+                                <div className="flex gap-3">
+                                    {colors.map(color => {
+                                        const skuForThisColor = item.product?.skus?.find((s:any) => s.color_id === color.id && (sizes.length === 0 || s.size_id === selectedSize));
+                                        const isOutOfStock = !skuForThisColor || skuForThisColor.stock <= 0;
+                                        const isSelected = selectedColor === color.id;
+                                        return (
+                                            <button
+                                                key={color.id}
+                                                disabled={isOutOfStock}
+                                                onClick={() => setSelectedColor(color.id)}
+                                                className={`w-10 h-10 rounded-full transition-all flex items-center justify-center relative overflow-hidden ${
+                                                    isSelected ? 'ring-2 ring-black ring-offset-2 scale-110' : 
+                                                    isOutOfStock ? 'opacity-40 cursor-not-allowed ring-1 ring-gray-200' : 'hover:scale-110 ring-1 ring-gray-200'
+                                                }`}
+                                                style={{ backgroundColor: color.hex_code || '#cccccc' }}
+                                                title={color.name}
+                                            >
+                                                {isOutOfStock && (
+                                                    <span className="absolute w-[150%] border-t-2 border-red-500 -rotate-45" style={{ top: '50%', left: '-25%' }} />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {colors.length === 0 && sizes.length === 0 && (
+                            <p className="text-sm text-gray-500">No alternatives available.</p>
+                        )}
+                    </div>
+
+                    <div className="p-6 border-t border-gray-100 bg-white flex items-center justify-between mt-auto">
+                        <div className="font-bold text-2xl text-gray-900">{currentSku ? `₹${Number(currentSku.price).toLocaleString()}` : `₹${Number(item.price).toLocaleString()}`}</div>
+                        <button 
+                            onClick={() => {
+                                if (currentSku && currentSku.stock > 0) {
+                                    onSelect(currentSku.id);
+                                } else {
+                                    alert('Please select an available variant.');
+                                }
+                            }}
+                            disabled={!currentSku || currentSku.stock <= 0}
+                            className="px-8 py-3.5 bg-black text-white text-sm font-black uppercase tracking-wider rounded-xl transition-all hover:bg-gray-900 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {currentSku && currentSku.stock <= 0 ? 'Out of Stock' : 'Confirm Selection'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     const { user } = useAuthStore();
     const { settings: settings } = usePage().props as any;
@@ -74,17 +305,24 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
     const [actionModal, setActionModal] = useState<'cancel' | 'return' | 'exchange' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [selectedActionItems, setSelectedActionItems] = useState<Record<number, number>>({});
+    const [selectedExchangeVariants, setSelectedExchangeVariants] = useState<Record<number, number>>({});
+    const [activeExchangeItem, setActiveExchangeItem] = useState<any | null>(null);
     
     // Review Modal State
     const [reviewModalItem, setReviewModalItem] = useState<OrderItem | null>(null);
     const [reviewRating, setReviewRating] = useState(5);
     const [reviewComment, setReviewComment] = useState('');
-        const [reviewLoading, setReviewLoading] = useState(false);
+    const [reviewLoading, setReviewLoading] = useState(false);
     const [reviewImages, setReviewImages] = useState<File[]>([]);
     const [reviewImageError, setReviewImageError] = useState<string>('');
     const [existingImages, setExistingImages] = useState<any[]>([]);
     const [deletedImages, setDeletedImages] = useState<number[]>([]);
     const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+
+    // Cancel RMA Modal State
+    const [cancelModalRmaId, setCancelModalRmaId] = useState<number | null>(null);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [shakeItemId, setShakeItemId] = useState<number | null>(null);
 
     const openReviewModal = (item: OrderItem) => {
         setReviewModalItem(item);
@@ -270,14 +508,72 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             if (actionModal === 'return' || actionModal === 'exchange') {
                 const items = Object.entries(selectedActionItems)
                     .filter(([_, qty]) => qty > 0)
-                    .map(([id, qty]) => ({ id: Number(id), quantity: qty }));
+                    .map(([id, qty]) => {
+                        const payloadItem: any = { id: Number(id), quantity: qty };
+                        if (actionModal === 'exchange' && selectedExchangeVariants[Number(id)]) {
+                            payloadItem.exchange_variant_id = selectedExchangeVariants[Number(id)];
+                        }
+                        return payloadItem;
+                    });
+                
+                if (actionModal === 'exchange') {
+                    const missingItem = items.find(i => !i.exchange_variant_id);
+                    if (missingItem) {
+                        setShakeItemId(missingItem.id);
+                        setTimeout(() => setShakeItemId(null), 800);
+                        setActionLoading(false);
+                        return;
+                    }
+                }
+
                 if (items.length > 0) {
                     payload.items = items;
                 }
             }
-            await api.post(`/api/my-orders/${order.uuid}/${actionModal}`, payload);
-            setActionModal(null);
-            fetchOrder();
+            const res = await api.post(`/api/my-orders/${order.uuid}/${actionModal}`, payload);
+            
+            if (res.data.requires_payment && res.data.rma_id) {
+                try {
+                    const initRes = await api.post(`/api/payment/rma/${res.data.rma_id}/initiate`);
+                    const options = {
+                        key: initRes.data.key,
+                        amount: initRes.data.amount,
+                        currency: 'INR',
+                        name: initRes.data.name,
+                        description: initRes.data.description,
+                        order_id: initRes.data.order_id,
+                        handler: async (response: any) => {
+                            try {
+                                const verifyRes = await api.post(`/api/payment/rma/${res.data.rma_id}/verify`, response);
+                                if (verifyRes.data.success) {
+                                    alert('Payment successful and exchange requested!');
+                                    setActionModal(null);
+                                    fetchOrder();
+                                }
+                            } catch (err: any) {
+                                alert('Payment verification failed. Please contact support.');
+                                fetchOrder();
+                            }
+                        },
+                        modal: {
+                            ondismiss: () => {
+                                alert('Payment cancelled. Request will not be processed.');
+                                setActionModal(null);
+                                fetchOrder();
+                            }
+                        }
+                    };
+                    const rzp = new (window as any).Razorpay(options);
+                    rzp.open();
+                } catch (err: any) {
+                    alert('Could not initiate payment.');
+                    setActionModal(null);
+                    fetchOrder();
+                }
+            } else {
+                setActionModal(null);
+                fetchOrder();
+            }
         } catch (err: any) {
             if (err.response?.status === 401) {
                 router.visit('/login');
@@ -286,6 +582,57 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
             }
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleCancelRequest = async () => {
+        if (!cancelModalRmaId) return;
+        setCancelLoading(true);
+        try {
+            await api.delete(`/api/return-requests/${cancelModalRmaId}`);
+            setCancelModalRmaId(null);
+            fetchOrder();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to cancel request.');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleRetryPayment = async (rma: any) => {
+        try {
+            const initRes = await api.post(`/api/payment/rma/${rma.id}/initiate`);
+            const options = {
+                key: initRes.data.key,
+                amount: initRes.data.amount,
+                currency: 'INR',
+                name: initRes.data.name,
+                description: initRes.data.description,
+                order_id: initRes.data.order_id,
+                handler: async (response: any) => {
+                    try {
+                        const verifyRes = await api.post(`/api/payment/rma/${rma.id}/verify`, response);
+                        if (verifyRes.data.success) {
+                            alert('Payment successful and exchange requested!');
+                            fetchOrder();
+                        }
+                    } catch (err: any) {
+                        alert('Payment verification failed. Please contact support.');
+                        fetchOrder();
+                    }
+                },
+                modal: {
+                    ondismiss: () => {
+                        alert('Payment cancelled. Request will not be processed.');
+                        fetchOrder();
+                    }
+                }
+            };
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+        } catch (err: any) {
+            alert('Could not initiate payment.');
+            fetchOrder();
         }
     };
 
@@ -370,17 +717,19 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                 </div>
 
                 {/* Tracking Banner */}
-                {(order.status === 'shipped' || (order.status === 'delivered' && order.tracking_number)) && (
+                {((order.tracking_url && !order.tracking_url.trim().endsWith('=')) || order.tracking_number) && (
                     <div className="mb-8 bg-gradient-to-r from-gray-900 to-black rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none"></div>
                         <div className="relative z-10">
                             <h3 className="text-lg font-bold text-white tracking-wide">Tracking Information</h3>
-                            <p className="text-gray-300 mt-2 text-sm">
-                                {order.courier_partner ? `${order.courier_partner} - ` : ''}
-                                {order.tracking_number ? <span className="font-mono bg-white/10 px-2.5 py-1 rounded-md text-white border border-white/20">{order.tracking_number}</span> : 'Preparing tracking details...'}
-                            </p>
+                            {(order.courier_partner || order.tracking_number) && (
+                                <p className="text-gray-300 mt-2 text-sm">
+                                    {order.courier_partner ? `${order.courier_partner}${order.tracking_number ? ' - ' : ''}` : ''}
+                                    {order.tracking_number && <span className="font-mono bg-white/10 px-2.5 py-1 rounded-md text-white border border-white/20">{order.tracking_number}</span>}
+                                </p>
+                            )}
                         </div>
-                        {order.tracking_url && (
+                        {order.tracking_url && !order.tracking_url.trim().endsWith('=') && (
                             <a 
                                 href={order.tracking_url} 
                                 target="_blank" 
@@ -402,6 +751,13 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                             <div className="space-y-6">
                                 {order.items.map((item) => {
                                     const imgUrl = item.image_url || item.sku?.product?.featured_image;
+                                    
+                                    // Determine item RMA status
+                                    const itemRma = (order as any).return_requests?.find((rma: any) => 
+                                        rma.items?.some((i: any) => i.order_item_id === item.id)
+                                    );
+                                    const rmaItemData = itemRma?.items?.find((i: any) => i.order_item_id === item.id);
+                                    
                                     return (
                                         <div key={item.id} className="flex gap-4 sm:gap-6 group">
                                             <div className="w-24 h-32 sm:w-28 sm:h-36 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative shadow-sm transition-transform group-hover:scale-[1.02]">
@@ -421,10 +777,42 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                         <h3 className="text-base font-bold text-gray-900 leading-tight">
                                                             {item.product_name}
                                                         </h3>
-                                                        {item.variant_name && (
-                                                            <p className="text-sm text-gray-500 mt-1 font-medium">{item.variant_name}</p>
+                                                        {getVariantName(item) && (
+                                                            <p className="text-sm text-gray-500 mt-1 font-medium">{getVariantName(item)}</p>
                                                         )}
-                                                        {item.delivery_date && (
+                                                        
+                                                        {itemRma && (
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                <span className={`px-2 py-1 text-[10px] sm:text-xs font-bold rounded-lg uppercase tracking-wider border ${
+                                                                    itemRma.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                                                    itemRma.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                                                    itemRma.status === 'approved' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                                    itemRma.status === 'received' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                                                                    'bg-amber-100 text-amber-800 border-amber-200'
+                                                                }`}>
+                                                                    {itemRma.type} {itemRma.status} {rmaItemData && rmaItemData.quantity < item.quantity ? `(${rmaItemData.quantity}x)` : ''}
+                                                                </span>
+                                                                {itemRma.status === 'pending' && (
+                                                                    itemRma.payment_status === 'pending' ? (
+                                                                        <button 
+                                                                            onClick={() => handleRetryPayment(itemRma)}
+                                                                            className="px-2 py-1 text-[10px] sm:text-xs font-bold text-amber-600 bg-white border border-amber-200 hover:bg-amber-50 rounded-lg transition-colors uppercase tracking-wider"
+                                                                        >
+                                                                            Attempt Again
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={() => setCancelModalRmaId(itemRma.id)}
+                                                                            className="px-2 py-1 text-[10px] sm:text-xs font-bold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors uppercase tracking-wider"
+                                                                        >
+                                                                            Cancel Request
+                                                                        </button>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {item.delivery_date && !itemRma && (
                                                             <div className="flex flex-col gap-1 mt-2">
                                                                 <p className="text-xs text-green-700 font-medium bg-green-50 inline-block px-2 py-1 rounded border border-green-100 w-fit">
                                                                     {order.status === 'delivered' ? 'Delivered on: ' : 'Delivered by: '} <span className="font-bold">{item.delivery_date}</span>
@@ -453,7 +841,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                                             {formatPrice(parseFloat(item.price as string || "0") * item.quantity)}
                                                         </div>
                                                     </div>
-                                                    {order.status === 'delivered' && (
+                                                    {(order.status === 'delivered' || order.status === 'partially_returned') && (!itemRma || itemRma.status === 'rejected') && (
                                                         <button 
                                                             onClick={() => openReviewModal(item)}
                                                             className="ml-auto text-xs font-bold uppercase tracking-wider px-4 py-2 border rounded-lg transition-colors hover:bg-gray-50"
@@ -575,6 +963,70 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                 </div>
                             </div>
                         </div>
+
+                        {(() => {
+                            const completedReturns = (order as any).return_requests?.filter((r: any) => r.type === 'return' && r.status === 'completed');
+                            if (!completedReturns || completedReturns.length === 0) return null;
+                            
+                            const totalRefunded = completedReturns.reduce((acc: number, r: any) => acc + parseFloat(r.refund_amount || 0), 0);
+                            const totalFee = completedReturns.reduce((acc: number, r: any) => acc + parseFloat(r.fee_deducted || 0), 0);
+
+                            return (
+                                <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden">
+                                    <div className="p-6 sm:p-8 bg-emerald-50/30">
+                                        <h2 className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest mb-4">Refund Summary</h2>
+                                        <div className="space-y-2.5 text-sm">
+                                            <div className="flex justify-between text-gray-800 font-medium">
+                                                <span>Total Refund Processed</span>
+                                                <span className="text-emerald-700 font-bold">{formatPrice(totalRefunded)}</span>
+                                            </div>
+                                            {totalFee > 0 && (
+                                                <div className="flex justify-between text-gray-500 text-xs mt-1">
+                                                    <span>Return Fees Deducted</span>
+                                                    <span>{formatPrice(totalFee)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {(() => {
+                            const exchangeRequests = (order as any).return_requests?.filter((r: any) => r.type === 'exchange' && parseFloat(r.fee_deducted || "0") > 0);
+                            if (!exchangeRequests || exchangeRequests.length === 0) return null;
+
+                            return (
+                                <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden mt-4">
+                                    <div className="p-6 sm:p-8 bg-amber-50/30">
+                                        <h2 className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-4">Exchange Summary</h2>
+                                        <div className="space-y-4">
+                                            {exchangeRequests.map((r: any) => (
+                                                <div key={r.id} className="flex flex-col sm:flex-row justify-between sm:items-center text-sm gap-2 pb-3 border-b border-amber-100/50 last:border-0 last:pb-0">
+                                                    <div>
+                                                        <div className="text-gray-800 font-medium">Exchange Fee</div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">Request #{r.id}</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-gray-900 font-bold">{formatPrice(parseFloat(r.fee_deducted))}</span>
+                                                        {r.payment_status === 'paid' ? (
+                                                            <span className="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg uppercase tracking-wider">Paid Successfully</span>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => handleRetryPayment(r)}
+                                                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-colors shadow-sm shadow-amber-200"
+                                                            >
+                                                                Attempt Payment
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             <div className="p-6 sm:p-8">
@@ -723,36 +1175,67 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                             const selectedQty = selectedActionItems[item.id] || 0;
                                             
                                             return (
-                                                <div key={item.id} className="flex items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm gap-3">
-                                                    <div className="flex items-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedQty > 0}
-                                                            onChange={(e) => {
-                                                                setSelectedActionItems(prev => ({ ...prev, [item.id]: e.target.checked ? 1 : 0 }));
-                                                            }}
-                                                            className="w-5 h-5 text-black border-gray-300 rounded focus:ring-black cursor-pointer"
-                                                        />
-                                                    </div>
-                                                    
-                                                    <div className="w-14 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
-                                                        {item.image_url && <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />}
-                                                    </div>
-                                                    
-                                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                        <span className="text-sm font-bold text-gray-900 line-clamp-1 leading-tight">{item.product_name}</span>
-                                                        {item.variant_name && <span className="text-[11px] font-medium text-gray-500 mt-0.5">{item.variant_name}</span>}
-                                                        <span className="text-xs font-semibold text-gray-900 mt-1">{formatPrice(item.price)}</span>
+                                                <div key={item.id} className="flex flex-col p-3 border border-gray-100 rounded-xl bg-white shadow-sm gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedQty > 0}
+                                                                onChange={(e) => {
+                                                                    setSelectedActionItems(prev => ({ ...prev, [item.id]: e.target.checked ? 1 : 0 }));
+                                                                }}
+                                                                className="w-5 h-5 text-black border-gray-300 rounded focus:ring-black cursor-pointer"
+                                                            />
+                                                        </div>
+                                                        
+                                                        <div className="w-14 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                                                            {item.image_url && <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />}
+                                                        </div>
+                                                        
+                                                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                            <span className="text-sm font-bold text-gray-900 line-clamp-1 leading-tight">{item.product_name}</span>
+                                                            {getVariantName(item) && <span className="text-[11px] font-medium text-gray-500 mt-0.5">{getVariantName(item)}</span>}
+                                                            <span className="text-xs font-semibold text-gray-900 mt-1">{formatPrice(item.price)}</span>
+                                                        </div>
+
+                                                        {selectedQty > 0 && (
+                                                            <div className="flex items-center gap-2 border border-gray-200 rounded-lg shrink-0 h-8 self-center ml-2">
+                                                                <button onClick={() => setSelectedActionItems(prev => ({ ...prev, [item.id]: Math.max(1, selectedQty - 1) }))} className="px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center">
+                                                                    <Minus size={12} strokeWidth={3} />
+                                                                </button>
+                                                                <span className="text-xs font-bold text-gray-900 w-5 text-center">{selectedQty}</span>
+                                                                <button onClick={() => setSelectedActionItems(prev => ({ ...prev, [item.id]: Math.min(maxQty, selectedQty + 1) }))} className="px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center">
+                                                                    <Plus size={12} strokeWidth={3} />
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
 
-                                                    {selectedQty > 0 && (
-                                                        <div className="flex items-center gap-2 border border-gray-200 rounded-lg shrink-0 h-8 self-center ml-2">
-                                                            <button onClick={() => setSelectedActionItems(prev => ({ ...prev, [item.id]: Math.max(1, selectedQty - 1) }))} className="px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center">
-                                                                <Minus size={12} strokeWidth={3} />
-                                                            </button>
-                                                            <span className="text-xs font-bold text-gray-900 w-5 text-center">{selectedQty}</span>
-                                                            <button onClick={() => setSelectedActionItems(prev => ({ ...prev, [item.id]: Math.min(maxQty, selectedQty + 1) }))} className="px-2 hover:bg-gray-50 transition-colors text-gray-500 h-full flex items-center justify-center">
-                                                                <Plus size={12} strokeWidth={3} />
+                                                    {actionModal === 'exchange' && selectedQty > 0 && (
+                                                        <div className={`pl-8 pt-2 border-t border-gray-50 flex items-center justify-between transition-colors ${shakeItemId === item.id ? 'animate-shake bg-red-50/50 -mx-4 px-4 py-3 rounded-xl' : ''}`}>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">Exchange For</label>
+                                                                {selectedExchangeVariants[item.id] ? (
+                                                                    <div className="text-xs font-bold text-gray-900">
+                                                                        {(() => {
+                                                                            const sku = item.product?.skus?.find((s: any) => s.id === selectedExchangeVariants[item.id]);
+                                                                            if (sku) {
+                                                                                const color = sku.color?.name;
+                                                                                const size = sku.size?.name;
+                                                                                return [color, size].filter(Boolean).join(' - ') || sku.short_code;
+                                                                            }
+                                                                            return 'Variant Selected';
+                                                                        })()}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-xs font-semibold text-red-500">Not selected</div>
+                                                                )}
+                                                            </div>
+                                                            <button 
+                                                                onClick={(e) => { e.preventDefault(); setActiveExchangeItem(item); }} 
+                                                                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors"
+                                                            >
+                                                                {selectedExchangeVariants[item.id] ? 'Change' : 'Select'}
                                                             </button>
                                                         </div>
                                                     )}
@@ -793,9 +1276,27 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                     {String(order?.payment_method).toLowerCase() === 'cod' && actionModal === 'cancel' && (!settings?.shipping_rules?.cod?.upfront_refundable || settings?.shipping_rules?.cod?.upfront_refundable != '1') && (
                                         <p className="text-xs text-red-500 font-semibold">Note: The upfront shipping amount is non-refundable.</p>
                                     )}
-                                    {String(order?.payment_method).toLowerCase() === 'prepaid' && (
-                                        <p className="text-xs text-gray-500 font-medium">Note: The fee will be automatically deducted from your refund.</p>
-                                    )}
+                                    {(() => {
+                                        const breakup = getActionBreakup(actionModal);
+                                        return (
+                                            <>
+                                                {actionModal === 'return' && breakup.fee > 0 && String(order?.payment_method).toLowerCase() === 'prepaid' && (
+                                                    <p className="text-xs text-gray-500 font-medium">Note: The return fee will be automatically deducted from your refund.</p>
+                                                )}
+                                                {actionModal === 'exchange' && breakup.fee > 0 && (
+                                                    <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl space-y-2">
+                                                        <p className="text-xs text-red-600 font-bold uppercase tracking-wider">Please Note</p>
+                                                        <p className="text-xs text-gray-700 font-medium leading-relaxed">
+                                                            An exchange fee of {formatPrice(breakup.fee)} is applicable and will be collected upfront before confirming your request. <span className="font-bold text-red-600">This amount is not refundable at any cost.</span>
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-500 mt-2">
+                                                            If you feel you are wrongly charged, please reach out to our Support by writing us to support email: <a href={`mailto:${settings?.general?.support_email || ''}`} className="text-primary font-bold hover:underline">{settings?.general?.support_email || 'support'}</a> or calling us at <a href={`tel:${settings?.general?.support_phone || ''}`} className="text-primary font-bold hover:underline">{settings?.general?.support_phone || 'support'}</a>
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
 
                                 {((actionModal === 'return' || actionModal === 'exchange') && !Object.values(selectedActionItems).some(q => q > 0)) && (
@@ -838,7 +1339,7 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                             </div>
                             <div className="flex-1">
                                 <p className="font-bold text-gray-900 leading-tight">{reviewModalItem.product_name}</p>
-                                {reviewModalItem.variant_name && <p className="text-xs text-gray-500 mt-1">{reviewModalItem.variant_name}</p>}
+                                {getVariantName(reviewModalItem) && <p className="text-xs text-gray-500 mt-1">{getVariantName(reviewModalItem)}</p>}
                             </div>
                         </div>
                         
@@ -952,6 +1453,48 @@ export default function OrderDetailsPage({ uuid }: { uuid: string }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {activeExchangeItem && (
+                <ExchangeVariantModal
+                    item={activeExchangeItem}
+                    selectedSkuId={selectedExchangeVariants[activeExchangeItem.id]}
+                    onSelect={(id) => {
+                        setSelectedExchangeVariants(prev => ({ ...prev, [activeExchangeItem.id]: id }));
+                        setActiveExchangeItem(null);
+                    }}
+                    onClose={() => setActiveExchangeItem(null)}
+                />
+            )}
+
+            {cancelModalRmaId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                    <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all p-6 text-center">
+                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Request</h3>
+                        <p className="text-gray-500 text-sm mb-6">Are you sure you want to cancel this request? This action cannot be undone.</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setCancelModalRmaId(null)}
+                                disabled={cancelLoading}
+                                className="flex-1 px-4 py-2.5 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+                            >
+                                No, Keep It
+                            </button>
+                            <button 
+                                onClick={handleCancelRequest}
+                                disabled={cancelLoading}
+                                className="flex-1 px-4 py-2.5 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-lg shadow-red-200 disabled:opacity-50"
+                            >
+                                {cancelLoading ? 'Cancelling...' : 'Yes, Cancel'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

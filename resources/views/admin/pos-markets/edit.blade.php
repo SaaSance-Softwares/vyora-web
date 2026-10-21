@@ -141,10 +141,32 @@
                 {{-- 4. Business & Contact Details --}}
                 <div class="pb-6 border-b border-gray-200">
                     <h4 class="text-base font-medium text-gray-900 mb-4">4. Business & Contact Details</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                            <input type="text" name="gst_number" value="{{ $location->gst_number ?? '' }}" placeholder="e.g. 22AAAAA0000A1Z5" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black uppercase" />
+                            <input type="text" name="gst_number" value="{{ $location->gst_number ?? '' }}" placeholder="e.g. 29AAAAA0000A1Z5"
+                                oninput="autoDetectMarketGstState(this.value, 'edit_market_gst_state')"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black uppercase" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Registered Business State (for GST)</label>
+                            @php
+                                $indianStates = [
+                                    'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+                                    'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa',
+                                    'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka',
+                                    'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
+                                    'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim',
+                                    'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+                                ];
+                                $currentMarketGstState = $location->gst_registered_state ?? '';
+                            @endphp
+                            <select name="gst_registered_state" id="edit_market_gst_state" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black">
+                                <option value="">— Select Registered GST State —</option>
+                                @foreach($indianStates as $st)
+                                    <option value="{{ $st }}" {{ strcasecmp($currentMarketGstState, $st) === 0 ? 'selected' : '' }}>{{ $st }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
@@ -155,6 +177,28 @@
                             <input type="email" name="contact_email" value="{{ $location->contact_email ?? '' }}" placeholder="store@example.com" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black" />
                         </div>
                     </div>
+                    <script>
+                        function autoDetectMarketGstState(gstin, selectId) {
+                            const map = {
+                                '01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh',
+                                '05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh',
+                                '10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur',
+                                '15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal',
+                                '20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat',
+                                '26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','28':'Andhra Pradesh',
+                                '29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu',
+                                '34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh'
+                            };
+                            const clean = (gstin || '').trim();
+                            if (clean.length >= 2) {
+                                const code = clean.substring(0, 2);
+                                const el = document.getElementById(selectId);
+                                if (map[code] && el) {
+                                    el.value = map[code];
+                                }
+                            }
+                        }
+                    </script>
                 </div>
 
                 {{-- 5. Location Details --}}

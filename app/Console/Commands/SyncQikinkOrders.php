@@ -177,39 +177,60 @@ class SyncQikinkOrders extends Command
                             $updateData['delivered_at'] = now();
                         }
                     } else {
-                        \Log::warning("Qikink Sync: Could not map status for {$order->order_number}", [
-                            'raw_status_string' => $statusString,
-                            'qikink_order' => $qikinkOrder
-                        ]);
+                        // Known intermediate factory statuses that intentionally keep the order as "Processing"
+                        $ignoredStatuses = ['live', 'printed', 'production', 'processing', 'pending', 'on hold', 'qc', 'created'];
+                        $isIgnored = false;
+                        foreach ($ignoredStatuses as $ignored) {
+                            if (str_contains($qStatus, $ignored)) {
+                                $isIgnored = true;
+                                break;
+                            }
+                        }
+
+                        if (!$isIgnored) {
+                            \Log::warning("Qikink Sync: Could not map status for {$order->order_number}", [
+                                'raw_status_string' => $statusString,
+                                'qikink_order' => $qikinkOrder
+                            ]);
+                        }
                     }
                 }
 
                 // 2. Update Shipping Details
                 if (!empty($qikinkData['shipping'])) {
                     $shipping = $qikinkData['shipping'];
-                    $awb = $shipping['awb'] ?? null;
+                    $awb = !empty($shipping['awb']) ? trim((string) $shipping['awb']) : null;
                     
-                    if (!empty($awb) && !$order->tracking_number) {
+                    if ($awb && !$order->tracking_number) {
                         $updateData['tracking_number'] = $awb;
                     }
                     
+                    $rawDbTrackingUrl = $order->getRawOriginal('tracking_url');
                     if (!empty($shipping['tracking_link'])) {
-                        $trackingUrl = $shipping['tracking_link'];
+                        $trackingUrl = trim((string) $shipping['tracking_link']);
                         
-                        // Fix incomplete tracking URLs from QikInk (e.g. "https://courierupdates.com/?awb=")
-                        if (!empty($awb) && str_ends_with($trackingUrl, '=')) {
+                        // Append AWB if QikInk returned a base link ending with '='
+                        if ($awb && str_ends_with($trackingUrl, '=')) {
                             $trackingUrl .= $awb;
                         }
                         
-                        // Save if empty, or overwrite if the current DB value is incomplete (ends with =)
-                        if (!$order->tracking_url || str_ends_with($order->tracking_url, '=')) {
-                            $updateData['tracking_url'] = $trackingUrl;
+                        // Only save if the tracking URL is complete (does not end with an empty '=')
+                        if (!str_ends_with($trackingUrl, '=')) {
+                            if (!$rawDbTrackingUrl || str_ends_with(trim($rawDbTrackingUrl), '=')) {
+                                $updateData['tracking_url'] = $trackingUrl;
+                            }
+                        } elseif ($rawDbTrackingUrl && str_ends_with(trim($rawDbTrackingUrl), '=')) {
+                            // Clear previously saved incomplete tracking URL (e.g. "https://courierupdates.com/?awb=")
+                            $updateData['tracking_url'] = null;
                         }
                     }
-                }
 
-                if (!empty($qikinkData['shipping_type']) && !$order->courier_partner) {
-                    $updateData['courier_partner'] = $qikinkData['shipping_type'];
+                    $courierName = $shipping['courier_provider_name'] ?? null;
+                    if (!empty($courierName) && (!$order->courier_partner || $order->courier_partner === 'Qikink Domestic Shipping')) {
+                        $updateData['courier_partner'] = $courierName;
+                    } elseif ($awb && !empty($qikinkData['shipping_type']) && !$order->courier_partner) {
+                        $updateData['courier_partner'] = $qikinkData['shipping_type'];
+                    }
                 }
 
                 if (!empty($updateData)) {

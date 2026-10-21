@@ -63,6 +63,14 @@
                     <span class="text-sm">Dashboard</span>
                 </a>
 
+                <a href="{{ route('admin.analysis.index') }}" class="flex items-center justify-between p-3 rounded-lg {{ request()->routeIs('admin.analysis.*') ? 'bg-gray-100 text-black font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        <span class="text-sm">Analysis</span>
+                    </div>
+                    <span class="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 rounded-md">Beta</span>
+                </a>
+
                 <div class="pt-4 pb-2">
                     <p class="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Sales & Customers</p>
                 </div>
@@ -70,6 +78,11 @@
                 <a href="{{ route('admin.orders.index') }}" class="flex items-center space-x-3 p-3 rounded-lg {{ request()->routeIs('admin.orders.*') ? 'bg-gray-100 text-black font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     <span class="text-sm">Orders</span>
+                </a>
+
+                <a href="{{ route('admin.returns.index') }}" class="flex items-center space-x-3 p-3 rounded-lg {{ request()->routeIs('admin.returns.*') ? 'bg-gray-100 text-black font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                    <span class="text-sm">Returns (RMA)</span>
                 </a>
 
                 <a href="{{ route('admin.customers.index') }}" class="flex items-center space-x-3 p-3 rounded-lg {{ request()->routeIs('admin.customers.*') ? 'bg-gray-100 text-black font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
