@@ -122,8 +122,9 @@ class SystemUpdateController extends Controller
                 // 2. Run database migrations safely
                 Artisan::call('migrate', ['--force' => true]);
                 
-                // 3. Rebuild cache for performance
-                Artisan::call('optimize');
+                // Note: We intentionally avoid calling 'optimize' here because Artisan::call('route:cache')
+                // would cache the in-memory route collection loaded before files were extracted.
+                // Keeping cache cleared ensures the next request loads newly extracted routes.
                 
                 $message = 'System updated successfully. Cache cleared and migrations run!';
 

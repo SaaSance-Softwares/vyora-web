@@ -29,7 +29,7 @@
             <a href="{{ route('admin.orders.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition">
                 Manage Orders
             </a>
-            <a href="{{ route('admin.analysis.index') }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-black hover:bg-gray-800 rounded-lg shadow-sm transition">
+            <a href="{{ Route::has('admin.analysis.index') ? route('admin.analysis.index') : url(config('app.admin_path', 'occ').'/analysis') }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-black hover:bg-gray-800 rounded-lg shadow-sm transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 Open Analysis (Beta) &rarr;
             </a>
@@ -51,7 +51,7 @@
             <div class="text-2xl font-black text-gray-900">{{ $currencySymbol }}{{ number_format($stats['today_revenue'], 2) }}</div>
             <div class="mt-2 pt-2 border-t border-gray-50 flex justify-between text-[11px] text-gray-500">
                 <span>Yesterday: <strong class="text-gray-800">{{ $currencySymbol }}{{ number_format($stats['yesterday_revenue'], 0) }}</strong></span>
-                <a href="{{ route('admin.analysis.index', ['preset' => 'today']) }}" class="text-indigo-600 font-bold hover:underline">Breakdown &rarr;</a>
+                <a href="{{ Route::has('admin.analysis.index') ? route('admin.analysis.index', ['preset' => 'today']) : url(config('app.admin_path', 'occ').'/analysis?preset=today') }}" class="text-indigo-600 font-bold hover:underline">Breakdown &rarr;</a>
             </div>
         </div>
 
@@ -140,7 +140,7 @@
             <div class="flex items-center gap-2">
                 <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">All-Time Order Status Pipeline</h3>
             </div>
-            <a href="{{ route('admin.analysis.index') }}#operations-fulfillment" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+            <a href="{{ Route::has('admin.analysis.index') ? route('admin.analysis.index') : url(config('app.admin_path', 'occ').'/analysis') }}#operations-fulfillment" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">
                 View SLA & Payment Risk Analysis &rarr;
             </a>
         </div>
@@ -224,7 +224,7 @@
                     <span class="text-xs font-bold uppercase tracking-wider text-gray-400" x-text="salesType === 'amount' ? 'Period Net Sales' : 'Period Valid Orders'"></span>
                     <div class="text-2xl font-black text-gray-900" x-text="salesTotal">0</div>
                 </div>
-                <a href="{{ route('admin.analysis.index') }}" class="text-xs font-bold text-emerald-700 hover:underline">
+                <a href="{{ Route::has('admin.analysis.index') ? route('admin.analysis.index') : url(config('app.admin_path', 'occ').'/analysis') }}" class="text-xs font-bold text-emerald-700 hover:underline">
                     View SKU Profit & Discount Breakdown &rarr;
                 </a>
             </div>
