@@ -122,6 +122,14 @@ class GoogleMerchantController extends Controller
             $url = $appUrl.'/'.(str_starts_with($clean, 'storage/') || str_starts_with($clean, 'uploads/') ? $clean : 'storage/'.$clean);
         }
 
+        // Encode spaces/special characters in the path (Meta rejects raw spaces in image URLs)
+        $parts = parse_url($url);
+        if (! empty($parts['scheme']) && ! empty($parts['host'])) {
+            $path = implode('/', array_map('rawurlencode', array_map('rawurldecode', explode('/', $parts['path'] ?? ''))));
+            $url = $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '').$path
+                .(isset($parts['query']) ? '?'.$parts['query'] : '');
+        }
+
         return $url;
     }
 }
