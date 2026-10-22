@@ -172,11 +172,11 @@ export const trackViewContent = (product: any) => {
         ]
     });
 
-    // Meta (Catalog matched by product ID, content_type: product)
+    // Meta (Catalog matched by product ID, content_type: product_group, matches item_group_id)
     fbq('track', 'ViewContent', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product',
+        content_type: 'product_group',
         value: value,
         currency: 'INR'
     });
@@ -210,11 +210,11 @@ export const trackAddToCart = (product: any, quantity: number = 1) => {
         ]
     });
 
-    // Meta (Catalog matched by product ID, content_type: product)
+    // Meta (Catalog matched by product ID, content_type: product_group, matches item_group_id)
     fbq('track', 'AddToCart', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product',
+        content_type: 'product_group',
         value: value,
         currency: 'INR'
     });
@@ -250,7 +250,7 @@ export const trackAddToWishlist = (product: any) => {
     fbq('track', 'AddToWishlist', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product',
+        content_type: 'product_group',
         value: value,
         currency: 'INR'
     });
@@ -281,10 +281,10 @@ export const trackInitiateCheckout = (cartTotal: number, items: any[], customerD
         items: gaItems
     });
 
-    // Meta (Catalog matched by product IDs, content_type: product)
+    // Meta (Catalog matched by product IDs, content_type: product_group, matches item_group_id)
     fbq('track', 'InitiateCheckout', {
         content_ids: productIds,
-        content_type: 'product',
+        content_type: 'product_group',
         value: cartTotal,
         num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0),
         currency: 'INR'
@@ -317,10 +317,10 @@ export const trackPurchase = (transactionId: string, total: number, items: any[]
         items: gaItems
     });
 
-    // Meta (Catalog matched by product IDs, content_type: product)
+    // Meta (Catalog matched by product IDs, content_type: product_group, matches item_group_id)
     fbq('track', 'Purchase', {
         content_ids: productIds,
-        content_type: 'product',
+        content_type: 'product_group',
         value: total,
         currency: 'INR',
         num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0)

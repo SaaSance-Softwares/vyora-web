@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="2.5.1"
+VERSION="2.5.2"
 OUTPUT="release-v${VERSION}.zip"
 echo "Building frontend..."
 npm run build

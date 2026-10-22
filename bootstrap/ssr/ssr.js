@@ -4462,7 +4462,7 @@ const trackViewContent = (product) => {
   fbq("track", "ViewContent", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product",
+    content_type: "product_group",
     value,
     currency: "INR"
   });
@@ -4493,7 +4493,7 @@ const trackAddToCart = (product, quantity = 1) => {
   fbq("track", "AddToCart", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product",
+    content_type: "product_group",
     value,
     currency: "INR"
   });
@@ -4522,7 +4522,7 @@ const trackAddToWishlist = (product) => {
   fbq("track", "AddToWishlist", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product",
+    content_type: "product_group",
     value,
     currency: "INR"
   });
@@ -4547,7 +4547,7 @@ const trackInitiateCheckout = (cartTotal, items, customerData) => {
   });
   fbq("track", "InitiateCheckout", {
     content_ids: productIds,
-    content_type: "product",
+    content_type: "product_group",
     value: cartTotal,
     num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0),
     currency: "INR"
@@ -4575,7 +4575,7 @@ const trackPurchase = (transactionId, total, items, customerData) => {
   });
   fbq("track", "Purchase", {
     content_ids: productIds,
-    content_type: "product",
+    content_type: "product_group",
     value: total,
     currency: "INR",
     num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0)

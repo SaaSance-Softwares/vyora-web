@@ -12,18 +12,22 @@ class GoogleMerchantController extends Controller
     /**
      * Product feed used by Google Merchant Center AND Meta (Facebook/Instagram) Catalog.
      *
-     * Rules:
-     *  - One <item> per product. g:id == product id, which is exactly what the
-     *    Meta Pixel / CAPI send in content_ids, so catalog matching works.
+     * Structure (fashion variant model):
+     *  - One <item> per SKU (colour + size variant).
+     *  - g:id            = skus.code (globally unique in the DB) -> no duplicate IDs.
+     *  - g:item_group_id = product id. The Meta Pixel / CAPI send this same product id
+     *                      as content_ids with content_type "product_group", so events
+     *                      match the catalog group.
      *  - Every item always has id, title, description, link, image_link, price,
      *    availability and condition. Items that can't satisfy this are skipped.
-     *  - Streamed with XMLWriter in chunks (no 500s from memory/XML warnings),
-     *    and cached briefly so Meta/Google fetchers never hammer the database.
+     *
+     * Streamed with XMLWriter in chunks (low memory, correct XML escaping) and cached
+     * briefly so Meta/Google fetchers never hammer the database.
      */
     public function feed()
     {
         try {
-            $xml = Cache::remember('merchant_feed_xml_v2', 900, fn () => $this->buildFeed());
+            $xml = Cache::remember('merchant_feed_xml_v3', 900, fn () => $this->buildFeed());
         } catch (\Throwable $e) {
             Log::error('Merchant feed generation failed: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
@@ -55,47 +59,73 @@ class GoogleMerchantController extends Controller
         $w->writeElement('description', $storeName.' Product Feed');
 
         Product::query()
-            ->with(['skus:id,product_id,price,stock', 'images'])
+            ->with(['skus.color', 'skus.size', 'images'])
             ->where('is_active', true)
-            ->chunkById(200, function ($products) use ($w, $appUrl, $storeName, &$seen) {
+            ->chunkById(50, function ($products) use ($w, $appUrl, $storeName, &$seen) {
                 foreach ($products as $product) {
-                    $id = (string) $product->id;
-                    if (isset($seen[$id]) || $product->skus->isEmpty()) {
-                        continue;
-                    }
-
-                    $imageUrl = $this->resolveImage($product, $appUrl);
                     $slug = trim((string) $product->slug);
-                    if ($imageUrl === null || $slug === '') {
-                        continue; // Meta rejects items without link/image
-                    }
-                    $seen[$id] = true;
-
-                    $title = trim((string) $product->name) ?: 'Product #'.$id;
-                    $description = trim(strip_tags((string) ($product->description ?: $product->short_description ?: $title)));
-                    $description = mb_substr($description !== '' ? $description : $title.' - Available at '.$storeName, 0, 4900);
-
-                    $minPrice = (float) ($product->skus->where('price', '>', 0)->min('price') ?: $product->price ?: 0);
-                    if ($minPrice <= 0) {
+                    if ($slug === '' || $product->skus->isEmpty()) {
                         continue;
                     }
 
-                    $inStock = $product->skus->where('stock', '>', 0)->isNotEmpty();
+                    $groupId = (string) $product->id;
+                    $name = trim((string) $product->name) ?: 'Product #'.$groupId;
+                    $description = trim(strip_tags((string) ($product->description ?: $product->short_description ?: $name)));
+                    $description = mb_substr($description !== '' ? $description : $name.' - Available at '.$storeName, 0, 4900);
                     $brand = trim((string) $product->brand_name) ?: $storeName;
+                    $link = $appUrl.'/product/'.rawurlencode($slug);
 
-                    $w->startElement('item');
-                    $w->writeElement('g:id', $id);
-                    $w->writeElement('g:title', mb_substr($title, 0, 150));
-                    $w->writeElement('g:description', $description);
-                    $w->writeElement('g:link', $appUrl.'/product/'.rawurlencode($slug));
-                    $w->writeElement('g:image_link', $imageUrl);
-                    $w->writeElement('g:condition', 'new');
-                    $w->writeElement('g:availability', $inStock ? 'in stock' : 'out of stock');
-                    $w->writeElement('g:price', number_format($minPrice, 2, '.', '').' INR');
-                    $w->writeElement('g:brand', $brand);
-                    $w->writeElement('g:google_product_category', '1604'); // Apparel & Accessories > Clothing
-                    $w->writeElement('g:identifier_exists', 'no');
-                    $w->endElement(); // item
+                    foreach ($product->skus as $sku) {
+                        $id = trim((string) $sku->code) !== '' ? trim((string) $sku->code) : $groupId.'-'.$sku->id;
+                        if (isset($seen[$id])) {
+                            $id = $groupId.'-'.$sku->id; // guarantee uniqueness
+                        }
+                        if (isset($seen[$id])) {
+                            continue;
+                        }
+
+                        $price = (float) $sku->price;
+                        if ($price <= 0) {
+                            continue;
+                        }
+
+                        $imageUrl = $this->resolveImage($product, $sku->color_id, $appUrl);
+                        if ($imageUrl === null) {
+                            continue; // Meta rejects items without an image
+                        }
+                        $seen[$id] = true;
+
+                        $color = $sku->color?->name;
+                        $size = $sku->size?->name;
+                        $title = $name.($color ? ' - '.$color : '').($size ? ' - '.$size : '');
+                        $mrp = (float) $sku->mrp;
+
+                        $w->startElement('item');
+                        $w->writeElement('g:id', $id);
+                        $w->writeElement('g:item_group_id', $groupId);
+                        $w->writeElement('g:title', mb_substr($title, 0, 150));
+                        $w->writeElement('g:description', $description);
+                        $w->writeElement('g:link', $link);
+                        $w->writeElement('g:image_link', $imageUrl);
+                        $w->writeElement('g:condition', 'new');
+                        $w->writeElement('g:availability', ((int) $sku->stock) > 0 ? 'in stock' : 'out of stock');
+                        if ($mrp > $price) {
+                            $w->writeElement('g:price', number_format($mrp, 2, '.', '').' INR');
+                            $w->writeElement('g:sale_price', number_format($price, 2, '.', '').' INR');
+                        } else {
+                            $w->writeElement('g:price', number_format($price, 2, '.', '').' INR');
+                        }
+                        $w->writeElement('g:brand', $brand);
+                        if ($color) {
+                            $w->writeElement('g:color', $color);
+                        }
+                        if ($size) {
+                            $w->writeElement('g:size', $size);
+                        }
+                        $w->writeElement('g:google_product_category', '1604'); // Apparel & Accessories > Clothing
+                        $w->writeElement('g:identifier_exists', 'no');
+                        $w->endElement(); // item
+                    }
                 }
             });
 
@@ -106,14 +136,20 @@ class GoogleMerchantController extends Controller
         return $w->outputMemory();
     }
 
-    private function resolveImage(Product $product, string $appUrl): ?string
+    /**
+     * Prefer an image of the SKU's colour, then the first image, then the preview image.
+     */
+    private function resolveImage(Product $product, $colorId, string $appUrl): ?string
     {
-        $url = $product->image_url;
+        $isImage = fn ($img) => ($img->media_type ?? 'image') !== 'video' && $img->image_path;
 
-        if (! $url) {
-            $first = $product->images->first(fn ($img) => ($img->media_type ?? 'image') !== 'video' && $img->image_path);
-            $url = $first?->url;
+        $image = null;
+        if ($colorId) {
+            $image = $product->images->first(fn ($img) => $img->color_id == $colorId && $isImage($img));
         }
+        $image ??= $product->images->first($isImage);
+
+        $url = $image?->url ?: $product->image_url;
         if (! $url) {
             return null;
         }
