@@ -36,6 +36,7 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
 
                 cart.addItem({
                     skuId: v?.id || data.id,
+                    skuCode: v?.code || undefined,
                     productId: data.id,
                     name: data.name,
                     slug: data.slug,
@@ -52,7 +53,7 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                     exchangeDays: data.is_exchangeable ? data.exchange_days : null,
                     returnDays: data.is_returnable ? data.return_days : null,
                 });
-                trackAddToCart(data, 1);
+                trackAddToCart(data, 1, v?.code);
                 if (action === 'buy') {
                     router.visit('/checkout');
                 }

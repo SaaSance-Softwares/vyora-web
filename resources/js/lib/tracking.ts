@@ -153,9 +153,10 @@ export const trackPageView = (url: string) => {
     snaptr('track', 'PAGE_VIEW');
 };
 
-export const trackViewContent = (product: any) => {
+export const trackViewContent = (product: any, variantSkuCode?: string) => {
     const value = parseFloat(product.price) || 0;
-    const productId = String(product.id);
+    const skuCode = variantSkuCode || product.sku_code || product.code || product.sku || (product.variants && product.variants[0]?.code);
+    const productId = String(skuCode || product.id);
     const title = product.name || product.title || '';
     
     // GA4
@@ -172,11 +173,11 @@ export const trackViewContent = (product: any) => {
         ]
     });
 
-    // Meta (Catalog matched by product ID, content_type: product_group, matches item_group_id)
+    // Meta (Catalog matched by variant SKU code, content_type: product)
     fbq('track', 'ViewContent', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product_group',
+        content_type: 'product',
         value: value,
         currency: 'INR'
     });
@@ -190,10 +191,11 @@ export const trackViewContent = (product: any) => {
     });
 };
 
-export const trackAddToCart = (product: any, quantity: number = 1) => {
+export const trackAddToCart = (product: any, quantity: number = 1, variantSkuCode?: string) => {
     const price = parseFloat(product.price) || 0;
     const value = price * quantity;
-    const productId = String(product.id || product.productId);
+    const skuCode = variantSkuCode || product.sku_code || product.code || product.sku || (product.variants && product.variants[0]?.code);
+    const productId = String(skuCode || product.id || product.productId);
     const title = product.name || product.title || '';
 
     // GA4
@@ -210,11 +212,11 @@ export const trackAddToCart = (product: any, quantity: number = 1) => {
         ]
     });
 
-    // Meta (Catalog matched by product ID, content_type: product_group, matches item_group_id)
+    // Meta (Catalog matched by variant SKU code, content_type: product)
     fbq('track', 'AddToCart', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product_group',
+        content_type: 'product',
         value: value,
         currency: 'INR'
     });
@@ -227,9 +229,10 @@ export const trackAddToCart = (product: any, quantity: number = 1) => {
     });
 };
 
-export const trackAddToWishlist = (product: any) => {
+export const trackAddToWishlist = (product: any, variantSkuCode?: string) => {
     const value = parseFloat(product.price) || 0;
-    const productId = String(product.id || product.productId);
+    const skuCode = variantSkuCode || product.sku_code || product.code || product.sku || (product.variants && product.variants[0]?.code);
+    const productId = String(skuCode || product.id || product.productId);
     const title = product.name || product.title || '';
 
     // GA4
@@ -250,7 +253,7 @@ export const trackAddToWishlist = (product: any) => {
     fbq('track', 'AddToWishlist', {
         content_ids: [productId],
         content_name: title,
-        content_type: 'product_group',
+        content_type: 'product',
         value: value,
         currency: 'INR'
     });
@@ -264,11 +267,11 @@ export const trackAddToWishlist = (product: any) => {
 };
 
 export const trackInitiateCheckout = (cartTotal: number, items: any[], customerData?: any) => {
-    const productIds = items.map(item => String(item.productId || item.product_id || item.id));
+    const productIds = items.map(item => String(item.skuCode || item.sku_code || item.code || item.skuId || item.productId || item.product_id || item.id));
 
     // Format items for GA4
     const gaItems = items.map(item => ({
-        item_id: String(item.productId || item.product_id || item.id),
+        item_id: String(item.skuCode || item.sku_code || item.code || item.productId || item.product_id || item.id),
         item_name: item.name || item.title,
         price: parseFloat(item.price) || 0,
         quantity: item.quantity || 1
@@ -281,10 +284,10 @@ export const trackInitiateCheckout = (cartTotal: number, items: any[], customerD
         items: gaItems
     });
 
-    // Meta (Catalog matched by product IDs, content_type: product_group, matches item_group_id)
+    // Meta (Catalog matched by variant SKU codes, content_type: product)
     fbq('track', 'InitiateCheckout', {
         content_ids: productIds,
-        content_type: 'product_group',
+        content_type: 'product',
         value: cartTotal,
         num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0),
         currency: 'INR'
@@ -300,10 +303,10 @@ export const trackInitiateCheckout = (cartTotal: number, items: any[], customerD
 };
 
 export const trackPurchase = (transactionId: string, total: number, items: any[], customerData?: any) => {
-    const productIds = items.map(item => String(item.productId || item.product_id || item.id));
+    const productIds = items.map(item => String(item.sku?.code || item.skuCode || item.sku_code || item.code || item.skuId || item.productId || item.product_id || item.id));
 
     const gaItems = items.map(item => ({
-        item_id: String(item.productId || item.product_id || item.id),
+        item_id: String(item.sku?.code || item.skuCode || item.sku_code || item.code || item.productId || item.product_id || item.id),
         item_name: item.name || item.title || item.product_name,
         price: parseFloat(item.price) || 0,
         quantity: item.quantity || 1
@@ -317,10 +320,10 @@ export const trackPurchase = (transactionId: string, total: number, items: any[]
         items: gaItems
     });
 
-    // Meta (Catalog matched by product IDs, content_type: product_group, matches item_group_id)
+    // Meta (Catalog matched by variant SKU codes, content_type: product)
     fbq('track', 'Purchase', {
         content_ids: productIds,
-        content_type: 'product_group',
+        content_type: 'product',
         value: total,
         currency: 'INR',
         num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0)

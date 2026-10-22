@@ -86,6 +86,7 @@ export default function QuickViewModal() {
 
         cart.addItem({
             skuId: currentVariant.id,
+            skuCode: currentVariant.code || undefined,
             productId: product.id,
             name: product.name,
             slug: product.slug,
@@ -103,7 +104,7 @@ export default function QuickViewModal() {
             returnDays: product.is_returnable ? product.return_days : null,
         });
 
-        trackAddToCart(product, 1);
+        trackAddToCart(product, 1, currentVariant.code);
         
         closeQuickView();
         

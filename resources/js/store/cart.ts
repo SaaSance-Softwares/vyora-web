@@ -6,6 +6,7 @@ let syncTimeout: any;
 
 export interface CartItem {
     skuId: number;
+    skuCode?: string;
     productId: number;
     name: string;
     slug: string;

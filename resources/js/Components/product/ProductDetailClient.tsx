@@ -56,10 +56,11 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     const wishlisted = wishlist.isInWishlist(product.id);
     const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
 
-    // Track ViewContent on mount
+    // Track ViewContent on mount or variant change
     useEffect(() => {
-        trackViewContent(product);
-    }, [product.id]);
+        const variantCode = currentVariant?.code || product.variants?.[0]?.code;
+        trackViewContent(product, variantCode);
+    }, [product.id, currentVariant?.code]);
 
     // 1. Sanitize image URLs → always resolve to a local /storage/... path served by Next.js public/
     //    Gallery images come back as bare relative paths (e.g. "storage/products/...")
@@ -283,6 +284,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
         
         cart.addItem({
             skuId: currentVariant.id,
+            skuCode: currentVariant.code || undefined,
             productId: product.id,
             name: product.name,
             slug: product.slug,
@@ -300,7 +302,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             exchangeDays: product.is_exchangeable ? product.exchange_days : null,
             returnDays: product.is_returnable ? product.return_days : null,
         });
-        trackAddToCart(product, 1);
+        trackAddToCart(product, 1, currentVariant.code);
     }
 
     function handleWishlistToggle() {
@@ -346,6 +348,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
 
         cart.addItem({
             skuId: currentVariant.id,
+            skuCode: currentVariant.code || undefined,
             productId: product.id,
             name: product.name,
             slug: product.slug,
@@ -363,7 +366,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             exchangeDays: product.is_exchangeable ? product.exchange_days : null,
             returnDays: product.is_returnable ? product.return_days : null,
         });
-        trackAddToCart(product, 1);
+        trackAddToCart(product, 1, currentVariant.code);
         router.visit('/checkout');
     }
 

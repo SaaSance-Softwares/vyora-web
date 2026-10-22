@@ -4443,9 +4443,10 @@ const snaptr = (action, eventName, eventData = {}) => {
     }).catch((err) => console.error("Snapchat CAPI Event Error:", err));
   }
 };
-const trackViewContent = (product) => {
+const trackViewContent = (product, variantSkuCode) => {
   const value = parseFloat(product.price) || 0;
-  const productId = String(product.id);
+  const skuCode = variantSkuCode || product.sku_code || product.code || product.sku || product.variants && product.variants[0]?.code;
+  const productId = String(skuCode || product.id);
   const title = product.name || product.title || "";
   gtag("event", "view_item", {
     currency: "INR",
@@ -4462,7 +4463,7 @@ const trackViewContent = (product) => {
   fbq("track", "ViewContent", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product_group",
+    content_type: "product",
     value,
     currency: "INR"
   });
@@ -4473,10 +4474,11 @@ const trackViewContent = (product) => {
     currency: "INR"
   });
 };
-const trackAddToCart = (product, quantity = 1) => {
+const trackAddToCart = (product, quantity = 1, variantSkuCode) => {
   const price = parseFloat(product.price) || 0;
   const value = price * quantity;
-  const productId = String(product.id || product.productId);
+  const skuCode = variantSkuCode || product.sku_code || product.code || product.sku || product.variants && product.variants[0]?.code;
+  const productId = String(skuCode || product.id || product.productId);
   const title = product.name || product.title || "";
   gtag("event", "add_to_cart", {
     currency: "INR",
@@ -4493,7 +4495,7 @@ const trackAddToCart = (product, quantity = 1) => {
   fbq("track", "AddToCart", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product_group",
+    content_type: "product",
     value,
     currency: "INR"
   });
@@ -4503,9 +4505,10 @@ const trackAddToCart = (product, quantity = 1) => {
     currency: "INR"
   });
 };
-const trackAddToWishlist = (product) => {
+const trackAddToWishlist = (product, variantSkuCode) => {
   const value = parseFloat(product.price) || 0;
-  const productId = String(product.id || product.productId);
+  const skuCode = product.sku_code || product.code || product.sku || product.variants && product.variants[0]?.code;
+  const productId = String(skuCode || product.id || product.productId);
   const title = product.name || product.title || "";
   gtag("event", "add_to_wishlist", {
     currency: "INR",
@@ -4522,7 +4525,7 @@ const trackAddToWishlist = (product) => {
   fbq("track", "AddToWishlist", {
     content_ids: [productId],
     content_name: title,
-    content_type: "product_group",
+    content_type: "product",
     value,
     currency: "INR"
   });
@@ -4533,9 +4536,9 @@ const trackAddToWishlist = (product) => {
   });
 };
 const trackInitiateCheckout = (cartTotal, items, customerData) => {
-  const productIds = items.map((item) => String(item.productId || item.product_id || item.id));
+  const productIds = items.map((item) => String(item.skuCode || item.sku_code || item.code || item.skuId || item.productId || item.product_id || item.id));
   const gaItems = items.map((item) => ({
-    item_id: String(item.productId || item.product_id || item.id),
+    item_id: String(item.skuCode || item.sku_code || item.code || item.productId || item.product_id || item.id),
     item_name: item.name || item.title,
     price: parseFloat(item.price) || 0,
     quantity: item.quantity || 1
@@ -4547,7 +4550,7 @@ const trackInitiateCheckout = (cartTotal, items, customerData) => {
   });
   fbq("track", "InitiateCheckout", {
     content_ids: productIds,
-    content_type: "product_group",
+    content_type: "product",
     value: cartTotal,
     num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0),
     currency: "INR"
@@ -4560,9 +4563,9 @@ const trackInitiateCheckout = (cartTotal, items, customerData) => {
   });
 };
 const trackPurchase = (transactionId, total, items, customerData) => {
-  const productIds = items.map((item) => String(item.productId || item.product_id || item.id));
+  const productIds = items.map((item) => String(item.sku?.code || item.skuCode || item.sku_code || item.code || item.skuId || item.productId || item.product_id || item.id));
   const gaItems = items.map((item) => ({
-    item_id: String(item.productId || item.product_id || item.id),
+    item_id: String(item.sku?.code || item.skuCode || item.sku_code || item.code || item.productId || item.product_id || item.id),
     item_name: item.name || item.title || item.product_name,
     price: parseFloat(item.price) || 0,
     quantity: item.quantity || 1
@@ -4575,7 +4578,7 @@ const trackPurchase = (transactionId, total, items, customerData) => {
   });
   fbq("track", "Purchase", {
     content_ids: productIds,
-    content_type: "product_group",
+    content_type: "product",
     value: total,
     currency: "INR",
     num_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0)
@@ -4900,6 +4903,7 @@ function ProductCard({ product, activeCategory, onRemove }) {
         const colorImg = colorAttr ? data.images?.find((img) => img.color_id?.toString() === colorAttr.id?.toString()) : null;
         cart.addItem({
           skuId: v?.id || data.id,
+          skuCode: v?.code || void 0,
           productId: data.id,
           name: data.name,
           slug: data.slug,
@@ -4916,7 +4920,7 @@ function ProductCard({ product, activeCategory, onRemove }) {
           exchangeDays: data.is_exchangeable ? data.exchange_days : null,
           returnDays: data.is_returnable ? data.return_days : null
         });
-        trackAddToCart(data, 1);
+        trackAddToCart(data, 1, v?.code);
         if (action === "buy") {
           router.visit("/checkout");
         }
@@ -11158,8 +11162,9 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   const wishlisted = wishlist.isInWishlist(product.id);
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
   useEffect(() => {
-    trackViewContent(product);
-  }, [product.id]);
+    const variantCode = currentVariant?.code || product.variants?.[0]?.code;
+    trackViewContent(product, variantCode);
+  }, [product.id, currentVariant?.code]);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
   const sanitizeUrl = (url) => {
     if (!url) return null;
@@ -11330,6 +11335,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
     const colorImg = colorObj ? product.images?.find((img) => img.color_id?.toString() === colorObj.id?.toString()) : null;
     cart.addItem({
       skuId: currentVariant.id,
+      skuCode: currentVariant.code || void 0,
       productId: product.id,
       name: product.name,
       slug: product.slug,
@@ -11347,7 +11353,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
       exchangeDays: product.is_exchangeable ? product.exchange_days : null,
       returnDays: product.is_returnable ? product.return_days : null
     });
-    trackAddToCart(product, 1);
+    trackAddToCart(product, 1, currentVariant.code);
   }
   function handleWishlistToggle() {
     if (!auth?.user) {
@@ -11389,6 +11395,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
     const colorImg = colorObj ? product.images?.find((img) => img.color_id?.toString() === colorObj.id?.toString()) : null;
     cart.addItem({
       skuId: currentVariant.id,
+      skuCode: currentVariant.code || void 0,
       productId: product.id,
       name: product.name,
       slug: product.slug,
@@ -11406,7 +11413,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
       exchangeDays: product.is_exchangeable ? product.exchange_days : null,
       returnDays: product.is_returnable ? product.return_days : null
     });
-    trackAddToCart(product, 1);
+    trackAddToCart(product, 1, currentVariant.code);
     router.visit("/checkout");
   }
   return /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -13147,6 +13154,7 @@ function QuickViewModal() {
     const colorImg = colorObj ? product.images?.find((img) => img.color_id?.toString() === colorObj.id?.toString()) : null;
     cart.addItem({
       skuId: currentVariant.id,
+      skuCode: currentVariant.code || void 0,
       productId: product.id,
       name: product.name,
       slug: product.slug,
@@ -13163,7 +13171,7 @@ function QuickViewModal() {
       exchangeDays: product.is_exchangeable ? product.exchange_days : null,
       returnDays: product.is_returnable ? product.return_days : null
     });
-    trackAddToCart(product, 1);
+    trackAddToCart(product, 1, currentVariant.code);
     closeQuickView();
     if (action === "buy") {
       router.visit("/checkout");
