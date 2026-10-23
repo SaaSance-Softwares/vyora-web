@@ -11161,10 +11161,6 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
   const wishlist = useWishlistStore();
   const wishlisted = wishlist.isInWishlist(product.id);
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
-  useEffect(() => {
-    const variantCode = currentVariant?.code || product.variants?.[0]?.code;
-    trackViewContent(product, variantCode);
-  }, [product.id, currentVariant?.code]);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
   const sanitizeUrl = (url) => {
     if (!url) return null;
@@ -11307,6 +11303,10 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
       (v) => v.attributes.find((a) => a.name === "Color")?.value === selectedColor && v.attributes.find((a) => a.name === "Size")?.value === selectedSize
     );
   }, [selectedColor, selectedSize, product.variants]);
+  useEffect(() => {
+    const variantCode = currentVariant?.code || product.variants?.[0]?.code;
+    trackViewContent(product, variantCode);
+  }, [product.id, currentVariant?.code]);
   const cart = useCartStore();
   const handleShare = async () => {
     const shareData = {

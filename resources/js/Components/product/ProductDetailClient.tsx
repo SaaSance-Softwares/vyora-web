@@ -56,12 +56,6 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
     const wishlisted = wishlist.isInWishlist(product.id);
     const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
 
-    // Track ViewContent on mount or variant change
-    useEffect(() => {
-        const variantCode = currentVariant?.code || product.variants?.[0]?.code;
-        trackViewContent(product, variantCode);
-    }, [product.id, currentVariant?.code]);
-
     // 1. Sanitize image URLs → always resolve to a local /storage/... path served by Next.js public/
     //    Gallery images come back as bare relative paths (e.g. "storage/products/...")
     //    Master images come back as full URLs (e.g. "http://127.0.0.1:8000/storage/...")
@@ -251,6 +245,12 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             v.attributes.find(a => a.name === 'Size')?.value === selectedSize
         );
     }, [selectedColor, selectedSize, product.variants]);
+
+    // Track ViewContent on mount or variant change
+    useEffect(() => {
+        const variantCode = currentVariant?.code || product.variants?.[0]?.code;
+        trackViewContent(product, variantCode);
+    }, [product.id, currentVariant?.code]);
 
     const cart = useCartStore();
 
