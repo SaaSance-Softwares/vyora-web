@@ -5197,13 +5197,18 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   const primaryColor = settings?.tc_primary_color || "#000000";
   const activeQueryKey = queryKey || (searchParams.has("category") ? "category" : searchParams.has("collection") ? "collection" : void 0);
   const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : void 0) || void 0;
-  const [products, setProducts] = useRemember([], `products-${url}`);
-  const [page, setPage] = useRemember(1, `page-${url}`);
-  const [hasMore, setHasMore] = useRemember(true, `hasMore-${url}`);
+  const rememberKey = `listing-${baseEndpoint}-${activeQueryKey || "root"}-${activeQueryValue || "all"}`;
+  const [products, setProducts] = useRemember([], `${rememberKey}-products`);
+  const [page, setPage] = useRemember(1, `${rememberKey}-page`);
+  const [hasMore, setHasMore] = useRemember(true, `${rememberKey}-hasMore`);
+  const [availableFits, setAvailableFits] = useRemember([], `${rememberKey}-fits`);
+  const [availableFabrics, setAvailableFabrics] = useRemember([], `${rememberKey}-fabrics`);
+  const [availableColors, setAvailableColors] = useRemember([], `${rememberKey}-colors`);
+  const [availableSizes, setAvailableSizes] = useRemember([], `${rememberKey}-sizes`);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState(() => {
+  const [filters, setFilters] = useRemember(() => {
     const search = typeof window !== "undefined" ? window.location.search : url.includes("?") ? url.substring(url.indexOf("?")) : "";
     const sp = new URLSearchParams(search);
     return {
@@ -5216,7 +5221,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       fit: sp.get("fit") ? sp.get("fit").split(",").filter(Boolean) : initialFilters?.fit || [],
       fabric: sp.get("fabric") ? sp.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
     };
-  });
+  }, `${rememberKey}-filters`);
   const [expandedSections, setExpandedSections] = useState({
     sort: true,
     price: true,
@@ -5274,18 +5279,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       setLoadingMore(false);
     }
   }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
-  const isFirstMount = useRef(true);
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      if (products.length > 0) {
-        setLoading(false);
-        return;
-      }
-    }
-    setPage(1);
-    setHasMore(true);
-    fetchProducts(1, false);
+  const syncUrl = useCallback((currentFilters) => {
     const params = new URLSearchParams(window.location.search);
     params.delete("in_stock");
     params.delete("sort");
@@ -5295,14 +5289,14 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     params.delete("color");
     params.delete("fit");
     params.delete("fabric");
-    if (filters.in_stock) params.set("in_stock", "1");
-    if (filters.sort && filters.sort !== "new") params.set("sort", filters.sort);
-    if (filters.min_price) params.set("min_price", filters.min_price);
-    if (filters.max_price) params.set("max_price", filters.max_price);
-    if (filters.size.length) params.set("size", filters.size.join(","));
-    if (filters.color.length) params.set("color", filters.color.join(","));
-    if (filters.fit.length) params.set("fit", filters.fit.join(","));
-    if (filters.fabric.length) params.set("fabric", filters.fabric.join(","));
+    if (currentFilters.in_stock) params.set("in_stock", "1");
+    if (currentFilters.sort && currentFilters.sort !== "new") params.set("sort", currentFilters.sort);
+    if (currentFilters.min_price) params.set("min_price", currentFilters.min_price);
+    if (currentFilters.max_price) params.set("max_price", currentFilters.max_price);
+    if (currentFilters.size.length) params.set("size", currentFilters.size.join(","));
+    if (currentFilters.color.length) params.set("color", currentFilters.color.join(","));
+    if (currentFilters.fit.length) params.set("fit", currentFilters.fit.join(","));
+    if (currentFilters.fabric.length) params.set("fabric", currentFilters.fabric.join(","));
     const queryString = params.toString();
     const newUrl = window.location.pathname + (queryString ? "?" + queryString : "");
     const currentState = window.history.state || {};
@@ -5324,7 +5318,34 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       } catch {
       }
     }
-  }, [filters, fetchProducts, activeQueryKey, activeQueryValue]);
+  }, []);
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      if (products.length > 0) {
+        setLoading(false);
+        if (availableSizes.length === 0 && availableColors.length === 0 && availableFits.length === 0 && availableFabrics.length === 0) {
+          api.get(`${baseEndpoint}?limit=1&page=1${activeQueryKey && activeQueryValue ? `&${activeQueryKey}=${activeQueryValue}` : ""}`).then((res) => {
+            if (res.data.filters) {
+              const dynamicFilters = res.data.filters;
+              if (dynamicFilters.fits) setAvailableFits(dynamicFilters.fits);
+              if (dynamicFilters.fabrics) setAvailableFabrics(dynamicFilters.fabrics);
+              if (dynamicFilters.colors) setAvailableColors(dynamicFilters.colors);
+              if (dynamicFilters.sizes) setAvailableSizes(dynamicFilters.sizes);
+            }
+          }).catch(() => {
+          });
+        }
+        syncUrl(filters);
+        return;
+      }
+    }
+    setPage(1);
+    setHasMore(true);
+    fetchProducts(1, false);
+    syncUrl(filters);
+  }, [filters, fetchProducts, activeQueryKey, activeQueryValue, syncUrl]);
   useEffect(() => {
     const handlePopState = () => {
       const sp = new URLSearchParams(window.location.search);
@@ -5382,10 +5403,6 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       fabric: []
     });
   };
-  const [availableFits, setAvailableFits] = useState([]);
-  const [availableFabrics, setAvailableFabrics] = useState([]);
-  const [availableColors, setAvailableColors] = useState([]);
-  const [availableSizes, setAvailableSizes] = useState([]);
   const displayTitle = title ? title : activeQueryValue ? activeQueryValue.split("-").join(" ") : "Products";
   return /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 py-8 relative", children: [
     /* @__PURE__ */ jsxs("div", { className: "mb-6 flex flex-col gap-4", children: [

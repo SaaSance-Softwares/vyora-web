@@ -50,15 +50,24 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     const activeQueryKey = queryKey || (searchParams.has('category') ? 'category' : searchParams.has('collection') ? 'collection' : undefined);
     const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : undefined) || undefined;
     
-    const [products, setProducts] = useRemember<ProductList[]>([], `products-${url}`);
-    const [page, setPage] = useRemember(1, `page-${url}`);
-    const [hasMore, setHasMore] = useRemember(true, `hasMore-${url}`);
+    const rememberKey = `listing-${baseEndpoint}-${activeQueryKey || 'root'}-${activeQueryValue || 'all'}`;
+
+    const [products, setProducts] = useRemember<ProductList[]>([], `${rememberKey}-products`);
+    const [page, setPage] = useRemember(1, `${rememberKey}-page`);
+    const [hasMore, setHasMore] = useRemember(true, `${rememberKey}-hasMore`);
+    
+    // Available filter options (cached per listing so they restore on browser Back navigation)
+    const [availableFits, setAvailableFits] = useRemember<{name: string, count: number}[]>([], `${rememberKey}-fits`);
+    const [availableFabrics, setAvailableFabrics] = useRemember<{name: string, count: number}[]>([], `${rememberKey}-fabrics`);
+    const [availableColors, setAvailableColors] = useRemember<{name: string, hex: string, count: number}[]>([], `${rememberKey}-colors`);
+    const [availableSizes, setAvailableSizes] = useRemember<{name: string, count: number}[]>([], `${rememberKey}-sizes`);
+
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     
-    // Filters
+    // Filters (cached so selected sort and filters persist across navigation)
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState<FilterState>(() => {
+    const [filters, setFilters] = useRemember<FilterState>(() => {
         const search = typeof window !== 'undefined' ? window.location.search : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
         const sp = new URLSearchParams(search);
         return {
@@ -71,7 +80,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             fit: sp.get('fit') ? sp.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
             fabric: sp.get('fabric') ? sp.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
         };
-    });
+    }, `${rememberKey}-filters`);
 
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         sort: true, price: true, size: true, color: true, fit: true, fabric: true
@@ -142,24 +151,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         }
     }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
 
-    const isFirstMount = useRef(true);
-
-    // Initial fetch when filters change
-    useEffect(() => {
-        if (isFirstMount.current) {
-            isFirstMount.current = false;
-            if (products.length > 0) {
-                // State restored from useRemember, skip initial fetch
-                setLoading(false);
-                return;
-            }
-        }
-
-        setPage(1);
-        setHasMore(true);
-        fetchProducts(1, false);
-
-        // Update browser URL silently for sharing/bookmarking
+    const syncUrl = useCallback((currentFilters: FilterState) => {
         const params = new URLSearchParams(window.location.search);
         
         // Remove existing filter params
@@ -173,14 +165,14 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         params.delete('fabric');
         
         // Add active params
-        if (filters.in_stock) params.set('in_stock', '1');
-        if (filters.sort && filters.sort !== 'new') params.set('sort', filters.sort);
-        if (filters.min_price) params.set('min_price', filters.min_price);
-        if (filters.max_price) params.set('max_price', filters.max_price);
-        if (filters.size.length) params.set('size', filters.size.join(','));
-        if (filters.color.length) params.set('color', filters.color.join(','));
-        if (filters.fit.length) params.set('fit', filters.fit.join(','));
-        if (filters.fabric.length) params.set('fabric', filters.fabric.join(','));
+        if (currentFilters.in_stock) params.set('in_stock', '1');
+        if (currentFilters.sort && currentFilters.sort !== 'new') params.set('sort', currentFilters.sort);
+        if (currentFilters.min_price) params.set('min_price', currentFilters.min_price);
+        if (currentFilters.max_price) params.set('max_price', currentFilters.max_price);
+        if (currentFilters.size.length) params.set('size', currentFilters.size.join(','));
+        if (currentFilters.color.length) params.set('color', currentFilters.color.join(','));
+        if (currentFilters.fit.length) params.set('fit', currentFilters.fit.join(','));
+        if (currentFilters.fabric.length) params.set('fabric', currentFilters.fabric.join(','));
         
         const queryString = params.toString();
         const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
@@ -207,8 +199,44 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                 // Ignore fallback error
             }
         }
+    }, []);
 
-    }, [filters, fetchProducts, activeQueryKey, activeQueryValue]);
+    const isFirstMount = useRef(true);
+
+    // Initial fetch when filters change
+    useEffect(() => {
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            if (products.length > 0) {
+                // State restored from useRemember, skip products re-fetch
+                setLoading(false);
+
+                // If available filter options were not cached or empty, fetch them so sidebar is never blank
+                if (availableSizes.length === 0 && availableColors.length === 0 && availableFits.length === 0 && availableFabrics.length === 0) {
+                    api.get<PaginatedResponse<ProductList>>(`${baseEndpoint}?limit=1&page=1${activeQueryKey && activeQueryValue ? `&${activeQueryKey}=${activeQueryValue}` : ''}`)
+                        .then(res => {
+                            if ((res.data as any).filters) {
+                                const dynamicFilters = (res.data as any).filters;
+                                if (dynamicFilters.fits) setAvailableFits(dynamicFilters.fits);
+                                if (dynamicFilters.fabrics) setAvailableFabrics(dynamicFilters.fabrics);
+                                if (dynamicFilters.colors) setAvailableColors(dynamicFilters.colors);
+                                if (dynamicFilters.sizes) setAvailableSizes(dynamicFilters.sizes);
+                            }
+                        })
+                        .catch(() => {});
+                }
+
+                syncUrl(filters);
+                return;
+            }
+        }
+
+        setPage(1);
+        setHasMore(true);
+        fetchProducts(1, false);
+        syncUrl(filters);
+
+    }, [filters, fetchProducts, activeQueryKey, activeQueryValue, syncUrl]);
 
     // Synchronize filters on browser back/forward navigation
     useEffect(() => {
@@ -274,11 +302,6 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             fabric: [],
         });
     };
-
-    const [availableFits, setAvailableFits] = useState<{name: string, count: number}[]>([]);
-    const [availableFabrics, setAvailableFabrics] = useState<{name: string, count: number}[]>([]);
-    const [availableColors, setAvailableColors] = useState<{name: string, hex: string, count: number}[]>([]);
-    const [availableSizes, setAvailableSizes] = useState<{name: string, count: number}[]>([]);
 
     // Dummy filter options for UI demonstration. In a real app, these should come from API.
 
