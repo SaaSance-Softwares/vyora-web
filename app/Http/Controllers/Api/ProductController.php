@@ -150,12 +150,13 @@ class ProductController extends Controller
                 $query->orderBy('name', 'desc');
                 break;
             case 'best_seller':
-                // Fallback to latest if no sales column
-                $query->latest();
+                $query->withCount('orderItems')
+                    ->orderByDesc('order_items_count')
+                    ->latest();
                 break;
             case 'featured':
                 if (Schema::hasColumn('products', 'is_featured')) {
-                    $query->where('is_featured', true);
+                    $query->orderByDesc('is_featured');
                 }
                 $query->latest();
                 break;
