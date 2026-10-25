@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { usePage, useRemember } from '@inertiajs/react';
+import { usePage, useRemember, router } from '@inertiajs/react';
 import { ProductCard } from '@/components/product/ProductCard';
 import api from '@/lib/api';
 import { PaginatedResponse, ProductList } from '@/types';
@@ -58,15 +58,19 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     
     // Filters
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useRemember<FilterState>({
-        in_stock: searchParams.has('in_stock') ? searchParams.get('in_stock') === '1' : (initialFilters?.in_stock || false),
-        sort: searchParams.get('sort') || initialFilters?.sort || 'new',
-        min_price: searchParams.get('min_price') || initialFilters?.min_price || '',
-        max_price: searchParams.get('max_price') || initialFilters?.max_price || '',
-        size: searchParams.get('size') ? searchParams.get('size')!.split(',') : (initialFilters?.size || []),
-        color: searchParams.get('color') ? searchParams.get('color')!.split(',') : (initialFilters?.color || []),
-        fit: searchParams.get('fit') ? searchParams.get('fit')!.split(',') : (initialFilters?.fit || []),
-        fabric: searchParams.get('fabric') ? searchParams.get('fabric')!.split(',') : (initialFilters?.fabric || []),
+    const [filters, setFilters] = useState<FilterState>(() => {
+        const search = typeof window !== 'undefined' ? window.location.search : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
+        const sp = new URLSearchParams(search);
+        return {
+            in_stock: sp.has('in_stock') ? sp.get('in_stock') === '1' : (initialFilters?.in_stock || false),
+            sort: sp.get('sort') || initialFilters?.sort || 'new',
+            min_price: sp.get('min_price') || initialFilters?.min_price || '',
+            max_price: sp.get('max_price') || initialFilters?.max_price || '',
+            size: sp.get('size') ? sp.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
+            color: sp.get('color') ? sp.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
+            fit: sp.get('fit') ? sp.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
+            fabric: sp.get('fabric') ? sp.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
+        };
     });
 
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -178,10 +182,52 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         if (filters.fit.length) params.set('fit', filters.fit.join(','));
         if (filters.fabric.length) params.set('fabric', filters.fabric.join(','));
         
-        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-        window.history.replaceState({}, '', newUrl);
+        const queryString = params.toString();
+        const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
+
+        // Preserve Inertia state and update current URL in history
+        const currentState = window.history.state || {};
+        const updatedState = {
+            ...currentState,
+            page: currentState.page ? {
+                ...currentState.page,
+                url: newUrl,
+            } : currentState.page,
+        };
+        window.history.replaceState(updatedState, '', newUrl);
+
+        if (typeof router.replace === 'function') {
+            try {
+                router.replace({
+                    url: newUrl,
+                    preserveState: true,
+                    preserveScroll: true,
+                });
+            } catch {
+                // Ignore fallback error
+            }
+        }
 
     }, [filters, fetchProducts, activeQueryKey, activeQueryValue]);
+
+    // Synchronize filters on browser back/forward navigation
+    useEffect(() => {
+        const handlePopState = () => {
+            const sp = new URLSearchParams(window.location.search);
+            setFilters({
+                in_stock: sp.has('in_stock') ? sp.get('in_stock') === '1' : (initialFilters?.in_stock || false),
+                sort: sp.get('sort') || initialFilters?.sort || 'new',
+                min_price: sp.get('min_price') || initialFilters?.min_price || '',
+                max_price: sp.get('max_price') || initialFilters?.max_price || '',
+                size: sp.get('size') ? sp.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
+                color: sp.get('color') ? sp.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
+                fit: sp.get('fit') ? sp.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
+                fabric: sp.get('fabric') ? sp.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
+            });
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [initialFilters]);
 
     // Infinite scroll intersection observer
     useEffect(() => {
@@ -253,19 +299,19 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         {subtitle && <p className="text-gray-500 font-medium">{subtitle}</p>}
                     </div>
                 </div>
-                <div className="flex justify-end items-center gap-3 w-full border-t border-gray-100 pt-4">
+                <div className="flex justify-between lg:justify-end items-center gap-3 w-full border-t border-gray-100 pt-4">
                     <button 
                         onClick={() => setIsFilterOpen(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm"
+                        className="flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm text-sm"
                     >
-                        <SlidersHorizontal size={18} /> Filters
+                        <SlidersHorizontal size={16} /> Filters
                     </button>
-                    <div className="hidden lg:flex items-center gap-2">
-                        <span className="text-sm text-gray-500 font-medium">Sort By:</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-xs sm:text-sm text-gray-500 font-medium whitespace-nowrap">Sort By:</span>
                         <select 
                             value={filters.sort}
                             onChange={(e) => handleFilterChange('sort', e.target.value)}
-                            className="border-none font-semibold text-sm focus:ring-0 cursor-pointer bg-transparent"
+                            className="border-none font-semibold text-xs sm:text-sm focus:ring-0 cursor-pointer bg-transparent py-1 pl-1 pr-6"
                             style={{ color: primaryColor }}
                         >
                             {SORT_OPTIONS.map(opt => (
