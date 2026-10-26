@@ -4691,10 +4691,23 @@ function MilestoneTimeline({
         borderColor
       },
       children: [
-        /* @__PURE__ */ jsx("div", { className: "flex items-center justify-between gap-3 mb-2", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-          /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
-          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-gray-700 uppercase tracking-widest", children: title })
-        ] }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+            /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-gray-700 uppercase tracking-widest", children: title })
+          ] }),
+          nextMilestone && /* @__PURE__ */ jsxs(
+            "a",
+            {
+              href: "/shop",
+              className: "inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors",
+              children: [
+                "Add Items ",
+                /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
+              ]
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsx("div", { className: "mb-4", children: nextMilestone ? /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600 font-medium leading-relaxed", children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
           /* @__PURE__ */ jsxs("span", { className: "font-semibold text-emerald-700", children: [
             "✓ ",
@@ -4805,29 +4818,7 @@ function MilestoneTimeline({
             );
           })
         ] }),
-        nextMilestone && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
-          /* @__PURE__ */ jsxs("span", { className: "text-gray-600 font-medium", children: [
-            "Add ",
-            /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
-              "₹",
-              diffToNext.toLocaleString("en-IN")
-            ] }),
-            " more for ",
-            /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(nextMilestone) })
-          ] }),
-          /* @__PURE__ */ jsxs(
-            "a",
-            {
-              href: "/shop",
-              className: "inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors ml-2",
-              children: [
-                "Add Items ",
-                /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
-              ]
-            }
-          )
-        ] }),
-        bestUnlocked && /* @__PURE__ */ jsxs("div", { className: `flex items-center justify-between text-xs ${nextMilestone ? "pt-2.5 border-t border-gray-50" : "mt-6 pt-3 border-t border-gray-100"}`, children: [
+        bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
             /* @__PURE__ */ jsx(
               "span",

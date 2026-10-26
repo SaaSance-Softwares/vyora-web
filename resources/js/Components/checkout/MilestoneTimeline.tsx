@@ -174,7 +174,7 @@ export function MilestoneTimeline({
                 borderColor: borderColor,
             }}
         >
-            {/* Header: Micro-badge */}
+            {/* Header: Micro-badge & Add Items on top only once */}
             <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex items-center gap-1.5">
                     <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white">
@@ -184,9 +184,18 @@ export function MilestoneTimeline({
                         {title}
                     </span>
                 </div>
+
+                {nextMilestone && (
+                    <a
+                        href="/shop"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors"
+                    >
+                        Add Items <ArrowRight size={11} />
+                    </a>
+                )}
             </div>
 
-            {/* Dynamic Status / Encouragement Message */}
+            {/* Followed by: Dynamic Encouragement (Add ₹XXX more for XX% OFF) */}
             <div className="mb-4">
                 {nextMilestone ? (
                     <p className="text-xs text-gray-600 font-medium leading-relaxed">
@@ -322,24 +331,9 @@ export function MilestoneTimeline({
                 })}
             </div>
 
-            {/* Add Items prompt: Just above Code auto-applied */}
-            {nextMilestone && (
-                <div className="mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                    <span className="text-gray-600 font-medium">
-                        Add <strong className="font-bold text-gray-900">₹{diffToNext.toLocaleString('en-IN')}</strong> more for <span className="font-bold text-gray-900">{formatDiscount(nextMilestone)}</span>
-                    </span>
-                    <a
-                        href="/shop"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors ml-2"
-                    >
-                        Add Items <ArrowRight size={11} />
-                    </a>
-                </div>
-            )}
-
-            {/* Bottom Status: Clean, non-intrusive confirmation */}
+            {/* Bottom Status: Clean auto-applied confirmation */}
             {bestUnlocked && (
-                <div className={`flex items-center justify-between text-xs ${nextMilestone ? 'pt-2.5 border-t border-gray-50' : 'mt-6 pt-3 border-t border-gray-100'}`}>
+                <div className="mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 text-gray-600">
                         <span
                             className="flex h-1.5 w-1.5 rounded-full"

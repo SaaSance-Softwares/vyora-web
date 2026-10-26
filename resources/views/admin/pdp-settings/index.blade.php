@@ -566,7 +566,7 @@
                     <p class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Live Preview</p>
                     <div class="flex-1 flex items-center justify-center bg-gray-50/70 rounded-2xl p-6 border border-gray-100">
                         <div id="preview-milestone-card" class="w-full max-w-md rounded-2xl p-5 shadow-xs transition-all border">
-                            {{-- Header --}}
+                            {{-- Header: Micro-badge & Add Items on top only once --}}
                             <div class="flex items-center justify-between gap-3 mb-2">
                                 <div class="flex items-center gap-1.5">
                                     <span class="flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white">
@@ -576,9 +576,12 @@
                                         Savings Milestones
                                     </span>
                                 </div>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2">
+                                    Add Items →
+                                </span>
                             </div>
 
-                            {{-- Dynamic Status --}}
+                            {{-- Dynamic Status (Followed by Add ₹XXX more for XX% OFF) --}}
                             <div class="mb-4">
                                 <p class="text-xs text-gray-600 font-medium leading-relaxed">
                                     <span id="preview-milestone-unlocked-status" class="font-semibold text-emerald-700">✓ 15% OFF unlocked! </span>
@@ -627,26 +630,14 @@
                                 </div>
                             </div>
 
-                            {{-- Add Items Row: Just above Code auto-applied --}}
+                            {{-- Bottom Status Confirmation (Clean auto-applied) --}}
                             <div class="mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                                <span class="text-gray-600 font-medium">
-                                    Add <strong class="font-bold text-gray-900">₹1,000</strong> more for <strong class="font-bold text-gray-900">20% OFF</strong>
-                                </span>
-                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-black underline underline-offset-2">
-                                    Add Items →
-                                </span>
-                            </div>
-
-                            {{-- Bottom Status Confirmation --}}
-                            <div class="pt-2.5 border-t border-gray-50 flex items-center justify-between text-xs">
                                 <div class="flex items-center gap-2 text-gray-600">
                                     <span id="preview-bottom-dot" class="flex h-1.5 w-1.5 rounded-full"></span>
                                     <span>Code <span class="font-mono font-semibold text-gray-900">Milestone15</span> auto-applied</span>
                                 </div>
                                 <span id="preview-bottom-badge" class="preview-unlocked-badge text-[11px] font-bold px-2 py-0.5 rounded-full border">
                                     15% OFF
-                                </span>
-                            </div>
                                 </span>
                             </div>
                         </div>
