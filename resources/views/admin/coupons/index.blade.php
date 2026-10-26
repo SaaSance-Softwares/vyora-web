@@ -24,6 +24,7 @@
                             <th class="px-6 py-4">Widget / Code</th>
                             <th class="px-6 py-4">Discount</th>
                             <th class="px-6 py-4 text-center">Usage</th>
+                            <th class="px-6 py-4">Expiry Date</th>
                             <th class="px-6 py-4">Status</th>
                             <th class="px-6 py-4 text-right">Actions</th>
                         </tr>
@@ -50,7 +51,17 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <div class="text-gray-900">{{ $coupon->times_used }} <span class="text-gray-400 text-xs">/ {{ $coupon->usage_limit ?: '∞' }}</span></div>
+                                    <div class="text-gray-900 font-semibold">{{ $coupon->computed_times_used ?? $coupon->times_used ?? 0 }} <span class="text-gray-400 text-xs font-normal">/ {{ $coupon->usage_limit ?: '∞' }}</span></div>
+                                </td>
+                                <td class="px-6 py-4 text-xs font-medium">
+                                    @if($coupon->expires_at)
+                                        <div class="font-semibold text-gray-900">{{ $coupon->expires_at->format('d M Y') }}</div>
+                                        <div class="text-[10px] {{ $coupon->expires_at->isPast() ? 'text-red-500 font-semibold' : 'text-gray-400' }}">
+                                            {{ $coupon->expires_at->format('h:i A') }} ({{ $coupon->expires_at->diffForHumans() }})
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400 italic">No expiry (Forever)</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 uppercase text-[10px] font-bold">
                                     @if(!$coupon->is_active)

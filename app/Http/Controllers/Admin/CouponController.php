@@ -12,6 +12,33 @@ class CouponController extends Controller
     {
         $coupons = Coupon::latest()->paginate(15);
 
+        // Calculate and synchronize actual usage from orders table
+        try {
+            $codes = $coupons->pluck('code')->filter()->map(fn ($c) => strtoupper(trim($c)))->unique()->values()->all();
+
+            if (!empty($codes)) {
+                $orderUsageCounts = \App\Models\Order::whereNotNull('coupon_code')
+                    ->where('coupon_code', '!=', '')
+                    ->whereIn(\Illuminate\Support\Facades\DB::raw('UPPER(TRIM(coupon_code))'), $codes)
+                    ->selectRaw('UPPER(TRIM(coupon_code)) as code, COUNT(DISTINCT id) as count')
+                    ->groupBy(\Illuminate\Support\Facades\DB::raw('UPPER(TRIM(coupon_code))'))
+                    ->pluck('count', 'code');
+
+                foreach ($coupons as $coupon) {
+                    $codeKey = strtoupper(trim($coupon->code));
+                    $actualCount = (int) ($orderUsageCounts[$codeKey] ?? 0);
+                    $coupon->computed_times_used = max((int) $coupon->times_used, $actualCount);
+
+                    // If orders exist but times_used was zero/lower, sync it silently in database
+                    if ($actualCount > (int) $coupon->times_used) {
+                        $coupon->updateQuietly(['times_used' => $actualCount]);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not calculate coupon usage from orders: '.$e->getMessage());
+        }
+
         return view('admin.coupons.index', compact('coupons'));
     }
 

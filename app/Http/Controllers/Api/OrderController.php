@@ -399,6 +399,16 @@ class OrderController extends Controller
                     );
                 }
 
+                // Increment coupon usage count
+                if (!empty($couponCode)) {
+                    try {
+                        \App\Models\Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($couponCode))])
+                            ->increment('times_used');
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to increment coupon times_used: '.$e->getMessage());
+                    }
+                }
+
                 // 3. Create Order Items
                 foreach ($orderItemsData as $data) {
                     OrderItem::create([

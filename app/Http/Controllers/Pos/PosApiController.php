@@ -269,6 +269,15 @@ class PosApiController extends Controller
                     'updated_at' => now(),
                 ]);
 
+                if (!empty($posOrder['coupon_code'])) {
+                    try {
+                        \App\Models\Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($posOrder['coupon_code']))])
+                            ->increment('times_used');
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Failed to increment coupon times_used in POS: '.$e->getMessage());
+                    }
+                }
+
                 foreach ($posOrder['items'] as $item) {
                     DB::table('order_items')->insert([
                         'order_id' => $orderId,
