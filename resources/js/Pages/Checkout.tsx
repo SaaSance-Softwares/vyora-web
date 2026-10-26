@@ -172,6 +172,16 @@ export default function CheckoutPage() {
     const [applying, setApplying] = useState(false);
     const [couponCode, setCouponCode] = useState('');
     const [couponErr, setCouponErr] = useState('');
+    const userDismissedRef = useRef<boolean>(false);
+    const prevItemsLengthRef = useRef<number>(cart.items.length);
+
+    // Reset user dismissal if user adds more items to the cart
+    useEffect(() => {
+        if (cart.items.length > prevItemsLengthRef.current) {
+            userDismissedRef.current = false;
+        }
+        prevItemsLengthRef.current = cart.items.length;
+    }, [cart.items.length]);
 
     // Re-validate coupon on mount to prevent stale localStorage data
     useEffect(() => {
@@ -272,7 +282,7 @@ export default function CheckoutPage() {
             const state = useCartStore.getState();
             if (!state.appliedCoupon && state.items.length > 0) {
                 const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
-                const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+                const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
 
                 // 1. Check if eligible for any milestone coupon (try highest threshold first)
                 const eligibleMilestones = milestones
@@ -320,41 +330,55 @@ export default function CheckoutPage() {
         }
     }, [guest.email]);
 
-    // Reactive Auto-Apply & Auto-Upgrade for Milestone Coupons
+    // Reactive Auto-Apply, Auto-Upgrade, Auto-Downgrade & Recalculate for Milestone Coupons in Checkout
     useEffect(() => {
-        if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+        if (!mounted || cart.items.length === 0) return;
 
         const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
+
         const eligibleMilestones = milestoneCoupons
             .filter(m => sub >= Number(m.min_cart_value))
             .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
 
         const bestMilestone = eligibleMilestones[0];
+        const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+        const isCurrentAMilestone = milestoneCoupons.some(m => m.code.toUpperCase() === currentCode);
 
+        // Case A: Best milestone available
         if (bestMilestone) {
-            const currentCode = cart.appliedCoupon?.code?.toUpperCase();
-            if (currentCode !== bestMilestone.code.toUpperCase()) {
-                const autoApply = async () => {
-                    try {
-                        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
-                        const res = await api.post('/api/coupons/apply', {
-                            code: bestMilestone.code,
-                            cart: { subtotal: sub, items }
-                        });
-                        if (res.data.success) {
-                            cart.setAppliedCoupon({
-                                code: res.data.data.coupon.code,
-                                discountAmount: res.data.data.discount_amount
+            // Only switch to best milestone if:
+            // 1. No coupon is applied AND user hasn't explicitly dismissed coupons, OR
+            // 2. Currently applied coupon is already a milestone coupon (upgrade or downgrade)
+            if ((!cart.appliedCoupon && !userDismissedRef.current) || isCurrentAMilestone) {
+                if (currentCode !== bestMilestone.code.toUpperCase()) {
+                    const autoApply = async () => {
+                        try {
+                            const res = await api.post('/api/coupons/apply', {
+                                code: bestMilestone.code,
+                                cart: { subtotal: sub, items }
                             });
+                            if (res.data.success) {
+                                cart.setAppliedCoupon({
+                                    code: res.data.data.coupon.code,
+                                    discountAmount: res.data.data.discount_amount
+                                });
+                            }
+                        } catch (e) {
+                            // ignore background auto-apply errors
                         }
-                    } catch (e) {
-                        // ignore background auto-apply errors
-                    }
-                };
-                autoApply();
+                    };
+                    autoApply();
+                }
+            }
+        } else {
+            // Case B: No milestones are eligible (subtotal dropped below all milestone tiers)
+            // If the currently applied coupon is a milestone coupon, auto-remove it!
+            if (isCurrentAMilestone) {
+                cart.setAppliedCoupon(null);
             }
         }
-    }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
+    }, [mounted, subtotal, milestoneCoupons, cart.items.length, cart.items.reduce((acc, i) => acc + (i.quantity || 1), 0), cart.appliedCoupon?.code]);
 
     useEffect(() => {
         const fetchPincode = async () => {
@@ -388,6 +412,7 @@ export default function CheckoutPage() {
     }, [guest.zip, activeCountryId]);
 
     const handleApplyCoupon = async (code: string) => {
+        userDismissedRef.current = false;
         const c = (code || couponInput).trim().toUpperCase();
         if (!c) return;
         setApplying(true); setCouponErr('');
@@ -395,7 +420,7 @@ export default function CheckoutPage() {
         try {
             const r = await api.post('/api/coupons/apply', {
                 code: c,
-                cart: { subtotal: sub, items: cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity })) }
+                cart: { subtotal: sub, items: cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity })) }
             });
             if (r.data.success) {
                 cart.setAppliedCoupon({ code: r.data.data.coupon.code, discountAmount: r.data.data.discount_amount });
@@ -846,7 +871,16 @@ export default function CheckoutPage() {
                                     <p className="text-xs font-black text-green-700 tracking-widest uppercase">{cart.appliedCoupon.code}</p>
                                     <p className="text-xs text-green-600 mt-0.5">−{formatPrice(discount)} saved</p>
                                 </div>
-                                <button onClick={() => cart.setAppliedCoupon(null)} className="text-green-400 hover:text-green-700 transition-colors p-1"><X size={15} /></button>
+                                <button
+                                    onClick={() => {
+                                        userDismissedRef.current = true;
+                                        cart.setAppliedCoupon(null);
+                                    }}
+                                    className="text-green-400 hover:text-green-700 transition-colors p-1"
+                                    title="Remove coupon"
+                                >
+                                    <X size={15} />
+                                </button>
                             </div>
                         ) : (
                             <div className="space-y-2">

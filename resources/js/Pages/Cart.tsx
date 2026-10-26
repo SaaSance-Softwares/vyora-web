@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCartStore, CartItem } from '@/store/cart';
 import { useWishlistStore, WishlistItem } from '@/store/wishlist';
 import { formatPrice } from '@/lib/utils';
@@ -6,7 +6,7 @@ import { trackAddToCart } from '@/lib/tracking';
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
 import { MilestoneTimeline, MilestoneCoupon } from '@/Components/checkout/MilestoneTimeline';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye, RefreshCcw, RotateCcw } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye, RefreshCcw, RotateCcw, X } from 'lucide-react';
 
 /* ── Cart Item ────────────────────────────────────────────────────────────── */
 function CartRow({ item, update, remove }: {
@@ -193,11 +193,22 @@ export default function CartPage() {
     const [mounted, setMounted] = useState(false);
     const [settings, setSettings] = useState<any>(null);
     const [milestoneCoupons, setMilestoneCoupons] = useState<MilestoneCoupon[]>([]);
+    const userDismissedRef = useRef<boolean>(false);
+    const prevItemsLengthRef = useRef<number>(cart.items.length);
+
+    // Reset user dismissal if user adds more items to the cart
+    useEffect(() => {
+        if (cart.items.length > prevItemsLengthRef.current) {
+            userDismissedRef.current = false;
+        }
+        prevItemsLengthRef.current = cart.items.length;
+    }, [cart.items.length]);
 
     const handleApplyCoupon = async (code: string) => {
+        userDismissedRef.current = false;
         try {
             const sub = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
-            const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+            const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
             const applyRes = await api.post('/api/coupons/apply', { code, cart: { subtotal: sub, items } });
             if (applyRes.data.success) {
                 cart.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
@@ -218,7 +229,7 @@ export default function CartPage() {
             const state = useCartStore.getState();
             if (!state.appliedCoupon && state.items.length > 0) {
                 const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
-                const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+                const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
 
                 // 1. Try highest eligible milestone first
                 const eligibleMilestones = milestones
@@ -255,39 +266,104 @@ export default function CartPage() {
         }).catch(() => { });
     }, []);
 
-    // Reactive Auto-Apply & Auto-Upgrade for Milestone Coupons in Cart
+    // Reactive Auto-Apply, Auto-Upgrade, Auto-Downgrade & Recalculate for Coupons in Cart
     useEffect(() => {
-        if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+        if (!mounted || cart.items.length === 0) return;
 
         const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
+
         const eligibleMilestones = milestoneCoupons
             .filter(m => sub >= Number(m.min_cart_value))
             .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
 
         const bestMilestone = eligibleMilestones[0];
+        const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+        const isCurrentAMilestone = milestoneCoupons.some(m => m.code.toUpperCase() === currentCode);
 
+        // Case A: An eligible milestone exists
         if (bestMilestone) {
-            const currentCode = cart.appliedCoupon?.code?.toUpperCase();
-            if (currentCode !== bestMilestone.code.toUpperCase()) {
-                const autoApply = async () => {
-                    try {
-                        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
-                        const res = await api.post('/api/coupons/apply', {
-                            code: bestMilestone.code,
-                            cart: { subtotal: sub, items }
-                        });
-                        if (res.data.success) {
+            // Only auto-switch if:
+            // 1. No coupon is applied AND user hasn't explicitly dismissed coupons, OR
+            // 2. The currently applied coupon is already a milestone coupon (upgrade or downgrade)
+            if ((!cart.appliedCoupon && !userDismissedRef.current) || isCurrentAMilestone) {
+                if (currentCode !== bestMilestone.code.toUpperCase()) {
+                    // Upgrade or downgrade to best milestone
+                    const autoApply = async () => {
+                        try {
+                            const res = await api.post('/api/coupons/apply', {
+                                code: bestMilestone.code,
+                                cart: { subtotal: sub, items }
+                            });
+                            if (res.data.success) {
+                                cart.setAppliedCoupon({
+                                    code: res.data.data.coupon.code,
+                                    discountAmount: res.data.data.discount_amount
+                                });
+                            }
+                        } catch (e) {}
+                    };
+                    autoApply();
+                } else {
+                    // Already on this milestone, but subtotal or items might have changed -> re-sync discount amount
+                    const revalidate = async () => {
+                        try {
+                            const res = await api.post('/api/coupons/apply', {
+                                code: bestMilestone.code,
+                                cart: { subtotal: sub, items }
+                            });
+                            if (res.data.success) {
+                                if (res.data.data.discount_amount !== cart.appliedCoupon?.discountAmount) {
+                                    cart.setAppliedCoupon({
+                                        code: res.data.data.coupon.code,
+                                        discountAmount: res.data.data.discount_amount
+                                    });
+                                }
+                            } else {
+                                cart.setAppliedCoupon(null);
+                            }
+                        } catch (e) {
+                            cart.setAppliedCoupon(null);
+                        }
+                    };
+                    revalidate();
+                }
+            }
+        } else {
+            // Case B: No milestones are eligible (subtotal dropped below all milestone tiers)
+            // If the currently applied coupon is a milestone coupon, auto-remove it!
+            if (isCurrentAMilestone) {
+                cart.setAppliedCoupon(null);
+            }
+        }
+
+        // Case C: A non-milestone manual coupon is applied (e.g. VIP or influencer promo)
+        // Keep it and re-calculate discount against current subtotal
+        if (cart.appliedCoupon && !isCurrentAMilestone) {
+            const revalidateManual = async () => {
+                try {
+                    const res = await api.post('/api/coupons/apply', {
+                        code: cart.appliedCoupon!.code,
+                        cart: { subtotal: sub, items }
+                    });
+                    if (res.data.success) {
+                        if (res.data.data.discount_amount !== cart.appliedCoupon!.discountAmount) {
                             cart.setAppliedCoupon({
-                                code: res.data.data.coupon.code,
+                                code: cart.appliedCoupon!.code,
                                 discountAmount: res.data.data.discount_amount
                             });
                         }
-                    } catch (e) {}
-                };
-                autoApply();
-            }
+                    } else {
+                        // Requirements no longer met (e.g. min cart value)
+                        cart.setAppliedCoupon(null);
+                    }
+                } catch (e) {
+                    cart.setAppliedCoupon(null);
+                }
+            };
+            revalidateManual();
         }
-    }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
+    }, [mounted, subtotal, milestoneCoupons, cart.items.length, cart.items.reduce((acc, i) => acc + (i.quantity || 1), 0), cart.appliedCoupon?.code]);
 
     if (!mounted) return <div className="min-h-[60vh]" />;
 
@@ -422,8 +498,21 @@ export default function CartPage() {
                                     <span>{formatPrice(subtotal)}</span>
                                 </div>
                                 {cart.appliedCoupon && (
-                                    <div className="flex justify-between text-green-600 font-medium">
-                                        <span>Coupon ({cart.appliedCoupon.code})</span>
+                                    <div className="flex justify-between items-center text-green-600 font-medium">
+                                        <div className="flex items-center gap-1.5">
+                                            <span>Coupon ({cart.appliedCoupon.code})</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    userDismissedRef.current = true;
+                                                    cart.setAppliedCoupon(null);
+                                                }}
+                                                className="text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                                                title="Remove coupon"
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        </div>
                                         <span>−{formatPrice(discount)}</span>
                                     </div>
                                 )}

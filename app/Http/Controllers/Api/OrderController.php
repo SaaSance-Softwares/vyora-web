@@ -171,9 +171,12 @@ class OrderController extends Controller
 
                 // Apply Coupon
                 $discountAmount = 0;
+                $appliedCouponModel = null;
                 $couponCode = $request->input('coupon_code');
                 if ($couponCode) {
-                    $coupon = Coupon::where('code', $couponCode)->where('is_active', true)->first();
+                    $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($couponCode))])
+                        ->where('is_active', true)
+                        ->first();
                     if ($coupon) {
                         $couponService = app(CouponService::class);
                         $cartDataForCoupon = [
@@ -191,6 +194,7 @@ class OrderController extends Controller
                         $couponResult = $couponService->validateAndCalculate($coupon, $cartDataForCoupon, $request->user());
                         if ($couponResult['valid']) {
                             $discountAmount = $couponResult['discount_amount'];
+                            $appliedCouponModel = $coupon;
                         }
                     }
                 }
@@ -380,7 +384,7 @@ class OrderController extends Controller
                     'coupon_discount_amount' => $discountAmount,
                     'prepaid_discount_amount' => $prepaidDiscount,
                     'gift_card_discount_amount' => $giftCardDiscount,
-                    'coupon_code' => $couponCode,
+                    'coupon_code' => $discountAmount > 0 ? $couponCode : null,
                     'shipping_address_id' => $address->id,
                     'billing_address_id' => $address->id,
                     'ip_address' => $geo['ip'],
@@ -399,11 +403,10 @@ class OrderController extends Controller
                     );
                 }
 
-                // Increment coupon usage count
-                if (!empty($couponCode)) {
+                // Increment coupon usage count ONLY if coupon was valid and discount was actually applied
+                if (!empty($couponCode) && $discountAmount > 0 && $appliedCouponModel) {
                     try {
-                        \App\Models\Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($couponCode))])
-                            ->increment('times_used');
+                        $appliedCouponModel->increment('times_used');
                     } catch (\Throwable $e) {
                         Log::warning('Failed to increment coupon times_used: '.$e->getMessage());
                     }
