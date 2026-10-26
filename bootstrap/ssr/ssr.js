@@ -2,7 +2,7 @@ import { jsxs, jsx, Fragment } from "react/jsx-runtime";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
-import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
+import React, { useState, useRef, useEffect, Suspense, useMemo, useCallback, useId } from "react";
 import { Link, usePage, router, useForm, Head, useRemember, createInertiaApp } from "@inertiajs/react";
 import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Minus, Star, StarHalf, Mail, Phone, Sparkles, ShoppingBag, Heart, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
 import clsx$1, { clsx } from "clsx";
@@ -5430,20 +5430,22 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const searchString = typeof window !== "undefined" && window.location.search ? window.location.search : url.includes("?") ? url.substring(url.indexOf("?")) : "";
-  const spInitial = new URLSearchParams(searchString);
-  const initialFilterState = {
-    in_stock: spInitial.has("in_stock") ? spInitial.get("in_stock") === "1" : initialFilters?.in_stock || false,
-    sort: spInitial.get("sort") || initialFilters?.sort || "new",
-    min_price: spInitial.get("min_price") || initialFilters?.min_price || "",
-    max_price: spInitial.get("max_price") || initialFilters?.max_price || "",
-    size: spInitial.get("size") ? spInitial.get("size").split(",").filter(Boolean) : initialFilters?.size || [],
-    color: spInitial.get("color") ? spInitial.get("color").split(",").filter(Boolean) : initialFilters?.color || [],
-    fit: spInitial.get("fit") ? spInitial.get("fit").split(",").filter(Boolean) : initialFilters?.fit || [],
-    fabric: spInitial.get("fabric") ? spInitial.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
+  const getInitialFilterState = () => {
+    const searchString = typeof window !== "undefined" && window.location.search ? window.location.search : url.includes("?") ? url.substring(url.indexOf("?")) : "";
+    const spInitial = new URLSearchParams(searchString);
+    return {
+      in_stock: spInitial.has("in_stock") ? spInitial.get("in_stock") === "1" : Boolean(initialFilters?.in_stock),
+      sort: spInitial.get("sort") || initialFilters?.sort || "new",
+      min_price: spInitial.get("min_price") || initialFilters?.min_price || "",
+      max_price: spInitial.get("max_price") || initialFilters?.max_price || "",
+      size: spInitial.get("size") ? spInitial.get("size").split(",").filter(Boolean) : initialFilters?.size || [],
+      color: spInitial.get("color") ? spInitial.get("color").split(",").filter(Boolean) : initialFilters?.color || [],
+      fit: spInitial.get("fit") ? spInitial.get("fit").split(",").filter(Boolean) : initialFilters?.fit || [],
+      fabric: spInitial.get("fabric") ? spInitial.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
+    };
   };
-  const [rawFilters, setFilters] = useRemember(initialFilterState, `${rememberKey}-filters`);
-  const filters = {
+  const [rawFilters, setFilters] = useRemember(getInitialFilterState(), `${rememberKey}-filters`);
+  const filters = useMemo(() => ({
     in_stock: Boolean(rawFilters && typeof rawFilters === "object" && rawFilters.in_stock),
     sort: rawFilters && typeof rawFilters === "object" && rawFilters.sort || "new",
     min_price: rawFilters && typeof rawFilters === "object" && rawFilters.min_price || "",
@@ -5452,7 +5454,30 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     color: Array.isArray(rawFilters?.color) ? rawFilters.color : [],
     fit: Array.isArray(rawFilters?.fit) ? rawFilters.fit : [],
     fabric: Array.isArray(rawFilters?.fabric) ? rawFilters.fabric : []
-  };
+  }), [
+    rawFilters?.in_stock,
+    rawFilters?.sort,
+    rawFilters?.min_price,
+    rawFilters?.max_price,
+    rawFilters?.size,
+    rawFilters?.color,
+    rawFilters?.fit,
+    rawFilters?.fabric
+  ]);
+  const serializedFilters = useMemo(() => {
+    return JSON.stringify({
+      in_stock: filters.in_stock,
+      sort: filters.sort,
+      min_price: filters.min_price,
+      max_price: filters.max_price,
+      size: [...filters.size].sort(),
+      color: [...filters.color].sort(),
+      fit: [...filters.fit].sort(),
+      fabric: [...filters.fabric].sort()
+    });
+  }, [filters]);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
   const [expandedSections, setExpandedSections] = useState({
     sort: true,
     price: true,
@@ -5466,17 +5491,18 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   };
   const loader = useRef(null);
   const buildQueryString = (currentPage) => {
+    const activeFilters = filtersRef.current;
     const params = new URLSearchParams();
     params.append("page", currentPage.toString());
     if (activeQueryKey && activeQueryValue) params.append(activeQueryKey, activeQueryValue);
-    if (filters.in_stock) params.append("in_stock", "1");
-    if (filters.sort) params.append("sort", filters.sort);
-    if (filters.min_price) params.append("min_price", filters.min_price);
-    if (filters.max_price) params.append("max_price", filters.max_price);
-    if (filters.size.length) params.append("size", filters.size.join(","));
-    if (filters.color.length) params.append("color", filters.color.join(","));
-    if (filters.fit.length) params.append("fit", filters.fit.join(","));
-    if (filters.fabric.length) params.append("fabric", filters.fabric.join(","));
+    if (activeFilters.in_stock) params.append("in_stock", "1");
+    if (activeFilters.sort) params.append("sort", activeFilters.sort);
+    if (activeFilters.min_price) params.append("min_price", activeFilters.min_price);
+    if (activeFilters.max_price) params.append("max_price", activeFilters.max_price);
+    if (activeFilters.size.length) params.append("size", activeFilters.size.join(","));
+    if (activeFilters.color.length) params.append("color", activeFilters.color.join(","));
+    if (activeFilters.fit.length) params.append("fit", activeFilters.fit.join(","));
+    if (activeFilters.fabric.length) params.append("fabric", activeFilters.fabric.join(","));
     params.append("_t", Date.now().toString());
     return params.toString();
   };
@@ -5484,7 +5510,6 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     if (!append) setLoading(true);
     else setLoadingMore(true);
     const currentUrl = `${baseEndpoint}?${buildQueryString(currentPage)}`;
-    console.log("Fetching products from:", currentUrl);
     try {
       const res = await api.get(currentUrl);
       const fetched = res.data.data;
@@ -5509,8 +5534,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
+  }, [baseEndpoint, activeQueryKey, activeQueryValue]);
   const syncUrl = useCallback((currentFilters) => {
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     params.delete("in_stock");
     params.delete("sort");
@@ -5568,7 +5594,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     setHasMore(true);
     fetchProducts(1, false);
     syncUrl(filters);
-  }, [filters, fetchProducts, activeQueryKey, activeQueryValue, syncUrl]);
+  }, [serializedFilters, activeQueryKey, activeQueryValue]);
   useEffect(() => {
     const handlePopState = () => {
       const sp = new URLSearchParams(window.location.search);
@@ -5603,15 +5629,15 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, fetchProducts]);
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev || {}, [key]: value }));
   };
   const toggleArrayFilter = (key, value) => {
     setFilters((prev) => {
-      const current = prev[key];
+      const current = prev && Array.isArray(prev[key]) ? prev[key] : [];
       if (current.includes(value)) {
-        return { ...prev, [key]: current.filter((item) => item !== value) };
+        return { ...prev || {}, [key]: current.filter((item) => item !== value) };
       }
-      return { ...prev, [key]: [...current, value] };
+      return { ...prev || {}, [key]: [...current, value] };
     });
   };
   const clearFilters = () => {

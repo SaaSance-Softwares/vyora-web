@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { usePage, useRemember, router } from '@inertiajs/react';
 import { ProductCard } from '@/components/product/ProductCard';
 import api from '@/lib/api';
@@ -68,26 +68,29 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     // Filters (cached so selected sort and filters persist across navigation)
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // Compute initial filter state directly as an object (useRemember does not invoke initializer functions)
-    const searchString = typeof window !== 'undefined' && window.location.search 
-        ? window.location.search 
-        : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
-    const spInitial = new URLSearchParams(searchString);
-    const initialFilterState: FilterState = {
-        in_stock: spInitial.has('in_stock') ? spInitial.get('in_stock') === '1' : (initialFilters?.in_stock || false),
-        sort: spInitial.get('sort') || initialFilters?.sort || 'new',
-        min_price: spInitial.get('min_price') || initialFilters?.min_price || '',
-        max_price: spInitial.get('max_price') || initialFilters?.max_price || '',
-        size: spInitial.get('size') ? spInitial.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
-        color: spInitial.get('color') ? spInitial.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
-        fit: spInitial.get('fit') ? spInitial.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
-        fabric: spInitial.get('fabric') ? spInitial.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
+    // Compute initial filter state directly as an object
+    const getInitialFilterState = (): FilterState => {
+        const searchString = typeof window !== 'undefined' && window.location.search 
+            ? window.location.search 
+            : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
+        const spInitial = new URLSearchParams(searchString);
+        return {
+            in_stock: spInitial.has('in_stock') ? spInitial.get('in_stock') === '1' : Boolean(initialFilters?.in_stock),
+            sort: spInitial.get('sort') || initialFilters?.sort || 'new',
+            min_price: spInitial.get('min_price') || initialFilters?.min_price || '',
+            max_price: spInitial.get('max_price') || initialFilters?.max_price || '',
+            size: spInitial.get('size') ? spInitial.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
+            color: spInitial.get('color') ? spInitial.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
+            fit: spInitial.get('fit') ? spInitial.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
+            fabric: spInitial.get('fabric') ? spInitial.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
+        };
     };
 
-    const [rawFilters, setFilters] = useRemember<FilterState>(initialFilterState, `${rememberKey}-filters`);
+    const [rawFilters, setFilters] = useRemember<FilterState>(getInitialFilterState(), `${rememberKey}-filters`);
 
     // Defensive guarantee that filters is always a well-formed object with array properties
-    const filters: FilterState = {
+    // useMemo ensures a stable object reference that does not trigger re-render loops
+    const filters: FilterState = useMemo(() => ({
         in_stock: Boolean(rawFilters && typeof rawFilters === 'object' && rawFilters.in_stock),
         sort: (rawFilters && typeof rawFilters === 'object' && rawFilters.sort) || 'new',
         min_price: (rawFilters && typeof rawFilters === 'object' && rawFilters.min_price) || '',
@@ -96,7 +99,32 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         color: Array.isArray(rawFilters?.color) ? rawFilters.color : [],
         fit: Array.isArray(rawFilters?.fit) ? rawFilters.fit : [],
         fabric: Array.isArray(rawFilters?.fabric) ? rawFilters.fabric : [],
-    };
+    }), [
+        rawFilters?.in_stock,
+        rawFilters?.sort,
+        rawFilters?.min_price,
+        rawFilters?.max_price,
+        rawFilters?.size,
+        rawFilters?.color,
+        rawFilters?.fit,
+        rawFilters?.fabric,
+    ]);
+
+    const serializedFilters = useMemo(() => {
+        return JSON.stringify({
+            in_stock: filters.in_stock,
+            sort: filters.sort,
+            min_price: filters.min_price,
+            max_price: filters.max_price,
+            size: [...filters.size].sort(),
+            color: [...filters.color].sort(),
+            fit: [...filters.fit].sort(),
+            fabric: [...filters.fabric].sort(),
+        });
+    }, [filters]);
+
+    const filtersRef = useRef(filters);
+    filtersRef.current = filters;
 
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         sort: true, price: true, size: true, color: true, fit: true, fabric: true
@@ -109,23 +137,23 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     const loader = useRef<HTMLDivElement>(null);
 
     const buildQueryString = (currentPage: number) => {
+        const activeFilters = filtersRef.current;
         const params = new URLSearchParams();
         params.append('page', currentPage.toString());
         if (activeQueryKey && activeQueryValue) params.append(activeQueryKey, activeQueryValue);
         
-        if (filters.in_stock) params.append('in_stock', '1');
-        if (filters.sort) params.append('sort', filters.sort);
-        if (filters.min_price) params.append('min_price', filters.min_price);
-        if (filters.max_price) params.append('max_price', filters.max_price);
-        if (filters.size.length) params.append('size', filters.size.join(','));
-        if (filters.color.length) params.append('color', filters.color.join(','));
-        if (filters.fit.length) params.append('fit', filters.fit.join(','));
-        if (filters.fabric.length) params.append('fabric', filters.fabric.join(','));
+        if (activeFilters.in_stock) params.append('in_stock', '1');
+        if (activeFilters.sort) params.append('sort', activeFilters.sort);
+        if (activeFilters.min_price) params.append('min_price', activeFilters.min_price);
+        if (activeFilters.max_price) params.append('max_price', activeFilters.max_price);
+        if (activeFilters.size.length) params.append('size', activeFilters.size.join(','));
+        if (activeFilters.color.length) params.append('color', activeFilters.color.join(','));
+        if (activeFilters.fit.length) params.append('fit', activeFilters.fit.join(','));
+        if (activeFilters.fabric.length) params.append('fabric', activeFilters.fabric.join(','));
         
         // Cache buster to bypass strict Chromium XHR caching
         params.append('_t', Date.now().toString());
 
-        
         return params.toString();
     };
 
@@ -134,14 +162,11 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         else setLoadingMore(true);
 
         const currentUrl = `${baseEndpoint}?${buildQueryString(currentPage)}`;
-        console.log('Fetching products from:', currentUrl);
 
         try {
             const res = await api.get<PaginatedResponse<ProductList>>(currentUrl);
             const fetched = res.data.data;
-            
 
-            
             if (append) {
                 setProducts(prev => [...prev, ...fetched]);
             } else {
@@ -165,9 +190,10 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [filters, baseEndpoint, activeQueryKey, activeQueryValue]);
+    }, [baseEndpoint, activeQueryKey, activeQueryValue]);
 
     const syncUrl = useCallback((currentFilters: FilterState) => {
+        if (typeof window === 'undefined') return;
         const params = new URLSearchParams(window.location.search);
         
         // Remove existing filter params
@@ -209,7 +235,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
 
     const isFirstMount = useRef(true);
 
-    // Initial fetch when filters change
+    // Initial fetch and fetch when filters change
     useEffect(() => {
         if (isFirstMount.current) {
             isFirstMount.current = false;
@@ -242,7 +268,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         fetchProducts(1, false);
         syncUrl(filters);
 
-    }, [filters, fetchProducts, activeQueryKey, activeQueryValue, syncUrl]);
+    }, [serializedFilters, activeQueryKey, activeQueryValue]);
 
     // Synchronize filters on browser back/forward navigation
     useEffect(() => {
@@ -283,16 +309,16 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     }, [hasMore, loading, loadingMore, fetchProducts]);
 
     const handleFilterChange = (key: keyof FilterState, value: any) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+        setFilters(prev => ({ ...(prev || {}), [key]: value }));
     };
 
     const toggleArrayFilter = (key: keyof FilterState, value: string) => {
         setFilters(prev => {
-            const current = prev[key] as string[];
+            const current = (prev && Array.isArray(prev[key])) ? (prev[key] as string[]) : [];
             if (current.includes(value)) {
-                return { ...prev, [key]: current.filter(item => item !== value) };
+                return { ...(prev || {}), [key]: current.filter(item => item !== value) };
             }
-            return { ...prev, [key]: [...current, value] };
+            return { ...(prev || {}), [key]: [...current, value] };
         });
     };
 
