@@ -31,6 +31,11 @@
                                 <td class="px-6 py-4">
                                     <div class="font-bold text-gray-900">{{ $coupon->code }}</div>
                                     <div class="text-[10px] text-gray-400 font-bold uppercase">{{ $coupon->name ?: 'Standard' }}</div>
+                                    @if($coupon->is_milestone)
+                                        <div class="mt-1">
+                                            <span class="inline-block px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded text-[9px] font-bold">🎯 Milestone (Min ₹{{ number_format($coupon->min_cart_value) }})</span>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4">
                                     @if($coupon->type === 'percentage')

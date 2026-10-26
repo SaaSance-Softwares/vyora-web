@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/utils';
 import { trackAddToCart } from '@/lib/tracking';
 import { Link, Head, usePage } from '@inertiajs/react';
 import api from '@/lib/api';
+import { MilestoneTimeline, MilestoneCoupon } from '@/Components/checkout/MilestoneTimeline';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Heart, Eye, RefreshCcw, RotateCcw } from 'lucide-react';
 
 /* ── Cart Item ────────────────────────────────────────────────────────────── */
@@ -190,26 +191,64 @@ export default function CartPage() {
     const wishlist = useWishlistStore();
     const [mounted, setMounted] = useState(false);
     const [settings, setSettings] = useState<any>(null);
+    const [milestoneCoupons, setMilestoneCoupons] = useState<MilestoneCoupon[]>([]);
+
+    const handleApplyCoupon = async (code: string) => {
+        try {
+            const sub = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
+            const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+            const applyRes = await api.post('/api/coupons/apply', { code, cart: { subtotal: sub, items } });
+            if (applyRes.data.success) {
+                cart.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+            }
+        } catch (e) {}
+    };
 
     useEffect(() => {
         setMounted(true);
         api.get('/api/settings').then(r => setSettings(r.data)).catch(() => { });
 
-        // Magic Pre-applied Discount Logic
+        // Milestone and Magic Coupons Logic
         api.get('/api/coupons/public').then(async r => {
             const magicCoupons = r.data.magic_coupons || [];
+            const milestones: MilestoneCoupon[] = r.data.milestone_coupons || [];
+            setMilestoneCoupons(milestones);
+
             const state = useCartStore.getState();
-            if (!state.appliedCoupon && magicCoupons.length > 0 && state.items.length > 0) {
-                for (const mc of magicCoupons) {
-                    try {
-                        const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
-                        const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
-                        const applyRes = await api.post('/api/coupons/apply', { code: mc.code, cart: { subtotal: sub, items } });
-                        if (applyRes.data.success) {
-                            state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
-                            break;
-                        }
-                    } catch (e) {}
+            if (!state.appliedCoupon && state.items.length > 0) {
+                const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
+                const items = state.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+
+                // 1. Try highest eligible milestone first
+                const eligibleMilestones = milestones
+                    .filter(m => sub >= Number(m.min_cart_value))
+                    .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+
+                let applied = false;
+                if (eligibleMilestones.length > 0) {
+                    for (const em of eligibleMilestones) {
+                        try {
+                            const applyRes = await api.post('/api/coupons/apply', { code: em.code, cart: { subtotal: sub, items } });
+                            if (applyRes.data.success) {
+                                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                                applied = true;
+                                break;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                // 2. Fallback to magic coupons
+                if (!applied && magicCoupons.length > 0) {
+                    for (const mc of magicCoupons) {
+                        try {
+                            const applyRes = await api.post('/api/coupons/apply', { code: mc.code, cart: { subtotal: sub, items } });
+                            if (applyRes.data.success) {
+                                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                                break;
+                            }
+                        } catch (e) {}
+                    }
                 }
             }
         }).catch(() => { });
@@ -320,6 +359,16 @@ export default function CartPage() {
                 {/* ── RIGHT ────────────────────────────────────────────────── */}
                 {cart.items.length > 0 && (
                     <div className="w-full lg:w-[340px] shrink-0 space-y-4">
+                        {milestoneCoupons.length > 0 && (
+                            <MilestoneTimeline
+                                subtotal={subtotal}
+                                milestones={milestoneCoupons}
+                                appliedCoupon={cart.appliedCoupon}
+                                onApply={handleApplyCoupon}
+                                showContinueShoppingLink={true}
+                            />
+                        )}
+
                         <div className="bg-white border border-gray-100 rounded-2xl p-5">
                             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
 

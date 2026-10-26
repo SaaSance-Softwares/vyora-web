@@ -167,6 +167,10 @@
                         <input type="checkbox" name="show_on_checkout_page" value="1" {{ $coupon->show_on_checkout_page ? 'checked' : '' }} class="h-4 w-4 rounded bg-gray-800 border-0">
                         <span class="text-xs font-bold">Show on Checkout</span>
                     </label>
+                    <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-amber-50/60 border border-amber-200/60">
+                        <input type="checkbox" name="is_milestone" value="1" {{ $coupon->is_milestone ? 'checked' : '' }} class="h-4 w-4 rounded text-amber-600 focus:ring-amber-500 border-gray-300">
+                        <span class="text-xs font-bold text-amber-800">🎯 Milestone Coupon (Timeline Tier)</span>
+                    </label>
                 </div>
 
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">

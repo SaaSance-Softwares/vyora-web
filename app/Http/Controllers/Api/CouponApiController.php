@@ -34,11 +34,16 @@ class CouponApiController extends Controller
         $magicCoupons = $coupons->where('is_default_magic', true)->values();
         $productPageCoupons = $coupons->where('show_on_product_page', true)->values();
         $checkoutCoupons = $coupons->where('show_on_checkout_page', true)->values();
+        $milestoneCoupons = $coupons->where('is_milestone', true)
+            ->where('min_cart_value', '>', 0)
+            ->sortBy('min_cart_value')
+            ->values();
 
         return response()->json([
             'magic_coupons' => $magicCoupons,
             'product_coupons' => $productPageCoupons,
             'checkout_coupons' => $checkoutCoupons,
+            'milestone_coupons' => $milestoneCoupons,
         ]);
     }
 

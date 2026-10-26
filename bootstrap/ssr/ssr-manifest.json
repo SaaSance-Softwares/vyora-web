@@ -13,6 +13,7 @@
   "resources/js/Components/auth/LoginForm.tsx": [],
   "resources/js/Components/auth/RegisterForm.tsx": [],
   "resources/js/Components/checkout/CheckoutAddress.tsx": [],
+  "resources/js/Components/checkout/MilestoneTimeline.tsx": [],
   "resources/js/Components/product/PriceHistoryModal.tsx": [],
   "resources/js/Components/product/ProductCard.tsx": [],
   "resources/js/Components/product/ProductDetailClient.tsx": [],

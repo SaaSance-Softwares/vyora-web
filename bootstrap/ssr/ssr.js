@@ -4,7 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import React, { useState, useRef, useEffect, Suspense, useCallback, useId, useMemo } from "react";
 import { Link, usePage, router, useForm, Head, useRemember, createInertiaApp } from "@inertiajs/react";
-import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Minus, Star, StarHalf, Mail, Phone, ShoppingBag, Heart, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, Sparkles, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
+import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Minus, Star, StarHalf, Mail, Phone, Sparkles, ShoppingBag, Heart, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, X, Tag, Ticket, CheckCircle, Truck, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
 import clsx$1, { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import Confetti from "react-confetti";
@@ -4591,6 +4591,185 @@ const trackPurchase = (transactionId, total, items, customerData) => {
     number_items: items.reduce((sum, item) => sum + (item.quantity || 1), 0)
   });
 };
+function MilestoneTimeline({
+  subtotal,
+  milestones,
+  appliedCoupon,
+  onApply,
+  applying = false,
+  showContinueShoppingLink = false
+}) {
+  const validMilestones = React.useMemo(() => {
+    return (milestones || []).filter((m) => Number(m.min_cart_value) > 0).sort((a, b) => Number(a.min_cart_value) - Number(b.min_cart_value));
+  }, [milestones]);
+  if (!validMilestones || validMilestones.length === 0) {
+    return null;
+  }
+  const n = validMilestones.length;
+  const maxMilestoneValue = Number(validMilestones[n - 1].min_cart_value);
+  const unlockedMilestones = validMilestones.filter((m) => subtotal >= Number(m.min_cart_value));
+  const bestUnlocked = unlockedMilestones.length > 0 ? unlockedMilestones[unlockedMilestones.length - 1] : null;
+  const nextMilestone = validMilestones.find((m) => subtotal < Number(m.min_cart_value)) || null;
+  const formatDiscount = (m) => {
+    if (m.type === "percentage") {
+      return `${Number(m.discount_amount)}% OFF`;
+    }
+    if (m.type === "fixed") {
+      return `₹${Number(m.discount_amount).toLocaleString("en-IN")} OFF`;
+    }
+    if (m.type === "free_shipping") {
+      return "FREE SHIP";
+    }
+    return "SPECIAL OFFER";
+  };
+  const calculateProgress = () => {
+    if (subtotal <= 0) return 0;
+    if (subtotal >= maxMilestoneValue) return 100;
+    const nodePositions = validMilestones.map((_, idx) => {
+      if (n === 1) return 100;
+      const margin = 12;
+      const span = 100 - margin * 2;
+      return margin + idx / (n - 1) * span;
+    });
+    const firstMin = Number(validMilestones[0].min_cart_value);
+    if (subtotal < firstMin) {
+      const firstPos = nodePositions[0];
+      return Math.max(4, subtotal / firstMin * firstPos);
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const lowVal = Number(validMilestones[i].min_cart_value);
+      const highVal = Number(validMilestones[i + 1].min_cart_value);
+      if (subtotal >= lowVal && subtotal <= highVal) {
+        const lowPos = nodePositions[i];
+        const highPos = nodePositions[i + 1];
+        const ratio = (subtotal - lowVal) / (highVal - lowVal);
+        return lowPos + ratio * (highPos - lowPos);
+      }
+    }
+    return 100;
+  };
+  const progressPercent = calculateProgress();
+  const getNodePosition = (idx) => {
+    if (n === 1) return 100;
+    const margin = 12;
+    const span = 100 - margin * 2;
+    return margin + idx / (n - 1) * span;
+  };
+  const diffToNext = nextMilestone ? Math.max(0, Math.ceil(Number(nextMilestone.min_cart_value) - subtotal)) : 0;
+  const isApplied = (code) => {
+    return appliedCoupon?.code?.toUpperCase() === code?.toUpperCase();
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-emerald-50/50 border border-amber-200/70 p-4 sm:p-5 shadow-sm transition-all mb-4", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-3 mb-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs", children: /* @__PURE__ */ jsx(Sparkles, { size: 11, className: "animate-pulse" }) }),
+          /* @__PURE__ */ jsx("h4", { className: "text-xs font-black uppercase tracking-wider text-amber-950", children: "Savings Milestone" })
+        ] }),
+        /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-700 font-medium", children: nextMilestone ? /* @__PURE__ */ jsx(Fragment, { children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsxs("span", { className: "font-bold text-emerald-700", children: [
+            "🎉 ",
+            formatDiscount(bestUnlocked),
+            " unlocked! "
+          ] }),
+          "Add ",
+          /* @__PURE__ */ jsxs("strong", { className: "font-black text-gray-900", children: [
+            "₹",
+            diffToNext.toLocaleString("en-IN")
+          ] }),
+          " more to unlock ",
+          /* @__PURE__ */ jsx("span", { className: "font-black text-amber-700", children: formatDiscount(nextMilestone) }),
+          "!"
+        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+          "Add ",
+          /* @__PURE__ */ jsxs("strong", { className: "font-black text-gray-900", children: [
+            "₹",
+            diffToNext.toLocaleString("en-IN")
+          ] }),
+          " more to unlock ",
+          /* @__PURE__ */ jsx("span", { className: "font-black text-amber-700", children: formatDiscount(nextMilestone) }),
+          "!"
+        ] }) }) : /* @__PURE__ */ jsxs("span", { className: "font-black text-emerald-700 flex items-center gap-1", children: [
+          "🏆 Awesome! Maximum savings unlocked (",
+          bestUnlocked ? formatDiscount(bestUnlocked) : "Best offer",
+          ")!"
+        ] }) })
+      ] }),
+      showContinueShoppingLink && nextMilestone && /* @__PURE__ */ jsxs(
+        "a",
+        {
+          href: "/shop",
+          className: "hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors",
+          children: [
+            "Add Items ",
+            /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
+          ]
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "relative pt-2 pb-7 px-1", children: [
+      /* @__PURE__ */ jsx("div", { className: "h-2 w-full bg-amber-200/50 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 rounded-full transition-all duration-700 ease-out shadow-xs",
+          style: { width: `${Math.min(100, Math.max(0, progressPercent))}%` }
+        }
+      ) }),
+      validMilestones.map((m, idx) => {
+        const pos = getNodePosition(idx);
+        const unlocked = subtotal >= Number(m.min_cart_value);
+        const isNext = nextMilestone?.id === m.id;
+        const applied = isApplied(m.code);
+        return /* @__PURE__ */ jsxs(
+          "div",
+          {
+            className: "absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none group",
+            style: { left: `${pos}%` },
+            children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: !unlocked || applying,
+                  onClick: () => unlocked && onApply(m.code),
+                  title: unlocked ? applied ? "Coupon Applied" : `Click to apply ${m.code}` : `Spend ₹${Number(m.min_cart_value).toLocaleString("en-IN")} to unlock`,
+                  className: `relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${applied ? "bg-emerald-600 border-white text-white ring-2 ring-emerald-500 scale-110" : unlocked ? "bg-emerald-500 border-white text-white hover:scale-115 hover:bg-emerald-600 cursor-pointer ring-1 ring-emerald-300" : isNext ? "bg-white border-amber-500 text-amber-600 ring-2 ring-amber-200 animate-pulse" : "bg-white border-gray-300 text-gray-400"}`,
+                  children: applied ? /* @__PURE__ */ jsx(Check, { size: 12, strokeWidth: 3.5 }) : unlocked ? /* @__PURE__ */ jsx(Gift, { size: 11, strokeWidth: 2.5 }) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                }
+              ),
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-8 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
+                /* @__PURE__ */ jsxs("span", { className: `text-[10px] font-black leading-tight ${unlocked ? "text-emerald-700" : isNext ? "text-amber-900 font-extrabold" : "text-gray-400"}`, children: [
+                  "₹",
+                  Number(m.min_cart_value).toLocaleString("en-IN")
+                ] }),
+                /* @__PURE__ */ jsx("span", { className: `text-[9px] font-extrabold tracking-tight px-1.5 py-0.5 rounded-full mt-0.5 transition-colors ${applied ? "bg-emerald-600 text-white shadow-xs" : unlocked ? "bg-emerald-100 text-emerald-800" : isNext ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-500"}`, children: applied ? "✓ APPLIED" : formatDiscount(m) })
+              ] })
+            ]
+          },
+          m.id || idx
+        );
+      })
+    ] }),
+    bestUnlocked && !isApplied(bestUnlocked.code) && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-gray-600 font-medium", children: [
+        "You unlocked ",
+        /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(bestUnlocked) }),
+        " with code ",
+        /* @__PURE__ */ jsx("code", { className: "font-mono font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded", children: bestUnlocked.code })
+      ] }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => onApply(bestUnlocked.code),
+          disabled: applying,
+          className: "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50",
+          children: applying ? "Applying…" : `Claim ${formatDiscount(bestUnlocked)}`
+        }
+      )
+    ] })
+  ] });
+}
 function CartRow$1({ item, update, remove }) {
   return /* @__PURE__ */ jsxs("div", { className: "flex flex-col py-5 border-b border-gray-100 last:border-0", children: [
     /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
@@ -4720,24 +4899,55 @@ function CartPage() {
   const wishlist = useWishlistStore();
   const [mounted, setMounted] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [milestoneCoupons, setMilestoneCoupons] = useState([]);
+  const handleApplyCoupon = async (code) => {
+    try {
+      const sub = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
+      const items = cart.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+      const applyRes = await api.post("/api/coupons/apply", { code, cart: { subtotal: sub, items } });
+      if (applyRes.data.success) {
+        cart.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+      }
+    } catch (e) {
+    }
+  };
   useEffect(() => {
     setMounted(true);
     api.get("/api/settings").then((r) => setSettings(r.data)).catch(() => {
     });
     api.get("/api/coupons/public").then(async (r) => {
       const magicCoupons = r.data.magic_coupons || [];
+      const milestones = r.data.milestone_coupons || [];
+      setMilestoneCoupons(milestones);
       const state = useCartStore.getState();
-      if (!state.appliedCoupon && magicCoupons.length > 0 && state.items.length > 0) {
-        for (const mc of magicCoupons) {
-          try {
-            const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
-            const items = state.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
-            const applyRes = await api.post("/api/coupons/apply", { code: mc.code, cart: { subtotal: sub, items } });
-            if (applyRes.data.success) {
-              state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
-              break;
+      if (!state.appliedCoupon && state.items.length > 0) {
+        const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
+        const items = state.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+        const eligibleMilestones = milestones.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+        let applied = false;
+        if (eligibleMilestones.length > 0) {
+          for (const em of eligibleMilestones) {
+            try {
+              const applyRes = await api.post("/api/coupons/apply", { code: em.code, cart: { subtotal: sub, items } });
+              if (applyRes.data.success) {
+                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                applied = true;
+                break;
+              }
+            } catch (e) {
             }
-          } catch (e) {
+          }
+        }
+        if (!applied && magicCoupons.length > 0) {
+          for (const mc of magicCoupons) {
+            try {
+              const applyRes = await api.post("/api/coupons/apply", { code: mc.code, cart: { subtotal: sub, items } });
+              if (applyRes.data.success) {
+                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                break;
+              }
+            } catch (e) {
+            }
           }
         }
       }
@@ -4819,60 +5029,72 @@ function CartPage() {
           /* @__PURE__ */ jsx("div", { className: "bg-white border-y sm:border sm:rounded-2xl px-4 sm:px-5 divide-y divide-gray-50 -mx-4 sm:mx-0", children: wishlist.items.map((item) => /* @__PURE__ */ jsx(WishlistRow, { item, remove: wishlist.removeItem }, item.productId)) })
         ] })
       ] }),
-      cart.items.length > 0 && /* @__PURE__ */ jsx("div", { className: "w-full lg:w-[340px] shrink-0 space-y-4", children: /* @__PURE__ */ jsxs("div", { className: "bg-white border border-gray-100 rounded-2xl p-5", children: [
-        /* @__PURE__ */ jsx("p", { className: "text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4", children: "Order Summary" }),
-        /* @__PURE__ */ jsxs("div", { className: "space-y-2.5 text-sm", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
-            /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-900", children: formatPrice(mrpTotal) })
-          ] }),
-          mrpDiscount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
-            /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
-            /* @__PURE__ */ jsxs("span", { children: [
-              "−",
-              formatPrice(mrpDiscount)
+      cart.items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "w-full lg:w-[340px] shrink-0 space-y-4", children: [
+        milestoneCoupons.length > 0 && /* @__PURE__ */ jsx(
+          MilestoneTimeline,
+          {
+            subtotal,
+            milestones: milestoneCoupons,
+            appliedCoupon: cart.appliedCoupon,
+            onApply: handleApplyCoupon,
+            showContinueShoppingLink: true
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: "bg-white border border-gray-100 rounded-2xl p-5", children: [
+          /* @__PURE__ */ jsx("p", { className: "text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4", children: "Order Summary" }),
+          /* @__PURE__ */ jsxs("div", { className: "space-y-2.5 text-sm", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
+              /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
+              /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-900", children: formatPrice(mrpTotal) })
+            ] }),
+            mrpDiscount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600", children: [
+              /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
+              /* @__PURE__ */ jsxs("span", { children: [
+                "−",
+                formatPrice(mrpDiscount)
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
+              /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
+              /* @__PURE__ */ jsx("span", { children: formatPrice(subtotal) })
+            ] }),
+            cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600 font-medium", children: [
+              /* @__PURE__ */ jsxs("span", { children: [
+                "Coupon (",
+                cart.appliedCoupon.code,
+                ")"
+              ] }),
+              /* @__PURE__ */ jsxs("span", { children: [
+                "−",
+                formatPrice(discount)
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+              /* @__PURE__ */ jsx("span", { children: "Shipping" }),
+              /* @__PURE__ */ jsx("span", { children: shippingLabel })
+            ] }),
+            isTaxEnabled && settings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
+              /* @__PURE__ */ jsxs("span", { children: [
+                taxLabel,
+                " @ ",
+                rate,
+                "% ",
+                taxInclusive ? "(Included)" : "(Excluded)"
+              ] }),
+              /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
+            ] }, rate)) }),
+            /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-100 my-1" }),
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-base", children: [
+              /* @__PURE__ */ jsx("span", { children: "Estimated Total" }),
+              /* @__PURE__ */ jsx("span", { children: formatPrice(total) })
             ] })
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
-            /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
-            /* @__PURE__ */ jsx("span", { children: formatPrice(subtotal) })
-          ] }),
-          cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-green-600 font-medium", children: [
-            /* @__PURE__ */ jsxs("span", { children: [
-              "Coupon (",
-              cart.appliedCoupon.code,
-              ")"
-            ] }),
-            /* @__PURE__ */ jsxs("span", { children: [
-              "−",
-              formatPrice(discount)
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
-            /* @__PURE__ */ jsx("span", { children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { children: shippingLabel })
-          ] }),
-          isTaxEnabled && settings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500 text-xs", children: [
-            /* @__PURE__ */ jsxs("span", { children: [
-              taxLabel,
-              " @ ",
-              rate,
-              "% ",
-              taxInclusive ? "(Included)" : "(Excluded)"
-            ] }),
-            /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
-          ] }, rate)) }),
-          /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-100 my-1" }),
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-base", children: [
-            /* @__PURE__ */ jsx("span", { children: "Estimated Total" }),
-            /* @__PURE__ */ jsx("span", { children: formatPrice(total) })
+          /* @__PURE__ */ jsxs(Link, { href: "/checkout", className: "mt-5 w-full bg-gray-900 text-white py-3.5 rounded-xl font-semibold text-sm hover:bg-black transition-all active:scale-[0.98] flex items-center justify-center gap-2", children: [
+            "Proceed to Checkout",
+            /* @__PURE__ */ jsx(ArrowRight, { size: 16 })
           ] })
-        ] }),
-        /* @__PURE__ */ jsxs(Link, { href: "/checkout", className: "mt-5 w-full bg-gray-900 text-white py-3.5 rounded-xl font-semibold text-sm hover:bg-black transition-all active:scale-[0.98] flex items-center justify-center gap-2", children: [
-          "Proceed to Checkout",
-          /* @__PURE__ */ jsx(ArrowRight, { size: 16 })
         ] })
-      ] }) })
+      ] })
     ] })
   ] });
 }
@@ -5996,6 +6218,7 @@ function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [publicCoupons, setPublicCoupons] = useState([]);
+  const [milestoneCoupons, setMilestoneCoupons] = useState([]);
   const [couponModal, setCouponModal] = useState(false);
   const [applying, setApplying] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -6083,18 +6306,37 @@ function CheckoutPage() {
     api.get("/api/coupons/public").then(async (r) => {
       setPublicCoupons(r.data.checkout_coupons || []);
       const magicCoupons = r.data.magic_coupons || [];
+      const milestones = r.data.milestone_coupons || [];
+      setMilestoneCoupons(milestones);
       const state = useCartStore.getState();
-      if (!state.appliedCoupon && magicCoupons.length > 0 && state.items.length > 0) {
-        for (const mc of magicCoupons) {
-          try {
-            const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
-            const items = state.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
-            const applyRes = await api.post("/api/coupons/apply", { code: mc.code, cart: { subtotal: sub, items } });
-            if (applyRes.data.success) {
-              state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
-              break;
+      if (!state.appliedCoupon && state.items.length > 0) {
+        const sub = state.items.reduce((s, i) => s + i.price * i.quantity, 0);
+        const items = state.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+        const eligibleMilestones = milestones.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+        let applied = false;
+        if (eligibleMilestones.length > 0) {
+          for (const em of eligibleMilestones) {
+            try {
+              const applyRes = await api.post("/api/coupons/apply", { code: em.code, cart: { subtotal: sub, items } });
+              if (applyRes.data.success) {
+                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                applied = true;
+                break;
+              }
+            } catch (e) {
             }
-          } catch (e) {
+          }
+        }
+        if (!applied && magicCoupons.length > 0) {
+          for (const mc of magicCoupons) {
+            try {
+              const applyRes = await api.post("/api/coupons/apply", { code: mc.code, cart: { subtotal: sub, items } });
+              if (applyRes.data.success) {
+                state.setAppliedCoupon({ code: applyRes.data.data.coupon.code, discountAmount: applyRes.data.data.discount_amount });
+                break;
+              }
+            } catch (e) {
+            }
           }
         }
       }
@@ -6529,6 +6771,16 @@ function CheckoutPage() {
             /* @__PURE__ */ jsx(Tag, { size: 14, className: "text-gray-500" }),
             /* @__PURE__ */ jsx("p", { className: "text-sm font-semibold text-gray-700", children: "Apply Coupon" })
           ] }),
+          milestoneCoupons.length > 0 && /* @__PURE__ */ jsx(
+            MilestoneTimeline,
+            {
+              subtotal,
+              milestones: milestoneCoupons,
+              appliedCoupon: cart.appliedCoupon,
+              onApply: handleApplyCoupon,
+              applying
+            }
+          ),
           cart.appliedCoupon ? /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-4 py-3", children: [
             /* @__PURE__ */ jsxs("div", { children: [
               /* @__PURE__ */ jsx("p", { className: "text-xs font-black text-green-700 tracking-widest uppercase", children: cart.appliedCoupon.code }),

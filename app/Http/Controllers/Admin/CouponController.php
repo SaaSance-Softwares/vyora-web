@@ -36,6 +36,7 @@ class CouponController extends Controller
             'is_default_magic' => 'boolean',
             'show_on_product_page' => 'boolean',
             'show_on_checkout_page' => 'boolean',
+            'is_milestone' => 'boolean',
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after_or_equal:starts_at',
             'usage_limit' => 'nullable|integer|min:1',
@@ -55,6 +56,7 @@ class CouponController extends Controller
         $validated['is_default_magic'] = $request->has('is_default_magic');
         $validated['show_on_product_page'] = $request->has('show_on_product_page');
         $validated['show_on_checkout_page'] = $request->has('show_on_checkout_page');
+        $validated['is_milestone'] = $request->has('is_milestone');
         $validated['exclude_sale_items'] = $request->has('exclude_sale_items');
         $validated['first_time_users_only'] = $request->has('first_time_users_only');
         $validated['can_combine'] = $request->has('can_combine');
@@ -94,6 +96,7 @@ class CouponController extends Controller
             'is_default_magic' => 'boolean',
             'show_on_product_page' => 'boolean',
             'show_on_checkout_page' => 'boolean',
+            'is_milestone' => 'boolean',
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after_or_equal:starts_at',
             'usage_limit' => 'nullable|integer|min:1',
@@ -112,6 +115,7 @@ class CouponController extends Controller
         $validated['is_default_magic'] = $request->has('is_default_magic');
         $validated['show_on_product_page'] = $request->has('show_on_product_page');
         $validated['show_on_checkout_page'] = $request->has('show_on_checkout_page');
+        $validated['is_milestone'] = $request->has('is_milestone');
         $validated['exclude_sale_items'] = $request->has('exclude_sale_items');
         $validated['first_time_users_only'] = $request->has('first_time_users_only');
         $validated['can_combine'] = $request->has('can_combine');
