@@ -30,7 +30,7 @@ class PdpSettingsController extends Controller
             );
         }
 
-        return redirect()->back()->with('success', 'PDP settings updated successfully.');
+        return redirect()->back()->with('success', 'Widget settings updated successfully.');
     }
 
     private function getGroupForKey($key)

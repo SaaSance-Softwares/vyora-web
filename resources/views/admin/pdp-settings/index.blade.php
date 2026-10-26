@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header', 'PDP Page Design')
+@section('header', 'Widget Customisation')
 
 @section('content')
 <div class="w-full">
@@ -8,13 +8,13 @@
     <div class="mb-8">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-black text-gray-900 tracking-tight">PDP Page Design</h1>
-                <p class="mt-2 text-gray-500 font-medium">Customize the layout and visual elements of your Product Detail Pages.</p>
+                <h1 class="text-3xl font-black text-gray-900 tracking-tight">Widget Customisation</h1>
+                <p class="mt-2 text-gray-500 font-medium">Customize the layout, colors, and visual elements of your store widgets (Mega Deal, Price History, and Savings Milestones).</p>
             </div>
         </div>
     </div>
 
-    <form action="{{ route('admin.online-store.pdp-settings.update') }}" method="POST">
+    <form action="{{ route('admin.online-store.widget-customisation.update') }}" method="POST">
         @csrf
         @method('PUT')
         
@@ -652,7 +652,7 @@
                 <svg class="w-5 h-5 mr-2 -ml-1 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                Save PDP Settings
+                Save Widget Settings
             </button>
         </div>
     </form>

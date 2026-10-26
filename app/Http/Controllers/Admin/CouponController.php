@@ -99,7 +99,7 @@ class CouponController extends Controller
 
         Coupon::create($validated);
 
-        return redirect()->route('admin.online-store.custom-widgets.index')->with('success', 'Coupon campaign launched successfully!');
+        return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon campaign launched successfully!');
     }
 
     public function edit(Coupon $coupon)
@@ -158,13 +158,13 @@ class CouponController extends Controller
 
         $coupon->update($validated);
 
-        return redirect()->route('admin.online-store.custom-widgets.index')->with('success', 'Coupon configuration updated!');
+        return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon configuration updated!');
     }
 
     public function destroy(Coupon $coupon)
     {
         $coupon->delete();
 
-        return redirect()->route('admin.online-store.custom-widgets.index')->with('success', 'Coupon archived and removed.');
+        return redirect()->route('admin.online-store.coupons.index')->with('success', 'Coupon archived and removed.');
     }
 }
