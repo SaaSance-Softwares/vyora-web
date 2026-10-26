@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Check, Lock, Gift, ArrowRight } from 'lucide-react';
+import { Sparkles, Check, Lock, ArrowRight } from 'lucide-react';
 
 export interface MilestoneCoupon {
     id: number;
@@ -56,35 +56,34 @@ export function MilestoneTimeline({
             return `₹${Number(m.discount_amount).toLocaleString('en-IN')} OFF`;
         }
         if (m.type === 'free_shipping') {
-            return 'FREE SHIP';
+            return 'FREE SHIPPING';
         }
         return 'SPECIAL OFFER';
     };
 
+    // Node position getter (ensures left & right labels never clip container edges)
+    const getNodePosition = (idx: number) => {
+        if (n === 1) return 50;
+        const margin = n === 2 ? 22 : 14;
+        const span = 100 - margin * 2;
+        return margin + (idx / (n - 1)) * span;
+    };
+
     // Calculate progress percentage along the timeline
-    // Each checkpoint is positioned evenly across the bar for optimal mobile & desktop rendering
-    // Progress fill advances smoothly between milestones
     const calculateProgress = () => {
         if (subtotal <= 0) return 0;
         if (subtotal >= maxMilestoneValue) return 100;
 
-        // Position nodes at fixed percentage steps: e.g. for 3 nodes: [20%, 55%, 90%] or proportional
-        // Using piecewise linear interpolation between node positions
-        const nodePositions = validMilestones.map((_, idx) => {
-            if (n === 1) return 100;
-            const margin = 12; // left/right margin in %
-            const span = 100 - (margin * 2);
-            return margin + (idx / (n - 1)) * span;
-        });
+        const nodePositions = validMilestones.map((_, idx) => getNodePosition(idx));
 
-        // If subtotal is below the first milestone
+        // Before first milestone
         const firstMin = Number(validMilestones[0].min_cart_value);
         if (subtotal < firstMin) {
             const firstPos = nodePositions[0];
-            return Math.max(4, (subtotal / firstMin) * firstPos);
+            return Math.max(0, (subtotal / firstMin) * firstPos);
         }
 
-        // Interpolate between the two bounding milestones
+        // Interpolate between milestones
         for (let i = 0; i < n - 1; i++) {
             const lowVal = Number(validMilestones[i].min_cart_value);
             const highVal = Number(validMilestones[i + 1].min_cart_value);
@@ -100,16 +99,6 @@ export function MilestoneTimeline({
     };
 
     const progressPercent = calculateProgress();
-
-    // Node position getter
-    const getNodePosition = (idx: number) => {
-        if (n === 1) return 100;
-        const margin = 12;
-        const span = 100 - (margin * 2);
-        return margin + (idx / (n - 1)) * span;
-    };
-
-    // Shortfall message
     const diffToNext = nextMilestone ? Math.max(0, Math.ceil(Number(nextMilestone.min_cart_value) - subtotal)) : 0;
 
     const isApplied = (code: string) => {
@@ -117,58 +106,57 @@ export function MilestoneTimeline({
     };
 
     return (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-emerald-50/50 border border-amber-200/70 p-4 sm:p-5 shadow-sm transition-all mb-4">
-            {/* Top Header / Dynamic Encouragement message */}
-            <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs">
-                            <Sparkles size={11} className="animate-pulse" />
-                        </span>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-950">
-                            Savings Milestone
-                        </h4>
-                    </div>
-                    <p className="text-xs text-gray-700 font-medium">
-                        {nextMilestone ? (
-                            <>
-                                {bestUnlocked ? (
-                                    <>
-                                        <span className="font-bold text-emerald-700">🎉 {formatDiscount(bestUnlocked)} unlocked! </span>
-                                        Add <strong className="font-black text-gray-900">₹{diffToNext.toLocaleString('en-IN')}</strong> more to unlock <span className="font-black text-amber-700">{formatDiscount(nextMilestone)}</span>!
-                                    </>
-                                ) : (
-                                    <>
-                                        Add <strong className="font-black text-gray-900">₹{diffToNext.toLocaleString('en-IN')}</strong> more to unlock <span className="font-black text-amber-700">{formatDiscount(nextMilestone)}</span>!
-                                    </>
-                                )}
-                            </>
-                        ) : (
-                            <span className="font-black text-emerald-700 flex items-center gap-1">
-                                🏆 Awesome! Maximum savings unlocked ({bestUnlocked ? formatDiscount(bestUnlocked) : 'Best offer'})!
-                            </span>
-                        )}
-                    </p>
+        <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-100 p-4 sm:p-5 shadow-xs transition-all mb-4">
+            {/* Header: Micro-badge & Continue Shopping link */}
+            <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white">
+                        <Sparkles size={9} />
+                    </span>
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                        Savings Milestones
+                    </span>
                 </div>
 
-                {/* Optional Continue Shopping Link (for Cart Drawer or Cart Page) */}
                 {showContinueShoppingLink && nextMilestone && (
                     <a
                         href="/shop"
-                        className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-800 hover:text-black transition-colors"
                     >
                         Add Items <ArrowRight size={11} />
                     </a>
                 )}
             </div>
 
-            {/* Progress Bar & Checkpoints */}
-            <div className="relative pt-2 pb-7 px-1">
+            {/* Dynamic Status / Encouragement Message */}
+            <div className="mb-4">
+                {nextMilestone ? (
+                    <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                        {bestUnlocked ? (
+                            <>
+                                <span className="font-semibold text-emerald-700">✓ {formatDiscount(bestUnlocked)} unlocked! </span>
+                                Add <strong className="font-bold text-gray-900">₹{diffToNext.toLocaleString('en-IN')}</strong> more for <span className="font-bold text-gray-900">{formatDiscount(nextMilestone)}</span>
+                            </>
+                        ) : (
+                            <>
+                                Add <strong className="font-bold text-gray-900">₹{diffToNext.toLocaleString('en-IN')}</strong> more to unlock <span className="font-bold text-emerald-700">{formatDiscount(nextMilestone)}</span>
+                            </>
+                        )}
+                    </p>
+                ) : (
+                    <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                        <Check size={13} strokeWidth={3} />
+                        <span>Maximum savings unlocked ({bestUnlocked ? formatDiscount(bestUnlocked) : 'Best offer'})</span>
+                    </p>
+                )}
+            </div>
+
+            {/* Progress Track & Checkpoints */}
+            <div className="relative pt-2 pb-8 px-1">
                 {/* Background Track */}
-                <div className="h-2 w-full bg-amber-200/50 rounded-full overflow-hidden">
-                    {/* Fill */}
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 rounded-full transition-all duration-700 ease-out shadow-xs"
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
                     />
                 </div>
@@ -183,51 +171,61 @@ export function MilestoneTimeline({
                     return (
                         <div
                             key={m.id || idx}
-                            className="absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none group"
+                            className="absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none"
                             style={{ left: `${pos}%` }}
                         >
-                            {/* Circle Node Icon */}
+                            {/* Checkpoint Dot */}
                             <button
                                 type="button"
                                 disabled={!unlocked || applying}
                                 onClick={() => unlocked && onApply(m.code)}
-                                title={unlocked ? (applied ? 'Coupon Applied' : `Click to apply ${m.code}`) : `Spend ₹${Number(m.min_cart_value).toLocaleString('en-IN')} to unlock`}
-                                className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${
-                                    applied
-                                        ? 'bg-emerald-600 border-white text-white ring-2 ring-emerald-500 scale-110'
-                                        : unlocked
-                                        ? 'bg-emerald-500 border-white text-white hover:scale-115 hover:bg-emerald-600 cursor-pointer ring-1 ring-emerald-300'
+                                title={
+                                    unlocked
+                                        ? applied
+                                            ? `${m.code} applied`
+                                            : `Click to apply ${m.code}`
+                                        : `Spend ₹${Number(m.min_cart_value).toLocaleString('en-IN')} to unlock`
+                                }
+                                className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-200 ${
+                                    applied || unlocked
+                                        ? 'bg-emerald-600 border-white text-white shadow-xs'
                                         : isNext
-                                        ? 'bg-white border-amber-500 text-amber-600 ring-2 ring-amber-200 animate-pulse'
-                                        : 'bg-white border-gray-300 text-gray-400'
-                                }`}
+                                        ? 'bg-white border-2 border-emerald-500 text-emerald-600 shadow-xs'
+                                        : 'bg-white border-gray-200 text-gray-300'
+                                } ${unlocked ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`}
                             >
-                                {applied ? (
-                                    <Check size={12} strokeWidth={3.5} />
-                                ) : unlocked ? (
-                                    <Gift size={11} strokeWidth={2.5} />
+                                {applied || unlocked ? (
+                                    <Check size={11} strokeWidth={3} />
+                                ) : isNext ? (
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
                                 ) : (
                                     <Lock size={10} strokeWidth={2.5} />
                                 )}
                             </button>
 
                             {/* Node Labels */}
-                            <div className="absolute top-8 flex flex-col items-center pointer-events-none whitespace-nowrap">
-                                <span className={`text-[10px] font-black leading-tight ${
-                                    unlocked ? 'text-emerald-700' : isNext ? 'text-amber-900 font-extrabold' : 'text-gray-400'
-                                }`}>
+                            <div className="absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap">
+                                <span
+                                    className={`text-[11px] font-semibold leading-tight ${
+                                        unlocked
+                                            ? 'text-gray-900'
+                                            : isNext
+                                            ? 'text-gray-800'
+                                            : 'text-gray-400'
+                                    }`}
+                                >
                                     ₹{Number(m.min_cart_value).toLocaleString('en-IN')}
                                 </span>
-                                <span className={`text-[9px] font-extrabold tracking-tight px-1.5 py-0.5 rounded-full mt-0.5 transition-colors ${
-                                    applied
-                                        ? 'bg-emerald-600 text-white shadow-xs'
-                                        : unlocked
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : isNext
-                                        ? 'bg-amber-100 text-amber-900'
-                                        : 'bg-gray-100 text-gray-500'
-                                }`}>
-                                    {applied ? '✓ APPLIED' : formatDiscount(m)}
+                                <span
+                                    className={`text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors ${
+                                        applied || unlocked
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
+                                            : isNext
+                                            ? 'bg-gray-50 text-gray-700 border-gray-200'
+                                            : 'bg-gray-50/50 text-gray-400 border-gray-100'
+                                    }`}
+                                >
+                                    {formatDiscount(m)}
                                 </span>
                             </div>
                         </div>
@@ -235,23 +233,18 @@ export function MilestoneTimeline({
                 })}
             </div>
 
-            {/* Confirmation Banner when a Milestone is Unlocked (Auto-Applied) */}
+            {/* Bottom Status: Clean, non-intrusive confirmation */}
             {bestUnlocked && (
-                <div className="mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[11px] text-gray-700 font-medium">
-                        Unlocked <strong className="font-bold text-gray-900">{formatDiscount(bestUnlocked)}</strong> with code <code className="font-mono font-bold text-emerald-900 bg-emerald-100/80 px-1.5 py-0.5 rounded">{bestUnlocked.code}</code>
+                <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>
+                            Code <span className="font-mono font-semibold text-gray-900">{bestUnlocked.code}</span> auto-applied
+                        </span>
                     </div>
-                    {isApplied(bestUnlocked.code) ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs">
-                            <Check size={12} strokeWidth={3} />
-                            <span>Applied</span>
-                        </div>
-                    ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg animate-pulse">
-                            <Sparkles size={12} />
-                            <span>{applying ? 'Applying…' : 'Auto-applying…'}</span>
-                        </div>
-                    )}
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100/80">
+                        {formatDiscount(bestUnlocked)}
+                    </span>
                 </div>
             )}
         </div>

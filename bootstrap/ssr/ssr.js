@@ -4620,23 +4620,24 @@ function MilestoneTimeline({
       return `₹${Number(m.discount_amount).toLocaleString("en-IN")} OFF`;
     }
     if (m.type === "free_shipping") {
-      return "FREE SHIP";
+      return "FREE SHIPPING";
     }
     return "SPECIAL OFFER";
+  };
+  const getNodePosition = (idx) => {
+    if (n === 1) return 50;
+    const margin = n === 2 ? 22 : 14;
+    const span = 100 - margin * 2;
+    return margin + idx / (n - 1) * span;
   };
   const calculateProgress = () => {
     if (subtotal <= 0) return 0;
     if (subtotal >= maxMilestoneValue) return 100;
-    const nodePositions = validMilestones.map((_, idx) => {
-      if (n === 1) return 100;
-      const margin = 12;
-      const span = 100 - margin * 2;
-      return margin + idx / (n - 1) * span;
-    });
+    const nodePositions = validMilestones.map((_, idx) => getNodePosition(idx));
     const firstMin = Number(validMilestones[0].min_cart_value);
     if (subtotal < firstMin) {
       const firstPos = nodePositions[0];
-      return Math.max(4, subtotal / firstMin * firstPos);
+      return Math.max(0, subtotal / firstMin * firstPos);
     }
     for (let i = 0; i < n - 1; i++) {
       const lowVal = Number(validMilestones[i].min_cart_value);
@@ -4651,57 +4652,21 @@ function MilestoneTimeline({
     return 100;
   };
   const progressPercent = calculateProgress();
-  const getNodePosition = (idx) => {
-    if (n === 1) return 100;
-    const margin = 12;
-    const span = 100 - margin * 2;
-    return margin + idx / (n - 1) * span;
-  };
   const diffToNext = nextMilestone ? Math.max(0, Math.ceil(Number(nextMilestone.min_cart_value) - subtotal)) : 0;
   const isApplied = (code) => {
     return appliedCoupon?.code?.toUpperCase() === code?.toUpperCase();
   };
-  return /* @__PURE__ */ jsxs("div", { className: "relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-emerald-50/50 border border-amber-200/70 p-4 sm:p-5 shadow-sm transition-all mb-4", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between gap-3 mb-4", children: [
-      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-          /* @__PURE__ */ jsx("span", { className: "flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-xs", children: /* @__PURE__ */ jsx(Sparkles, { size: 11, className: "animate-pulse" }) }),
-          /* @__PURE__ */ jsx("h4", { className: "text-xs font-black uppercase tracking-wider text-amber-950", children: "Savings Milestone" })
-        ] }),
-        /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-700 font-medium", children: nextMilestone ? /* @__PURE__ */ jsx(Fragment, { children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsxs("span", { className: "font-bold text-emerald-700", children: [
-            "🎉 ",
-            formatDiscount(bestUnlocked),
-            " unlocked! "
-          ] }),
-          "Add ",
-          /* @__PURE__ */ jsxs("strong", { className: "font-black text-gray-900", children: [
-            "₹",
-            diffToNext.toLocaleString("en-IN")
-          ] }),
-          " more to unlock ",
-          /* @__PURE__ */ jsx("span", { className: "font-black text-amber-700", children: formatDiscount(nextMilestone) }),
-          "!"
-        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
-          "Add ",
-          /* @__PURE__ */ jsxs("strong", { className: "font-black text-gray-900", children: [
-            "₹",
-            diffToNext.toLocaleString("en-IN")
-          ] }),
-          " more to unlock ",
-          /* @__PURE__ */ jsx("span", { className: "font-black text-amber-700", children: formatDiscount(nextMilestone) }),
-          "!"
-        ] }) }) : /* @__PURE__ */ jsxs("span", { className: "font-black text-emerald-700 flex items-center gap-1", children: [
-          "🏆 Awesome! Maximum savings unlocked (",
-          bestUnlocked ? formatDiscount(bestUnlocked) : "Best offer",
-          ")!"
-        ] }) })
+  return /* @__PURE__ */ jsxs("div", { className: "relative overflow-hidden rounded-2xl bg-white border border-gray-100 p-4 sm:p-5 shadow-xs transition-all mb-4", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
+        /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-gray-500 uppercase tracking-widest", children: "Savings Milestones" })
       ] }),
       showContinueShoppingLink && nextMilestone && /* @__PURE__ */ jsxs(
         "a",
         {
           href: "/shop",
-          className: "hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 hover:text-black underline underline-offset-2 shrink-0 transition-colors",
+          className: "inline-flex items-center gap-1 text-[11px] font-semibold text-gray-800 hover:text-black transition-colors",
           children: [
             "Add Items ",
             /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
@@ -4709,11 +4674,40 @@ function MilestoneTimeline({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "relative pt-2 pb-7 px-1", children: [
-      /* @__PURE__ */ jsx("div", { className: "h-2 w-full bg-amber-200/50 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsx("div", { className: "mb-4", children: nextMilestone ? /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600 font-medium leading-relaxed", children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsxs("span", { className: "font-semibold text-emerald-700", children: [
+        "✓ ",
+        formatDiscount(bestUnlocked),
+        " unlocked! "
+      ] }),
+      "Add ",
+      /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
+        "₹",
+        diffToNext.toLocaleString("en-IN")
+      ] }),
+      " more for ",
+      /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(nextMilestone) })
+    ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+      "Add ",
+      /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
+        "₹",
+        diffToNext.toLocaleString("en-IN")
+      ] }),
+      " more to unlock ",
+      /* @__PURE__ */ jsx("span", { className: "font-bold text-emerald-700", children: formatDiscount(nextMilestone) })
+    ] }) }) : /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-emerald-700 flex items-center gap-1.5", children: [
+      /* @__PURE__ */ jsx(Check, { size: 13, strokeWidth: 3 }),
+      /* @__PURE__ */ jsxs("span", { children: [
+        "Maximum savings unlocked (",
+        bestUnlocked ? formatDiscount(bestUnlocked) : "Best offer",
+        ")"
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxs("div", { className: "relative pt-2 pb-8 px-1", children: [
+      /* @__PURE__ */ jsx("div", { className: "h-1.5 w-full bg-gray-100 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx(
         "div",
         {
-          className: "h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 rounded-full transition-all duration-700 ease-out shadow-xs",
+          className: "h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out",
           style: { width: `${Math.min(100, Math.max(0, progressPercent))}%` }
         }
       ) }),
@@ -4725,7 +4719,7 @@ function MilestoneTimeline({
         return /* @__PURE__ */ jsxs(
           "div",
           {
-            className: "absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none group",
+            className: "absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none",
             style: { left: `${pos}%` },
             children: [
               /* @__PURE__ */ jsx(
@@ -4734,17 +4728,29 @@ function MilestoneTimeline({
                   type: "button",
                   disabled: !unlocked || applying,
                   onClick: () => unlocked && onApply(m.code),
-                  title: unlocked ? applied ? "Coupon Applied" : `Click to apply ${m.code}` : `Spend ₹${Number(m.min_cart_value).toLocaleString("en-IN")} to unlock`,
-                  className: `relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${applied ? "bg-emerald-600 border-white text-white ring-2 ring-emerald-500 scale-110" : unlocked ? "bg-emerald-500 border-white text-white hover:scale-115 hover:bg-emerald-600 cursor-pointer ring-1 ring-emerald-300" : isNext ? "bg-white border-amber-500 text-amber-600 ring-2 ring-amber-200 animate-pulse" : "bg-white border-gray-300 text-gray-400"}`,
-                  children: applied ? /* @__PURE__ */ jsx(Check, { size: 12, strokeWidth: 3.5 }) : unlocked ? /* @__PURE__ */ jsx(Gift, { size: 11, strokeWidth: 2.5 }) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                  title: unlocked ? applied ? `${m.code} applied` : `Click to apply ${m.code}` : `Spend ₹${Number(m.min_cart_value).toLocaleString("en-IN")} to unlock`,
+                  className: `flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-200 ${applied || unlocked ? "bg-emerald-600 border-white text-white shadow-xs" : isNext ? "bg-white border-2 border-emerald-500 text-emerald-600 shadow-xs" : "bg-white border-gray-200 text-gray-300"} ${unlocked ? "cursor-pointer hover:scale-105" : "cursor-default"}`,
+                  children: applied || unlocked ? /* @__PURE__ */ jsx(Check, { size: 11, strokeWidth: 3 }) : isNext ? /* @__PURE__ */ jsx("span", { className: "h-2 w-2 rounded-full bg-emerald-500" }) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
                 }
               ),
-              /* @__PURE__ */ jsxs("div", { className: "absolute top-8 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
-                /* @__PURE__ */ jsxs("span", { className: `text-[10px] font-black leading-tight ${unlocked ? "text-emerald-700" : isNext ? "text-amber-900 font-extrabold" : "text-gray-400"}`, children: [
-                  "₹",
-                  Number(m.min_cart_value).toLocaleString("en-IN")
-                ] }),
-                /* @__PURE__ */ jsx("span", { className: `text-[9px] font-extrabold tracking-tight px-1.5 py-0.5 rounded-full mt-0.5 transition-colors ${applied ? "bg-emerald-600 text-white shadow-xs" : unlocked ? "bg-emerald-100 text-emerald-800" : isNext ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-500"}`, children: applied ? "✓ APPLIED" : formatDiscount(m) })
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
+                /* @__PURE__ */ jsxs(
+                  "span",
+                  {
+                    className: `text-[11px] font-semibold leading-tight ${unlocked ? "text-gray-900" : isNext ? "text-gray-800" : "text-gray-400"}`,
+                    children: [
+                      "₹",
+                      Number(m.min_cart_value).toLocaleString("en-IN")
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsx(
+                  "span",
+                  {
+                    className: `text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors ${applied || unlocked ? "bg-emerald-50 text-emerald-700 border-emerald-200/70" : isNext ? "bg-gray-50 text-gray-700 border-gray-200" : "bg-gray-50/50 text-gray-400 border-gray-100"}`,
+                    children: formatDiscount(m)
+                  }
+                )
               ] })
             ]
           },
@@ -4752,20 +4758,16 @@ function MilestoneTimeline({
         );
       })
     ] }),
-    bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2", children: [
-      /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-gray-700 font-medium", children: [
-        "Unlocked ",
-        /* @__PURE__ */ jsx("strong", { className: "font-bold text-gray-900", children: formatDiscount(bestUnlocked) }),
-        " with code ",
-        /* @__PURE__ */ jsx("code", { className: "font-mono font-bold text-emerald-900 bg-emerald-100/80 px-1.5 py-0.5 rounded", children: bestUnlocked.code })
+    bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
+        /* @__PURE__ */ jsx("span", { className: "flex h-1.5 w-1.5 rounded-full bg-emerald-500" }),
+        /* @__PURE__ */ jsxs("span", { children: [
+          "Code ",
+          /* @__PURE__ */ jsx("span", { className: "font-mono font-semibold text-gray-900", children: bestUnlocked.code }),
+          " auto-applied"
+        ] })
       ] }),
-      isApplied(bestUnlocked.code) ? /* @__PURE__ */ jsxs("div", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs", children: [
-        /* @__PURE__ */ jsx(Check, { size: 12, strokeWidth: 3 }),
-        /* @__PURE__ */ jsx("span", { children: "Applied" })
-      ] }) : /* @__PURE__ */ jsxs("div", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg animate-pulse", children: [
-        /* @__PURE__ */ jsx(Sparkles, { size: 12 }),
-        /* @__PURE__ */ jsx("span", { children: applying ? "Applying…" : "Auto-applying…" })
-      ] })
+      /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100/80", children: formatDiscount(bestUnlocked) })
     ] })
   ] });
 }
