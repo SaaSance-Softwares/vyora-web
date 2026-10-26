@@ -5415,7 +5415,7 @@ const SORT_OPTIONS = [
 function ProductListingInner({ title, subtitle, bannerImage, description, faqs, initialFilters, baseEndpoint = "/api/products", queryKey, queryValue }) {
   const { settings } = usePage().props;
   const { url } = usePage();
-  const searchParams = new URLSearchParams(url.substring(url.indexOf("?")));
+  const searchParams = new URLSearchParams(url.includes("?") ? url.substring(url.indexOf("?")) : "");
   const primaryColor = settings?.tc_primary_color || "#000000";
   const activeQueryKey = queryKey || (searchParams.has("category") ? "category" : searchParams.has("collection") ? "collection" : void 0);
   const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : void 0) || void 0;
@@ -5430,20 +5430,29 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useRemember(() => {
-    const search = typeof window !== "undefined" ? window.location.search : url.includes("?") ? url.substring(url.indexOf("?")) : "";
-    const sp = new URLSearchParams(search);
-    return {
-      in_stock: sp.has("in_stock") ? sp.get("in_stock") === "1" : initialFilters?.in_stock || false,
-      sort: sp.get("sort") || initialFilters?.sort || "new",
-      min_price: sp.get("min_price") || initialFilters?.min_price || "",
-      max_price: sp.get("max_price") || initialFilters?.max_price || "",
-      size: sp.get("size") ? sp.get("size").split(",").filter(Boolean) : initialFilters?.size || [],
-      color: sp.get("color") ? sp.get("color").split(",").filter(Boolean) : initialFilters?.color || [],
-      fit: sp.get("fit") ? sp.get("fit").split(",").filter(Boolean) : initialFilters?.fit || [],
-      fabric: sp.get("fabric") ? sp.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
-    };
-  }, `${rememberKey}-filters`);
+  const searchString = typeof window !== "undefined" && window.location.search ? window.location.search : url.includes("?") ? url.substring(url.indexOf("?")) : "";
+  const spInitial = new URLSearchParams(searchString);
+  const initialFilterState = {
+    in_stock: spInitial.has("in_stock") ? spInitial.get("in_stock") === "1" : initialFilters?.in_stock || false,
+    sort: spInitial.get("sort") || initialFilters?.sort || "new",
+    min_price: spInitial.get("min_price") || initialFilters?.min_price || "",
+    max_price: spInitial.get("max_price") || initialFilters?.max_price || "",
+    size: spInitial.get("size") ? spInitial.get("size").split(",").filter(Boolean) : initialFilters?.size || [],
+    color: spInitial.get("color") ? spInitial.get("color").split(",").filter(Boolean) : initialFilters?.color || [],
+    fit: spInitial.get("fit") ? spInitial.get("fit").split(",").filter(Boolean) : initialFilters?.fit || [],
+    fabric: spInitial.get("fabric") ? spInitial.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
+  };
+  const [rawFilters, setFilters] = useRemember(initialFilterState, `${rememberKey}-filters`);
+  const filters = {
+    in_stock: Boolean(rawFilters && typeof rawFilters === "object" && rawFilters.in_stock),
+    sort: rawFilters && typeof rawFilters === "object" && rawFilters.sort || "new",
+    min_price: rawFilters && typeof rawFilters === "object" && rawFilters.min_price || "",
+    max_price: rawFilters && typeof rawFilters === "object" && rawFilters.max_price || "",
+    size: Array.isArray(rawFilters?.size) ? rawFilters.size : [],
+    color: Array.isArray(rawFilters?.color) ? rawFilters.color : [],
+    fit: Array.isArray(rawFilters?.fit) ? rawFilters.fit : [],
+    fabric: Array.isArray(rawFilters?.fabric) ? rawFilters.fabric : []
+  };
   const [expandedSections, setExpandedSections] = useState({
     sort: true,
     price: true,
@@ -5521,24 +5530,16 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     if (currentFilters.fabric.length) params.set("fabric", currentFilters.fabric.join(","));
     const queryString = params.toString();
     const newUrl = window.location.pathname + (queryString ? "?" + queryString : "");
-    const currentState = window.history.state || {};
-    const updatedState = {
-      ...currentState,
-      page: currentState.page ? {
-        ...currentState.page,
-        url: newUrl
-      } : currentState.page
-    };
-    window.history.replaceState(updatedState, "", newUrl);
-    if (typeof router.replace === "function") {
-      try {
-        router.replace({
-          url: newUrl,
-          preserveState: true,
-          preserveScroll: true
-        });
-      } catch {
-      }
+    if (window.location.pathname + window.location.search !== newUrl) {
+      const currentState = window.history.state || {};
+      const updatedState = {
+        ...currentState,
+        page: currentState.page ? {
+          ...currentState.page,
+          url: newUrl
+        } : currentState.page
+      };
+      window.history.replaceState(updatedState, "", newUrl);
     }
   }, []);
   const isFirstMount = useRef(true);

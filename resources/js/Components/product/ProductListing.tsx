@@ -43,7 +43,7 @@ const SORT_OPTIONS = [
 function ProductListingInner({ title, subtitle, bannerImage, description, faqs, initialFilters, baseEndpoint = '/api/products', queryKey, queryValue }: ProductListingProps) {
     const { settings: settings } = usePage().props as any;
     const { url } = usePage();
-  const searchParams = new URLSearchParams(url.substring(url.indexOf("?")));
+    const searchParams = new URLSearchParams(url.includes('?') ? url.substring(url.indexOf('?')) : '');
     const primaryColor = settings?.tc_primary_color || '#000000';
     
     // Read dynamic query from URL if available, otherwise fallback to props from Server Component
@@ -67,20 +67,36 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     
     // Filters (cached so selected sort and filters persist across navigation)
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useRemember<FilterState>(() => {
-        const search = typeof window !== 'undefined' ? window.location.search : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
-        const sp = new URLSearchParams(search);
-        return {
-            in_stock: sp.has('in_stock') ? sp.get('in_stock') === '1' : (initialFilters?.in_stock || false),
-            sort: sp.get('sort') || initialFilters?.sort || 'new',
-            min_price: sp.get('min_price') || initialFilters?.min_price || '',
-            max_price: sp.get('max_price') || initialFilters?.max_price || '',
-            size: sp.get('size') ? sp.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
-            color: sp.get('color') ? sp.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
-            fit: sp.get('fit') ? sp.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
-            fabric: sp.get('fabric') ? sp.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
-        };
-    }, `${rememberKey}-filters`);
+
+    // Compute initial filter state directly as an object (useRemember does not invoke initializer functions)
+    const searchString = typeof window !== 'undefined' && window.location.search 
+        ? window.location.search 
+        : (url.includes('?') ? url.substring(url.indexOf('?')) : '');
+    const spInitial = new URLSearchParams(searchString);
+    const initialFilterState: FilterState = {
+        in_stock: spInitial.has('in_stock') ? spInitial.get('in_stock') === '1' : (initialFilters?.in_stock || false),
+        sort: spInitial.get('sort') || initialFilters?.sort || 'new',
+        min_price: spInitial.get('min_price') || initialFilters?.min_price || '',
+        max_price: spInitial.get('max_price') || initialFilters?.max_price || '',
+        size: spInitial.get('size') ? spInitial.get('size')!.split(',').filter(Boolean) : (initialFilters?.size || []),
+        color: spInitial.get('color') ? spInitial.get('color')!.split(',').filter(Boolean) : (initialFilters?.color || []),
+        fit: spInitial.get('fit') ? spInitial.get('fit')!.split(',').filter(Boolean) : (initialFilters?.fit || []),
+        fabric: spInitial.get('fabric') ? spInitial.get('fabric')!.split(',').filter(Boolean) : (initialFilters?.fabric || []),
+    };
+
+    const [rawFilters, setFilters] = useRemember<FilterState>(initialFilterState, `${rememberKey}-filters`);
+
+    // Defensive guarantee that filters is always a well-formed object with array properties
+    const filters: FilterState = {
+        in_stock: Boolean(rawFilters && typeof rawFilters === 'object' && rawFilters.in_stock),
+        sort: (rawFilters && typeof rawFilters === 'object' && rawFilters.sort) || 'new',
+        min_price: (rawFilters && typeof rawFilters === 'object' && rawFilters.min_price) || '',
+        max_price: (rawFilters && typeof rawFilters === 'object' && rawFilters.max_price) || '',
+        size: Array.isArray(rawFilters?.size) ? rawFilters.size : [],
+        color: Array.isArray(rawFilters?.color) ? rawFilters.color : [],
+        fit: Array.isArray(rawFilters?.fit) ? rawFilters.fit : [],
+        fabric: Array.isArray(rawFilters?.fabric) ? rawFilters.fabric : [],
+    };
 
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         sort: true, price: true, size: true, color: true, fit: true, fabric: true
@@ -177,27 +193,17 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         const queryString = params.toString();
         const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
 
-        // Preserve Inertia state and update current URL in history
-        const currentState = window.history.state || {};
-        const updatedState = {
-            ...currentState,
-            page: currentState.page ? {
-                ...currentState.page,
-                url: newUrl,
-            } : currentState.page,
-        };
-        window.history.replaceState(updatedState, '', newUrl);
-
-        if (typeof router.replace === 'function') {
-            try {
-                router.replace({
+        if (window.location.pathname + window.location.search !== newUrl) {
+            // Preserve Inertia state and update current URL in history
+            const currentState = window.history.state || {};
+            const updatedState = {
+                ...currentState,
+                page: currentState.page ? {
+                    ...currentState.page,
                     url: newUrl,
-                    preserveState: true,
-                    preserveScroll: true,
-                });
-            } catch {
-                // Ignore fallback error
-            }
+                } : currentState.page,
+            };
+            window.history.replaceState(updatedState, '', newUrl);
         }
     }, []);
 
