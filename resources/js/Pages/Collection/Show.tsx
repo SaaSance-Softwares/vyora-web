@@ -51,7 +51,7 @@ export default function CollectionPage({ collection }) {
             </Head>
             <ProductListing 
                 title={collection.name} 
-                subtitle={collection.aeo_use_case ? `Ideal for: ${collection.aeo_use_case}` : undefined}
+                subtitle={collection.meta_description || collection.social_description || undefined}
                 bannerImage={collection.banner_image_url}
                 description={collection.description}
                 faqs={collection.faqs}

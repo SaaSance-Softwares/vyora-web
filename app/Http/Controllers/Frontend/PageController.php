@@ -195,7 +195,7 @@ class PageController extends Controller
             "@type" => "Product",
             "name" => $productData['name'] ?? $product->name,
             "image" => !empty($productData['images']) ? $productData['images'][0]['url'] : (!empty($productData['image']) ? $productData['image'] : $this->getDefaultOgImage()),
-            "description" => strip_tags($productData['short_description'] ?? $productData['name'] ?? '') . (!empty($productData['use_case']) ? " Ideal for: " . $productData['use_case'] : ""),
+            "description" => !empty($product->seo_description) ? $product->seo_description : (!empty($productData['short_description']) ? strip_tags($productData['short_description']) : ($productData['name'] ?? '')),
             "sku" => !empty($productData['variants']) ? ($productData['variants'][0]['code'] ?? 'SKU-01') : 'SKU-01',
             "brand" => [
                 "@type" => "Brand",

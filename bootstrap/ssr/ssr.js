@@ -6009,7 +6009,7 @@ function CategoryPage({ category }) {
       ProductListing,
       {
         title: category.name,
-        subtitle: category.aeo_use_case ? `Ideal for: ${category.aeo_use_case}` : void 0,
+        subtitle: category.meta_description || void 0,
         bannerImage: category.banner_image_url,
         description: category.description,
         faqs: category.faqs,
@@ -8587,7 +8587,7 @@ function CollectionPage({ collection }) {
       ProductListing,
       {
         title: collection.name,
-        subtitle: collection.aeo_use_case ? `Ideal for: ${collection.aeo_use_case}` : void 0,
+        subtitle: collection.meta_description || collection.social_description || void 0,
         bannerImage: collection.banner_image_url,
         description: collection.description,
         faqs: collection.faqs,

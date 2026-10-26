@@ -21,7 +21,12 @@ class Collection extends Model
         return $this->belongsToMany(Product::class, 'collection_product');
     }
 
-    protected $appends = ['banner_image_url'];
+    protected $appends = ['banner_image_url', 'meta_description'];
+
+    public function getMetaDescriptionAttribute()
+    {
+        return $this->attributes['social_description'] ?? null;
+    }
 
     public function getBannerImageUrlAttribute()
     {

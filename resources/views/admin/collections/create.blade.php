@@ -83,9 +83,9 @@
                     </div>
 
                     <div class="w-full">
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Social Description</label>
-                        <textarea name="social_description" rows="3" placeholder="Description shown on social media shares..."
-                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('social_description') }}</textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Meta Description</label>
+                        <textarea name="social_description" rows="3" placeholder="Brief description for search engines and social shares..."
+                            class="w-full border border-gray-300 rounded-lg py-2 px-3 text-sm focus:ring-black focus:border-black">{{ old('social_description', old('meta_description')) }}</textarea>
                     </div>
 
                     <!-- Meta Keywords -->

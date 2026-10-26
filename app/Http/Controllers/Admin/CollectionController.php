@@ -33,6 +33,7 @@ class CollectionController extends Controller
             'is_active' => 'boolean',
             'social_title' => 'nullable|string|max:255',
             'social_description' => 'nullable|string|max:5000',
+            'meta_description' => 'nullable|string|max:5000',
             'meta_keywords' => 'nullable|string|max:1000',
             'aeo_use_case' => 'nullable|string|max:255',
             'social_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -45,6 +46,10 @@ class CollectionController extends Controller
 
         $data = $request->except(['social_image', 'faqs']);
         $data['is_active'] = $request->has('is_active');
+        if ($request->filled('meta_description') || $request->filled('social_description')) {
+            $data['social_description'] = $request->input('meta_description', $request->input('social_description'));
+        }
+        unset($data['meta_description']);
 
         if ($request->hasFile('social_image')) {
             $data['social_image'] = $this->uploadImageAsWebp($request->file('social_image'), 'social', 'storage/collections');
@@ -86,6 +91,7 @@ class CollectionController extends Controller
             'is_active' => 'boolean',
             'social_title' => 'nullable|string|max:255',
             'social_description' => 'nullable|string|max:5000',
+            'meta_description' => 'nullable|string|max:5000',
             'meta_keywords' => 'nullable|string|max:1000',
             'aeo_use_case' => 'nullable|string|max:255',
             'social_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -102,7 +108,7 @@ class CollectionController extends Controller
             'description' => $request->description,
             'is_active' => $request->has('is_active'),
             'social_title' => $request->social_title,
-            'social_description' => $request->social_description,
+            'social_description' => $request->input('meta_description', $request->input('social_description')),
             'meta_keywords' => $request->meta_keywords,
             'aeo_use_case' => $request->aeo_use_case,
         ];

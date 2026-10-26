@@ -51,7 +51,7 @@ export default function CategoryPage({ category }) {
             </Head>
             <ProductListing 
                 title={category.name} 
-                subtitle={category.aeo_use_case ? `Ideal for: ${category.aeo_use_case}` : undefined}
+                subtitle={category.meta_description || undefined}
                 bannerImage={category.banner_image_url}
                 description={category.description}
                 faqs={category.faqs}

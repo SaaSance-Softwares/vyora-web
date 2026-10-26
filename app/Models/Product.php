@@ -42,6 +42,11 @@ class Product extends Model
 
     protected $guarded = [];
 
+    public function getMetaDescriptionAttribute()
+    {
+        return $this->attributes['seo_description'] ?? null;
+    }
+
     public function deliveryTimeline()
     {
         return $this->belongsTo(DeliveryTimeline::class);

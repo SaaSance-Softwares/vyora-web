@@ -130,10 +130,11 @@
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-1">
-                                <label class="block text-sm font-medium text-gray-700">SEO Description</label>
+                                <label class="block text-sm font-medium text-gray-700">Meta Description</label>
                                 <span id="seo-description-count" class="text-xs text-gray-500">0 / 160</span>
                             </div>
                             <textarea name="seo_description" id="seo-description-input" rows="3" maxlength="160"
+                                placeholder="Brief description for search engines..."
                                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black sm:text-sm border p-2">{{ old('seo_description', $product->seo_description) }}</textarea>
                         </div>
                         <div>
