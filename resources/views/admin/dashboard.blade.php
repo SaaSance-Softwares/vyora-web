@@ -438,8 +438,8 @@
                         <span>Returns (RMA)</span>
                         <span>&rarr;</span>
                     </a>
-                    <a href="{{ route('admin.online-store.coupons.index') }}" class="p-3 rounded-xl bg-gray-50 hover:bg-black hover:text-white text-gray-800 border border-gray-100 transition flex items-center justify-between">
-                        <span>Coupons</span>
+                    <a href="{{ route('admin.online-store.custom-widgets.index') }}" class="p-3 rounded-xl bg-gray-50 hover:bg-black hover:text-white text-gray-800 border border-gray-100 transition flex items-center justify-between">
+                        <span>Custom Widget</span>
                         <span>&rarr;</span>
                     </a>
                     <a href="{{ route('admin.abandoned-carts.index') }}" class="p-3 rounded-xl bg-gray-50 hover:bg-black hover:text-white text-gray-800 border border-gray-100 transition flex items-center justify-between">

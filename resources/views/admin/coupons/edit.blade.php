@@ -1,21 +1,21 @@
 @extends('layouts.admin')
 
-@section('header', 'Edit Coupon')
+@section('header', 'Edit Custom Widget / Coupon')
 
 @section('content')
 <div class="max-w-5xl mx-auto pb-24">
-    <form action="{{ route('admin.online-store.coupons.update', $coupon->id) }}" method="POST" class="space-y-8">
+    <form action="{{ route('admin.online-store.custom-widgets.update', $coupon->id) }}" method="POST" class="space-y-8">
         @csrf
         @method('PUT')
         
         <div class="flex justify-between items-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div>
-                <h1 class="text-xl font-bold">Edit Campaign: {{ $coupon->code }}</h1>
-                <p class="text-sm text-gray-500">Modify discount rules and eligibility criteria.</p>
+                <h1 class="text-xl font-bold">Edit Widget / Coupon: {{ $coupon->code }}</h1>
+                <p class="text-sm text-gray-500">Modify discount rules, milestone settings, and widget criteria.</p>
             </div>
             <div class="flex gap-3">
-                <a href="{{ route('admin.online-store.coupons.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-bold">Cancel</a>
-                <button type="submit" class="px-6 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800">Update Coupon</button>
+                <a href="{{ route('admin.online-store.custom-widgets.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-bold">Cancel</a>
+                <button type="submit" class="px-6 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800">Update Widget / Coupon</button>
             </div>
         </div>
 

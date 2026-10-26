@@ -570,8 +570,12 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
             Route::get('/footer-settings', [FooterSettingsController::class, 'index'])->name('footer-settings.index');
             Route::put('/footer-settings', [FooterSettingsController::class, 'update'])->name('footer-settings.update');
 
-            // Coupons
-            Route::resource('coupons', CouponController::class);
+            // Custom Widget (formerly coupons)
+            Route::resource('custom-widgets', CouponController::class);
+            Route::redirect('custom-widget', '/occ/online-store/custom-widgets', 301);
+            Route::redirect('coupons', '/occ/online-store/custom-widgets', 301);
+            // Backward-compatible alias for coupons route names
+            Route::get('coupons', fn() => redirect()->route('admin.online-store.custom-widgets.index'))->name('coupons.index');
 
             // Marketing / Search Queries
             Route::prefix('marketing/search-queries')->name('marketing.search-queries.')->group(function () {

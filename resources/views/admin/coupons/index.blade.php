@@ -1,13 +1,16 @@
 @extends('layouts.admin')
 
-@section('header', 'Coupons & Promotions')
+@section('header', 'Custom Widget')
 
 @section('content')
 <div class="space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-900">Discount Campaigns</h1>
-        <a href="{{ route('admin.online-store.coupons.create') }}" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm font-bold flex items-center gap-2">
-            <span>+</span> Create Coupon
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Custom Widget</h1>
+            <p class="text-xs text-gray-500 mt-1">Manage discount campaigns, milestone promotion widgets, and coupon codes.</p>
+        </div>
+        <a href="{{ route('admin.online-store.custom-widgets.create') }}" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm font-bold flex items-center gap-2">
+            <span>+</span> Create Widget / Coupon
         </a>
     </div>
 
@@ -18,7 +21,7 @@
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase">
                         <tr>
-                            <th class="px-6 py-4">Coupon Code</th>
+                            <th class="px-6 py-4">Widget / Code</th>
                             <th class="px-6 py-4">Discount</th>
                             <th class="px-6 py-4 text-center">Usage</th>
                             <th class="px-6 py-4">Status</th>
@@ -60,8 +63,8 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex justify-end gap-3 text-xs font-bold">
-                                        <a href="{{ route('admin.online-store.coupons.edit', $coupon->id) }}" class="text-blue-600 hover:underline">Edit</a>
-                                        <form action="{{ route('admin.online-store.coupons.destroy', $coupon->id) }}" method="POST" onsubmit="return confirm('Delete coupon?')">
+                                        <a href="{{ route('admin.online-store.custom-widgets.edit', $coupon->id) }}" class="text-blue-600 hover:underline">Edit</a>
+                                        <form action="{{ route('admin.online-store.custom-widgets.destroy', $coupon->id) }}" method="POST" onsubmit="return confirm('Delete coupon?')">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="text-red-500 hover:underline">Delete</button>
                                         </form>
