@@ -57,7 +57,8 @@ class CouponApiController extends Controller
             'cart' => 'required|array',
         ]);
 
-        $coupon = Coupon::where('code', strtoupper($request->code))->first();
+        $code = strtoupper(trim($request->code));
+        $coupon = Coupon::whereRaw('UPPER(TRIM(code)) = ?', [$code])->first();
 
         if (! $coupon) {
             return response()->json([

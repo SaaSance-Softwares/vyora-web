@@ -445,6 +445,7 @@ export default function CheckoutPage() {
     };
 
     const handlePlaceOrder = async () => {
+        if (placing) return;
         setOrderErr('');
         let addrPayload: any, custPayload: any;
         if (user && selectedAddr) {
@@ -454,7 +455,7 @@ export default function CheckoutPage() {
             const { name, email, phone, line1, city, state, zip } = guest;
             if (!name || !email || !phone || !line1 || !city || !state || !zip) { setOrderErr('Please fill all delivery fields.'); return; }
             
-            let finalPhone = phone.trim();
+            let finalPhone = phone.trim().replace(/[\s\-]/g, '');
             if (finalPhone.startsWith(guestCountryCode)) {
                 finalPhone = finalPhone.substring(guestCountryCode.length);
             }

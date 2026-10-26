@@ -157,6 +157,9 @@ class CouponService
             }
         }
 
+        $maxAllowedDiscount = $coupon->type === 'free_shipping' ? ($cartData['shipping_cost'] ?? 0) : $eligibleTotal;
+        $discountAmount = max(0, min($discountAmount, $maxAllowedDiscount));
+
         return [
             'valid' => true,
             'discount_amount' => $discountAmount,

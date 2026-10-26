@@ -6679,6 +6679,7 @@ function CheckoutPage() {
     }
   };
   const handlePlaceOrder = async () => {
+    if (placing) return;
     setOrderErr("");
     let addrPayload, custPayload;
     if (user && selectedAddr) {
@@ -6690,7 +6691,7 @@ function CheckoutPage() {
         setOrderErr("Please fill all delivery fields.");
         return;
       }
-      let finalPhone = phone.trim();
+      let finalPhone = phone.trim().replace(/[\s\-]/g, "");
       if (finalPhone.startsWith(guestCountryCode)) {
         finalPhone = finalPhone.substring(guestCountryCode.length);
       }
