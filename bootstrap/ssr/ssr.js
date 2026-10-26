@@ -430,7 +430,9 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 function formatPrice(price) {
+  if (price == null || price === "") return "₹0";
   const num = typeof price === "string" ? parseFloat(price) : price;
+  if (isNaN(num)) return "₹0";
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
@@ -5413,22 +5415,21 @@ const SORT_OPTIONS = [
   { label: "Z to A", value: "z_a" }
 ];
 function ProductListingInner({ title, subtitle, bannerImage, description, faqs, initialFilters, baseEndpoint = "/api/products", queryKey, queryValue }) {
-  const { settings, products: serverProducts } = usePage().props;
-  const initialProductList = serverProducts && Array.isArray(serverProducts.data) ? serverProducts.data : [];
+  const { settings } = usePage().props;
   const { url } = usePage();
   const searchParams = new URLSearchParams(url.includes("?") ? url.substring(url.indexOf("?")) : "");
   const primaryColor = settings?.tc_primary_color || "#000000";
   const activeQueryKey = queryKey || (searchParams.has("category") ? "category" : searchParams.has("collection") ? "collection" : void 0);
   const activeQueryValue = queryValue || (activeQueryKey ? searchParams.get(activeQueryKey) : void 0) || void 0;
   const rememberKey = `listing-${baseEndpoint}-${activeQueryKey || "root"}-${activeQueryValue || "all"}`;
-  const [products, setProducts] = useRemember(initialProductList, `${rememberKey}-products`);
+  const [products, setProducts] = useRemember([], `${rememberKey}-products`);
   const [page, setPage] = useRemember(1, `${rememberKey}-page`);
   const [hasMore, setHasMore] = useRemember(true, `${rememberKey}-hasMore`);
   const [availableFits, setAvailableFits] = useRemember([], `${rememberKey}-fits`);
   const [availableFabrics, setAvailableFabrics] = useRemember([], `${rememberKey}-fabrics`);
   const [availableColors, setAvailableColors] = useRemember([], `${rememberKey}-colors`);
   const [availableSizes, setAvailableSizes] = useRemember([], `${rememberKey}-sizes`);
-  const [loading, setLoading] = useState(products.length === 0 && initialProductList.length === 0);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const getInitialFilterState = () => {
@@ -5571,12 +5572,10 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   }, []);
   const isFirstMount = useRef(true);
   useEffect(() => {
+    const hasValidCachedProducts = Array.isArray(products) && products.length > 0 && products.every((p) => p && typeof p.price === "number");
     if (isFirstMount.current) {
       isFirstMount.current = false;
-      if (products.length > 0 || initialProductList.length > 0) {
-        if (products.length === 0 && initialProductList.length > 0) {
-          setProducts(initialProductList);
-        }
+      if (hasValidCachedProducts) {
         setLoading(false);
         if (availableSizes.length === 0 && availableColors.length === 0 && availableFits.length === 0 && availableFabrics.length === 0) {
           api.get(`${baseEndpoint}?limit=1&page=1${activeQueryKey && activeQueryValue ? `&${activeQueryKey}=${activeQueryValue}` : ""}`).then((res) => {
