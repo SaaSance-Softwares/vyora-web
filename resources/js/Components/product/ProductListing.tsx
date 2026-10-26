@@ -86,7 +86,12 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         };
     };
 
-    const [rawFilters, setFilters] = useRemember<FilterState>(getInitialFilterState(), `${rememberKey}-filters`);
+    const hasInteractedWithSort = useRef(Boolean(
+        (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sort')) ||
+        initialFilters?.sort
+    ));
+
+    const [rawFilters, setFilters] = useState<FilterState>(getInitialFilterState);
 
     // Defensive guarantee that filters is always a well-formed object with array properties
     // useMemo ensures a stable object reference that does not trigger re-render loops
@@ -208,7 +213,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         
         // Add active params
         if (currentFilters.in_stock) params.set('in_stock', '1');
-        if (currentFilters.sort && currentFilters.sort !== 'new') params.set('sort', currentFilters.sort);
+        if (currentFilters.sort && (currentFilters.sort !== 'new' || hasInteractedWithSort.current)) {
+            params.set('sort', currentFilters.sort);
+        }
         if (currentFilters.min_price) params.set('min_price', currentFilters.min_price);
         if (currentFilters.max_price) params.set('max_price', currentFilters.max_price);
         if (currentFilters.size.length) params.set('size', currentFilters.size.join(','));
@@ -220,16 +227,27 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
         const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
 
         if (window.location.pathname + window.location.search !== newUrl) {
-            // Preserve Inertia state and update current URL in history
+            // Update browser history state immediately
             const currentState = window.history.state || {};
             const updatedState = {
                 ...currentState,
-                page: currentState.page ? {
+                page: currentState.page && typeof currentState.page === 'object' ? {
                     ...currentState.page,
                     url: newUrl,
                 } : currentState.page,
             };
-            window.history.replaceState(updatedState, '', newUrl);
+            try {
+                window.history.replaceState(updatedState, '', newUrl);
+            } catch (e) {}
+
+            // Keep Inertia's internal page.url synchronized
+            try {
+                router.replace({
+                    url: newUrl,
+                    preserveState: true,
+                    preserveScroll: true,
+                });
+            } catch (e) {}
         }
     }, []);
 
@@ -277,8 +295,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     useEffect(() => {
         const handlePopState = () => {
             const sp = new URLSearchParams(window.location.search);
+            hasInteractedWithSort.current = sp.has('sort');
             setFilters({
-                in_stock: sp.has('in_stock') ? sp.get('in_stock') === '1' : (initialFilters?.in_stock || false),
+                in_stock: sp.has('in_stock') ? sp.get('in_stock') === '1' : Boolean(initialFilters?.in_stock),
                 sort: sp.get('sort') || initialFilters?.sort || 'new',
                 min_price: sp.get('min_price') || initialFilters?.min_price || '',
                 max_price: sp.get('max_price') || initialFilters?.max_price || '',
@@ -312,6 +331,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     }, [hasMore, loading, loadingMore, fetchProducts]);
 
     const handleFilterChange = (key: keyof FilterState, value: any) => {
+        if (key === 'sort') {
+            hasInteractedWithSort.current = true;
+        }
         setFilters(prev => ({ ...(prev || {}), [key]: value }));
     };
 
@@ -326,6 +348,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     };
 
     const clearFilters = () => {
+        hasInteractedWithSort.current = false;
         setFilters({
             in_stock: false,
             sort: 'new',

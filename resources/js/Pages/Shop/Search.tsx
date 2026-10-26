@@ -5,7 +5,7 @@ import { SearchInput } from './SearchInput';
 
 export default function SearchPage() {
     const { url } = usePage();
-    const searchParams = new URLSearchParams(url.substring(url.indexOf('?')));
+    const searchParams = new URLSearchParams(url.includes('?') ? url.substring(url.indexOf('?')) : '');
     const q = searchParams.get('q') || '';
 
     return (

@@ -5628,7 +5628,10 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       fabric: spInitial.get("fabric") ? spInitial.get("fabric").split(",").filter(Boolean) : initialFilters?.fabric || []
     };
   };
-  const [rawFilters, setFilters] = useRemember(getInitialFilterState(), `${rememberKey}-filters`);
+  const hasInteractedWithSort = useRef(Boolean(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("sort") || initialFilters?.sort
+  ));
+  const [rawFilters, setFilters] = useState(getInitialFilterState);
   const filters = useMemo(() => ({
     in_stock: Boolean(rawFilters && typeof rawFilters === "object" && rawFilters.in_stock),
     sort: rawFilters && typeof rawFilters === "object" && rawFilters.sort || "new",
@@ -5731,7 +5734,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     params.delete("fit");
     params.delete("fabric");
     if (currentFilters.in_stock) params.set("in_stock", "1");
-    if (currentFilters.sort && currentFilters.sort !== "new") params.set("sort", currentFilters.sort);
+    if (currentFilters.sort && (currentFilters.sort !== "new" || hasInteractedWithSort.current)) {
+      params.set("sort", currentFilters.sort);
+    }
     if (currentFilters.min_price) params.set("min_price", currentFilters.min_price);
     if (currentFilters.max_price) params.set("max_price", currentFilters.max_price);
     if (currentFilters.size.length) params.set("size", currentFilters.size.join(","));
@@ -5744,12 +5749,23 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       const currentState = window.history.state || {};
       const updatedState = {
         ...currentState,
-        page: currentState.page ? {
+        page: currentState.page && typeof currentState.page === "object" ? {
           ...currentState.page,
           url: newUrl
         } : currentState.page
       };
-      window.history.replaceState(updatedState, "", newUrl);
+      try {
+        window.history.replaceState(updatedState, "", newUrl);
+      } catch (e) {
+      }
+      try {
+        router.replace({
+          url: newUrl,
+          preserveState: true,
+          preserveScroll: true
+        });
+      } catch (e) {
+      }
     }
   }, []);
   const isFirstMount = useRef(true);
@@ -5783,8 +5799,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
   useEffect(() => {
     const handlePopState = () => {
       const sp = new URLSearchParams(window.location.search);
+      hasInteractedWithSort.current = sp.has("sort");
       setFilters({
-        in_stock: sp.has("in_stock") ? sp.get("in_stock") === "1" : initialFilters?.in_stock || false,
+        in_stock: sp.has("in_stock") ? sp.get("in_stock") === "1" : Boolean(initialFilters?.in_stock),
         sort: sp.get("sort") || initialFilters?.sort || "new",
         min_price: sp.get("min_price") || initialFilters?.min_price || "",
         max_price: sp.get("max_price") || initialFilters?.max_price || "",
@@ -5814,6 +5831,9 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, fetchProducts]);
   const handleFilterChange = (key, value) => {
+    if (key === "sort") {
+      hasInteractedWithSort.current = true;
+    }
     setFilters((prev) => ({ ...prev || {}, [key]: value }));
   };
   const toggleArrayFilter = (key, value) => {
@@ -5826,6 +5846,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     });
   };
   const clearFilters = () => {
+    hasInteractedWithSort.current = false;
     setFilters({
       in_stock: false,
       sort: "new",
@@ -12970,7 +12991,7 @@ const __vite_glob_0_22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
 }, Symbol.toStringTag, { value: "Module" }));
 function ShopPage() {
   const { url, app_url } = usePage();
-  const searchParams = new URLSearchParams(url.substring(url.indexOf("?")));
+  const searchParams = new URLSearchParams(url.includes("?") ? url.substring(url.indexOf("?")) : "");
   const category = searchParams.get("category");
   const collection = searchParams.get("collection");
   const baseUrl = app_url || "https://dopestyle.in";
@@ -13087,7 +13108,7 @@ const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.de
 }, Symbol.toStringTag, { value: "Module" }));
 function SearchPage() {
   const { url } = usePage();
-  const searchParams = new URLSearchParams(url.substring(url.indexOf("?")));
+  const searchParams = new URLSearchParams(url.includes("?") ? url.substring(url.indexOf("?")) : "");
   const q = searchParams.get("q") || "";
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx(Head, { title: `Search Results for "${q}"` }),

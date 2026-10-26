@@ -4,7 +4,7 @@ import { usePage, Head } from '@inertiajs/react';
 
 export default function ShopPage() {
     const { url, app_url } = usePage();
-    const searchParams = new URLSearchParams(url.substring(url.indexOf('?')));
+    const searchParams = new URLSearchParams(url.includes('?') ? url.substring(url.indexOf('?')) : '');
     const category = searchParams.get('category');
     const collection = searchParams.get('collection');
     
