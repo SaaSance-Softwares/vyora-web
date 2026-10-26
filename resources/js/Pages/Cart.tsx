@@ -188,6 +188,7 @@ export default function CartPage() {
     const { settings: sharedSettings } = usePage<any>().props;
     const storeName = sharedSettings?.store_name || 'Store';
     const cart = useCartStore();
+    const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * (i.quantity || 1), 0);
     const wishlist = useWishlistStore();
     const [mounted, setMounted] = useState(false);
     const [settings, setSettings] = useState<any>(null);
@@ -302,8 +303,7 @@ export default function CartPage() {
     );
 
     const mrpTotal = cart.items.reduce((s, i) => s + Math.max(Number(i.mrp) || 0, Number(i.price)) * i.quantity, 0);
-    const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-        const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
+    const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
     const discount = cart.appliedCoupon?.discountAmount || 0;
     
     let shippingLabel = 'Calculated at checkout';

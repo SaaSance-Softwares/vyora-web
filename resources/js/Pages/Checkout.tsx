@@ -160,6 +160,7 @@ export default function CheckoutPage() {
     const { settings: sharedSettings } = usePage<any>().props;
     const storeName = sharedSettings?.store_name || 'Store';
     const cart = useCartStore();
+    const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * (i.quantity || 1), 0);
     const { user } = useAuthStore();
     const { openAuthModal } = useUIStore();
     const [mounted, setMounted] = useState(false);
@@ -555,7 +556,6 @@ export default function CheckoutPage() {
     );
 
     const mrpTotal = cart.items.reduce((s, i) => s + Math.max(Number(i.mrp) || 0, Number(i.price)) * i.quantity, 0);
-    const subtotal = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
     const discount = cart.appliedCoupon?.discountAmount || 0;
     const subtotalAfterDiscount = Math.max(0, subtotal - discount);
