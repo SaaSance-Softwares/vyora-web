@@ -235,20 +235,23 @@ export function MilestoneTimeline({
                 })}
             </div>
 
-            {/* Quick-Action Bar when a Milestone is Unlocked */}
-            {bestUnlocked && !isApplied(bestUnlocked.code) && (
+            {/* Confirmation Banner when a Milestone is Unlocked (Auto-Applied) */}
+            {bestUnlocked && (
                 <div className="mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[11px] text-gray-600 font-medium">
-                        You unlocked <span className="font-bold text-gray-900">{formatDiscount(bestUnlocked)}</span> with code <code className="font-mono font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded">{bestUnlocked.code}</code>
+                    <div className="text-[11px] text-gray-700 font-medium">
+                        Unlocked <strong className="font-bold text-gray-900">{formatDiscount(bestUnlocked)}</strong> with code <code className="font-mono font-bold text-emerald-900 bg-emerald-100/80 px-1.5 py-0.5 rounded">{bestUnlocked.code}</code>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => onApply(bestUnlocked.code)}
-                        disabled={applying}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                        {applying ? 'Applying…' : `Claim ${formatDiscount(bestUnlocked)}`}
-                    </button>
+                    {isApplied(bestUnlocked.code) ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs">
+                            <Check size={12} strokeWidth={3} />
+                            <span>Applied</span>
+                        </div>
+                    ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg animate-pulse">
+                            <Sparkles size={12} />
+                            <span>{applying ? 'Applying…' : 'Auto-applying…'}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

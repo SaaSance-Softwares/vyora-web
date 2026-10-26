@@ -4752,23 +4752,20 @@ function MilestoneTimeline({
         );
       })
     ] }),
-    bestUnlocked && !isApplied(bestUnlocked.code) && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2", children: [
-      /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-gray-600 font-medium", children: [
-        "You unlocked ",
-        /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(bestUnlocked) }),
+    bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsxs("div", { className: "text-[11px] text-gray-700 font-medium", children: [
+        "Unlocked ",
+        /* @__PURE__ */ jsx("strong", { className: "font-bold text-gray-900", children: formatDiscount(bestUnlocked) }),
         " with code ",
-        /* @__PURE__ */ jsx("code", { className: "font-mono font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded", children: bestUnlocked.code })
+        /* @__PURE__ */ jsx("code", { className: "font-mono font-bold text-emerald-900 bg-emerald-100/80 px-1.5 py-0.5 rounded", children: bestUnlocked.code })
       ] }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => onApply(bestUnlocked.code),
-          disabled: applying,
-          className: "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50",
-          children: applying ? "Applying…" : `Claim ${formatDiscount(bestUnlocked)}`
-        }
-      )
+      isApplied(bestUnlocked.code) ? /* @__PURE__ */ jsxs("div", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-xs", children: [
+        /* @__PURE__ */ jsx(Check, { size: 12, strokeWidth: 3 }),
+        /* @__PURE__ */ jsx("span", { children: "Applied" })
+      ] }) : /* @__PURE__ */ jsxs("div", { className: "inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg animate-pulse", children: [
+        /* @__PURE__ */ jsx(Sparkles, { size: 12 }),
+        /* @__PURE__ */ jsx("span", { children: applying ? "Applying…" : "Auto-applying…" })
+      ] })
     ] })
   ] });
 }
@@ -4956,6 +4953,34 @@ function CartPage() {
     }).catch(() => {
     });
   }, []);
+  useEffect(() => {
+    if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+    const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const eligibleMilestones = milestoneCoupons.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+    const bestMilestone = eligibleMilestones[0];
+    if (bestMilestone) {
+      const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+      if (currentCode !== bestMilestone.code.toUpperCase()) {
+        const autoApply = async () => {
+          try {
+            const items = cart.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+            const res = await api.post("/api/coupons/apply", {
+              code: bestMilestone.code,
+              cart: { subtotal: sub, items }
+            });
+            if (res.data.success) {
+              cart.setAppliedCoupon({
+                code: res.data.data.coupon.code,
+                discountAmount: res.data.data.discount_amount
+              });
+            }
+          } catch (e) {
+          }
+        };
+        autoApply();
+      }
+    }
+  }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
   if (!mounted) return /* @__PURE__ */ jsx("div", { className: "min-h-[60vh]" });
   if (cart.items.length === 0 && wishlist.items.length === 0) return /* @__PURE__ */ jsxs("div", { className: "max-w-sm mx-auto px-4 py-28 text-center", children: [
     /* @__PURE__ */ jsx(ShoppingBag, { className: "w-12 h-12 text-gray-200 mx-auto mb-5" }),
@@ -6378,6 +6403,34 @@ function CheckoutPage() {
       cart.setGuestEmail(guest.email);
     }
   }, [guest.email]);
+  useEffect(() => {
+    if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+    const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const eligibleMilestones = milestoneCoupons.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+    const bestMilestone = eligibleMilestones[0];
+    if (bestMilestone) {
+      const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+      if (currentCode !== bestMilestone.code.toUpperCase()) {
+        const autoApply = async () => {
+          try {
+            const items = cart.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+            const res = await api.post("/api/coupons/apply", {
+              code: bestMilestone.code,
+              cart: { subtotal: sub, items }
+            });
+            if (res.data.success) {
+              cart.setAppliedCoupon({
+                code: res.data.data.coupon.code,
+                discountAmount: res.data.data.discount_amount
+              });
+            }
+          } catch (e) {
+          }
+        };
+        autoApply();
+      }
+    }
+  }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
   useEffect(() => {
     const fetchPincode = async () => {
       if (guest.zip.length === 6 && activeCountryId) {

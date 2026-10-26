@@ -319,6 +319,42 @@ export default function CheckoutPage() {
         }
     }, [guest.email]);
 
+    // Reactive Auto-Apply & Auto-Upgrade for Milestone Coupons
+    useEffect(() => {
+        if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+
+        const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+        const eligibleMilestones = milestoneCoupons
+            .filter(m => sub >= Number(m.min_cart_value))
+            .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+
+        const bestMilestone = eligibleMilestones[0];
+
+        if (bestMilestone) {
+            const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+            if (currentCode !== bestMilestone.code.toUpperCase()) {
+                const autoApply = async () => {
+                    try {
+                        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+                        const res = await api.post('/api/coupons/apply', {
+                            code: bestMilestone.code,
+                            cart: { subtotal: sub, items }
+                        });
+                        if (res.data.success) {
+                            cart.setAppliedCoupon({
+                                code: res.data.data.coupon.code,
+                                discountAmount: res.data.data.discount_amount
+                            });
+                        }
+                    } catch (e) {
+                        // ignore background auto-apply errors
+                    }
+                };
+                autoApply();
+            }
+        }
+    }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
+
     useEffect(() => {
         const fetchPincode = async () => {
             if (guest.zip.length === 6 && activeCountryId) {

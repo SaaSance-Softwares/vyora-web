@@ -254,6 +254,40 @@ export default function CartPage() {
         }).catch(() => { });
     }, []);
 
+    // Reactive Auto-Apply & Auto-Upgrade for Milestone Coupons in Cart
+    useEffect(() => {
+        if (!mounted || milestoneCoupons.length === 0 || cart.items.length === 0) return;
+
+        const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+        const eligibleMilestones = milestoneCoupons
+            .filter(m => sub >= Number(m.min_cart_value))
+            .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+
+        const bestMilestone = eligibleMilestones[0];
+
+        if (bestMilestone) {
+            const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+            if (currentCode !== bestMilestone.code.toUpperCase()) {
+                const autoApply = async () => {
+                    try {
+                        const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.price, quantity: i.quantity }));
+                        const res = await api.post('/api/coupons/apply', {
+                            code: bestMilestone.code,
+                            cart: { subtotal: sub, items }
+                        });
+                        if (res.data.success) {
+                            cart.setAppliedCoupon({
+                                code: res.data.data.coupon.code,
+                                discountAmount: res.data.data.discount_amount
+                            });
+                        }
+                    } catch (e) {}
+                };
+                autoApply();
+            }
+        }
+    }, [mounted, subtotal, milestoneCoupons, cart.appliedCoupon?.code]);
+
     if (!mounted) return <div className="min-h-[60vh]" />;
 
     if (cart.items.length === 0 && wishlist.items.length === 0) return (
