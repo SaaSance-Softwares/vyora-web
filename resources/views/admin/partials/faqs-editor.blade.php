@@ -4,7 +4,7 @@
             <h3 class="text-lg font-medium text-gray-900">AEO Conversational FAQs</h3>
             <p class="text-sm text-gray-500 mt-1">Add question and answer pairs to boost AI search matching and Google SGE.</p>
         </div>
-        <button type="button" id="add-faq-btn" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors">
+        <button type="button" id="add-faq-btn" class="add-faq-btn bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors">
             + Add Question
         </button>
     </div>
@@ -33,6 +33,13 @@
             </div>
         @endforeach
     </div>
+
+    <div id="faqs-bottom-bar" class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+        <span class="text-xs text-gray-400 font-medium">Add more question and answer pairs for AI & search engines</span>
+        <button type="button" id="add-faq-btn-bottom" class="add-faq-btn bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors">
+            + Add Question
+        </button>
+    </div>
 </div>
 
 <template id="faq-template">
@@ -55,28 +62,48 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const container = document.getElementById('faqs-container');
-        const addBtn = document.getElementById('add-faq-btn');
-        const template = document.getElementById('faq-template');
-        let faqIndex = document.querySelectorAll('.faq-item').length;
+    (function() {
+        function initFaqEditor() {
+            const container = document.getElementById('faqs-container');
+            const addBtns = document.querySelectorAll('.add-faq-btn');
+            const template = document.getElementById('faq-template');
+            if (!container || !template) return;
 
-        if(addBtn && container && template) {
-            addBtn.addEventListener('click', function() {
+            let faqIndex = document.querySelectorAll('.faq-item').length;
+
+            function addNewFaq() {
                 const html = template.innerHTML.replace(/__INDEX__/g, faqIndex);
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = html;
                 const newFaq = tempDiv.firstElementChild;
                 container.appendChild(newFaq);
                 faqIndex++;
+
+                const input = newFaq.querySelector('input[type="text"]');
+                if (input) {
+                    input.focus();
+                    newFaq.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            addBtns.forEach(function(btn) {
+                // Ensure no duplicate listener
+                btn.removeEventListener('click', addNewFaq);
+                btn.addEventListener('click', addNewFaq);
             });
 
             container.addEventListener('click', function(e) {
-                if(e.target.closest('.remove-faq-btn')) {
+                if (e.target.closest('.remove-faq-btn')) {
                     e.target.closest('.faq-item').remove();
                 }
             });
         }
-    });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFaqEditor);
+        } else {
+            initFaqEditor();
+        }
+    })();
 </script>
 @endpush
