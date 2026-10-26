@@ -4599,8 +4599,34 @@ function MilestoneTimeline({
   appliedCoupon,
   onApply,
   applying = false,
-  showContinueShoppingLink = false
+  showContinueShoppingLink = false,
+  customSettings
 }) {
+  let pageProps = null;
+  try {
+    pageProps = usePage()?.props;
+  } catch {
+  }
+  const s = customSettings || pageProps?.settings || {};
+  const title = s.milestone_title || "Savings Milestones";
+  const bgType = s.milestone_bg_type || "single";
+  const bgColor = s.milestone_bg_color || "#ffffff";
+  const bgFrom = s.milestone_bg_from || "#ffffff";
+  const bgTo = s.milestone_bg_to || "#f9fafb";
+  const bgDirection = s.milestone_bg_direction || "to bottom right";
+  const borderColor = s.milestone_border_color || "#f3f4f6";
+  const containerBackground = bgType === "gradient" ? `linear-gradient(${bgDirection}, ${bgFrom}, ${bgTo})` : bgColor;
+  const progressColor = s.milestone_progress_color || "#10b981";
+  const trackColor = s.milestone_track_color || "#f3f4f6";
+  const unlockedCircleColor = s.milestone_unlocked_circle_color || "#059669";
+  const unlockedIconColor = s.milestone_unlocked_icon_color || "#ffffff";
+  const targetCircleColor = s.milestone_target_circle_color || "#10b981";
+  const targetCircleBg = s.milestone_target_circle_bg || "#ffffff";
+  const badgeBg = s.milestone_badge_bg || "#ecfdf5";
+  const badgeTextColor = s.milestone_badge_text_color || "#047857";
+  const badgeBorderColor = s.milestone_badge_border_color || "#a7f3d0";
+  const targetBadgeBg = s.milestone_target_badge_bg || "#f9fafb";
+  const targetBadgeText = s.milestone_target_badge_text || "#374151";
   const validMilestones = React.useMemo(() => {
     return (milestones || []).filter((m) => Number(m.min_cart_value) > 0).sort((a, b) => Number(a.min_cart_value) - Number(b.min_cart_value));
   }, [milestones]);
@@ -4656,120 +4682,173 @@ function MilestoneTimeline({
   const isApplied = (code) => {
     return appliedCoupon?.code?.toUpperCase() === code?.toUpperCase();
   };
-  return /* @__PURE__ */ jsxs("div", { className: "relative overflow-hidden rounded-2xl bg-white border border-gray-100 p-4 sm:p-5 shadow-xs transition-all mb-4", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-        /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
-        /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-gray-500 uppercase tracking-widest", children: "Savings Milestones" })
-      ] }),
-      showContinueShoppingLink && nextMilestone && /* @__PURE__ */ jsxs(
-        "a",
-        {
-          href: "/shop",
-          className: "inline-flex items-center gap-1 text-[11px] font-semibold text-gray-800 hover:text-black transition-colors",
-          children: [
-            "Add Items ",
-            /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
-          ]
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsx("div", { className: "mb-4", children: nextMilestone ? /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600 font-medium leading-relaxed", children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsxs("span", { className: "font-semibold text-emerald-700", children: [
-        "✓ ",
-        formatDiscount(bestUnlocked),
-        " unlocked! "
-      ] }),
-      "Add ",
-      /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
-        "₹",
-        diffToNext.toLocaleString("en-IN")
-      ] }),
-      " more for ",
-      /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(nextMilestone) })
-    ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
-      "Add ",
-      /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
-        "₹",
-        diffToNext.toLocaleString("en-IN")
-      ] }),
-      " more to unlock ",
-      /* @__PURE__ */ jsx("span", { className: "font-bold text-emerald-700", children: formatDiscount(nextMilestone) })
-    ] }) }) : /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-emerald-700 flex items-center gap-1.5", children: [
-      /* @__PURE__ */ jsx(Check, { size: 13, strokeWidth: 3 }),
-      /* @__PURE__ */ jsxs("span", { children: [
-        "Maximum savings unlocked (",
-        bestUnlocked ? formatDiscount(bestUnlocked) : "Best offer",
-        ")"
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxs("div", { className: "relative pt-2 pb-8 px-1", children: [
-      /* @__PURE__ */ jsx("div", { className: "h-1.5 w-full bg-gray-100 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx(
-        "div",
-        {
-          className: "h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out",
-          style: { width: `${Math.min(100, Math.max(0, progressPercent))}%` }
-        }
-      ) }),
-      validMilestones.map((m, idx) => {
-        const pos = getNodePosition(idx);
-        const unlocked = subtotal >= Number(m.min_cart_value);
-        const isNext = nextMilestone?.id === m.id;
-        const applied = isApplied(m.code);
-        return /* @__PURE__ */ jsxs(
-          "div",
-          {
-            className: "absolute -top-1.5 flex flex-col items-center -translate-x-1/2 select-none",
-            style: { left: `${pos}%` },
-            children: [
-              /* @__PURE__ */ jsx(
-                "button",
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: "relative overflow-hidden rounded-2xl p-4 sm:p-5 shadow-xs transition-all mb-4 border",
+      style: {
+        background: containerBackground,
+        borderColor
+      },
+      children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+            /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-gray-700 uppercase tracking-widest", children: title })
+          ] }),
+          showContinueShoppingLink && nextMilestone && /* @__PURE__ */ jsxs(
+            "a",
+            {
+              href: "/shop",
+              className: "inline-flex items-center gap-1 text-[11px] font-semibold text-gray-800 hover:text-black transition-colors",
+              children: [
+                "Add Items ",
+                /* @__PURE__ */ jsx(ArrowRight, { size: 11 })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "mb-4", children: nextMilestone ? /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600 font-medium leading-relaxed", children: bestUnlocked ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsxs("span", { className: "font-semibold text-emerald-700", children: [
+            "✓ ",
+            formatDiscount(bestUnlocked),
+            " unlocked! "
+          ] }),
+          "Add ",
+          /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
+            "₹",
+            diffToNext.toLocaleString("en-IN")
+          ] }),
+          " more for ",
+          /* @__PURE__ */ jsx("span", { className: "font-bold text-gray-900", children: formatDiscount(nextMilestone) })
+        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+          "Add ",
+          /* @__PURE__ */ jsxs("strong", { className: "font-bold text-gray-900", children: [
+            "₹",
+            diffToNext.toLocaleString("en-IN")
+          ] }),
+          " more to unlock ",
+          /* @__PURE__ */ jsx("span", { className: "font-bold text-emerald-700", children: formatDiscount(nextMilestone) })
+        ] }) }) : /* @__PURE__ */ jsxs("p", { className: "text-xs font-semibold text-emerald-700 flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsx(Check, { size: 13, strokeWidth: 3 }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            "Maximum savings unlocked (",
+            bestUnlocked ? formatDiscount(bestUnlocked) : "Best offer",
+            ")"
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxs("div", { className: "relative h-6 flex items-center mb-9 px-1", children: [
+          /* @__PURE__ */ jsx(
+            "div",
+            {
+              className: "h-1.5 w-full rounded-full overflow-hidden",
+              style: { backgroundColor: trackColor },
+              children: /* @__PURE__ */ jsx(
+                "div",
                 {
-                  type: "button",
-                  disabled: !unlocked || applying,
-                  onClick: () => unlocked && onApply(m.code),
-                  title: unlocked ? applied ? `${m.code} applied` : `Click to apply ${m.code}` : `Spend ₹${Number(m.min_cart_value).toLocaleString("en-IN")} to unlock`,
-                  className: `flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-200 ${applied || unlocked ? "bg-emerald-600 border-white text-white shadow-xs" : isNext ? "bg-white border-2 border-emerald-500 text-emerald-600 shadow-xs" : "bg-white border-gray-200 text-gray-300"} ${unlocked ? "cursor-pointer hover:scale-105" : "cursor-default"}`,
-                  children: applied || unlocked ? /* @__PURE__ */ jsx(Check, { size: 11, strokeWidth: 3 }) : isNext ? /* @__PURE__ */ jsx("span", { className: "h-2 w-2 rounded-full bg-emerald-500" }) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                  className: "h-full rounded-full transition-all duration-500 ease-out",
+                  style: {
+                    width: `${Math.min(100, Math.max(0, progressPercent))}%`,
+                    backgroundColor: progressColor
+                  }
                 }
-              ),
-              /* @__PURE__ */ jsxs("div", { className: "absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
-                /* @__PURE__ */ jsxs(
-                  "span",
-                  {
-                    className: `text-[11px] font-semibold leading-tight ${unlocked ? "text-gray-900" : isNext ? "text-gray-800" : "text-gray-400"}`,
-                    children: [
-                      "₹",
-                      Number(m.min_cart_value).toLocaleString("en-IN")
-                    ]
-                  }
-                ),
-                /* @__PURE__ */ jsx(
-                  "span",
-                  {
-                    className: `text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors ${applied || unlocked ? "bg-emerald-50 text-emerald-700 border-emerald-200/70" : isNext ? "bg-gray-50 text-gray-700 border-gray-200" : "bg-gray-50/50 text-gray-400 border-gray-100"}`,
-                    children: formatDiscount(m)
-                  }
-                )
-              ] })
-            ]
-          },
-          m.id || idx
-        );
-      })
-    ] }),
-    bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
-        /* @__PURE__ */ jsx("span", { className: "flex h-1.5 w-1.5 rounded-full bg-emerald-500" }),
-        /* @__PURE__ */ jsxs("span", { children: [
-          "Code ",
-          /* @__PURE__ */ jsx("span", { className: "font-mono font-semibold text-gray-900", children: bestUnlocked.code }),
-          " auto-applied"
+              )
+            }
+          ),
+          validMilestones.map((m, idx) => {
+            const pos = getNodePosition(idx);
+            const unlocked = subtotal >= Number(m.min_cart_value);
+            const isNext = nextMilestone?.id === m.id;
+            const applied = isApplied(m.code);
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "absolute top-0 h-6 flex items-center justify-center -translate-x-1/2 select-none",
+                style: { left: `${pos}%` },
+                children: [
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !unlocked || applying,
+                      onClick: () => unlocked && onApply(m.code),
+                      title: unlocked ? applied ? `${m.code} applied` : `Click to apply ${m.code}` : `Spend ₹${Number(m.min_cart_value).toLocaleString("en-IN")} to unlock`,
+                      style: {
+                        backgroundColor: applied || unlocked ? unlockedCircleColor : isNext ? targetCircleBg : "#ffffff",
+                        borderColor: applied || unlocked ? "#ffffff" : isNext ? targetCircleColor : "#e5e7eb",
+                        color: applied || unlocked ? unlockedIconColor : isNext ? targetCircleColor : "#9ca3af"
+                      },
+                      className: `flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-xs ${unlocked ? "cursor-pointer hover:scale-105" : "cursor-default"}`,
+                      children: applied || unlocked ? /* @__PURE__ */ jsx(Check, { size: 11, strokeWidth: 3 }) : isNext ? /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "h-2 w-2 rounded-full",
+                          style: { backgroundColor: targetCircleColor }
+                        }
+                      ) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxs("div", { className: "absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
+                    /* @__PURE__ */ jsxs(
+                      "span",
+                      {
+                        className: `text-[11px] font-semibold leading-tight ${unlocked ? "text-gray-900" : isNext ? "text-gray-800" : "text-gray-400"}`,
+                        children: [
+                          "₹",
+                          Number(m.min_cart_value).toLocaleString("en-IN")
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        style: {
+                          backgroundColor: applied || unlocked ? badgeBg : isNext ? targetBadgeBg : "#f9fafb",
+                          color: applied || unlocked ? badgeTextColor : isNext ? targetBadgeText : "#9ca3af",
+                          borderColor: applied || unlocked ? badgeBorderColor : "#e5e7eb"
+                        },
+                        className: "text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors",
+                        children: formatDiscount(m)
+                      }
+                    )
+                  ] })
+                ]
+              },
+              m.id || idx
+            );
+          })
+        ] }),
+        bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
+            /* @__PURE__ */ jsx(
+              "span",
+              {
+                className: "flex h-1.5 w-1.5 rounded-full",
+                style: { backgroundColor: progressColor }
+              }
+            ),
+            /* @__PURE__ */ jsxs("span", { children: [
+              "Code ",
+              /* @__PURE__ */ jsx("span", { className: "font-mono font-semibold text-gray-900", children: bestUnlocked.code }),
+              " auto-applied"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "span",
+            {
+              style: {
+                backgroundColor: badgeBg,
+                color: badgeTextColor,
+                borderColor: badgeBorderColor
+              },
+              className: "text-[11px] font-bold px-2 py-0.5 rounded-full border",
+              children: formatDiscount(bestUnlocked)
+            }
+          )
         ] })
-      ] }),
-      /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100/80", children: formatDiscount(bestUnlocked) })
-    ] })
-  ] });
+      ]
+    }
+  );
 }
 function CartRow$1({ item, update, remove }) {
   return /* @__PURE__ */ jsxs("div", { className: "flex flex-col py-5 border-b border-gray-100 last:border-0", children: [

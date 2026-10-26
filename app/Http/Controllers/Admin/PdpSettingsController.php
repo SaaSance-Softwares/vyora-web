@@ -11,8 +11,9 @@ class PdpSettingsController extends Controller
     public function index()
     {
         $settings = ThemeSetting::all()->groupBy('group');
+        $allSettings = ThemeSetting::all()->pluck('value', 'key');
 
-        return view('admin.pdp-settings.index', compact('settings'));
+        return view('admin.pdp-settings.index', compact('settings', 'allSettings'));
     }
 
     public function update(Request $request)
@@ -36,6 +37,10 @@ class PdpSettingsController extends Controller
     {
         if (str_starts_with($key, 'mega_deal_')) {
             return 'mega_deal';
+        }
+
+        if (str_starts_with($key, 'milestone_')) {
+            return 'milestone';
         }
 
         return 'pdp';
