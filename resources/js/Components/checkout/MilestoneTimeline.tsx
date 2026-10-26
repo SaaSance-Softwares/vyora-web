@@ -238,22 +238,48 @@ export function MilestoneTimeline({
                         width={containerSize.width}
                         height={containerSize.height}
                         recycle={false}
-                        numberOfPieces={80}
-                        gravity={0.25}
-                        initialVelocityY={12}
-                        initialVelocityX={8}
-                        colors={['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#ef4444']}
+                        numberOfPieces={220}
+                        gravity={0.22}
+                        initialVelocityY={16}
+                        initialVelocityX={10}
+                        friction={0.98}
+                        colors={['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#ef4444', '#fbbf24', '#6366f1']}
                     />
                 </div>
             )}
 
             {showPopper && (
                 <>
-                    <div className="absolute -bottom-1 -left-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-left">
+                    {/* Bottom-left & bottom-right primary party poppers */}
+                    <div className="absolute -bottom-2 -left-2 text-2xl sm:text-4xl pointer-events-none z-30 select-none milestone-popper-left">
                         🎉
                     </div>
-                    <div className="absolute -bottom-1 -right-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-right">
+                    <div className="absolute -bottom-2 -right-2 text-2xl sm:text-4xl pointer-events-none z-30 select-none milestone-popper-right">
                         🎉
+                    </div>
+
+                    {/* Top-corner celebratory party poppers */}
+                    <div className="absolute -top-1 -left-1 text-xl sm:text-2xl pointer-events-none z-30 select-none milestone-popper-top-left">
+                        🎉
+                    </div>
+                    <div className="absolute -top-1 -right-1 text-xl sm:text-2xl pointer-events-none z-30 select-none milestone-popper-top-right">
+                        🎉
+                    </div>
+
+                    {/* Mid confetti balls */}
+                    <div className="absolute bottom-5 left-10 text-xl sm:text-2xl pointer-events-none z-30 select-none milestone-popper-float-1">
+                        🎊
+                    </div>
+                    <div className="absolute bottom-5 right-10 text-xl sm:text-2xl pointer-events-none z-30 select-none milestone-popper-float-2">
+                        🎊
+                    </div>
+
+                    {/* Festive sparkle stars */}
+                    <div className="absolute top-2 left-1/4 text-lg pointer-events-none z-30 select-none milestone-spark-1">
+                        ✨
+                    </div>
+                    <div className="absolute top-2 right-1/4 text-lg pointer-events-none z-30 select-none milestone-spark-2">
+                        ✨
                     </div>
                 </>
             )}
@@ -471,11 +497,40 @@ export function MilestoneTimeline({
                     75% { transform: scaleX(-1) scale(0.95) rotate(-15deg); opacity: 1; }
                     100% { transform: scaleX(-1) scale(1) rotate(-12deg); opacity: 1; }
                 }
+                @keyframes popperPopFloat {
+                    0% { transform: scale(0) translateY(12px); opacity: 0; }
+                    40% { transform: scale(1.3) translateY(-8px); opacity: 1; }
+                    70% { transform: scale(0.9) translateY(-2px); opacity: 1; }
+                    100% { transform: scale(1) translateY(0); opacity: 1; }
+                }
+                @keyframes sparkShimmer {
+                    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+                    50% { transform: scale(1.4) rotate(90deg); opacity: 1; }
+                    100% { transform: scale(1) rotate(180deg); opacity: 0.9; }
+                }
                 .milestone-popper-left {
                     animation: popperLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                 }
                 .milestone-popper-right {
                     animation: popperRight 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+                .milestone-popper-top-left {
+                    animation: popperLeft 0.6s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+                }
+                .milestone-popper-top-right {
+                    animation: popperRight 0.6s 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+                }
+                .milestone-popper-float-1 {
+                    animation: popperPopFloat 0.7s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+                }
+                .milestone-popper-float-2 {
+                    animation: popperPopFloat 0.7s 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+                }
+                .milestone-spark-1 {
+                    animation: sparkShimmer 0.8s 0.2s ease-out both;
+                }
+                .milestone-spark-2 {
+                    animation: sparkShimmer 0.8s 0.28s ease-out both;
                 }
             `}</style>
         </div>
