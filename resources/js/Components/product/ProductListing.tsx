@@ -41,7 +41,8 @@ const SORT_OPTIONS = [
 ];
 
 function ProductListingInner({ title, subtitle, bannerImage, description, faqs, initialFilters, baseEndpoint = '/api/products', queryKey, queryValue }: ProductListingProps) {
-    const { settings: settings } = usePage().props as any;
+    const { settings, products: serverProducts } = usePage().props as any;
+    const initialProductList: ProductList[] = (serverProducts && Array.isArray(serverProducts.data)) ? serverProducts.data : [];
     const { url } = usePage();
     const searchParams = new URLSearchParams(url.includes('?') ? url.substring(url.indexOf('?')) : '');
     const primaryColor = settings?.tc_primary_color || '#000000';
@@ -52,7 +53,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     
     const rememberKey = `listing-${baseEndpoint}-${activeQueryKey || 'root'}-${activeQueryValue || 'all'}`;
 
-    const [products, setProducts] = useRemember<ProductList[]>([], `${rememberKey}-products`);
+    const [products, setProducts] = useRemember<ProductList[]>(initialProductList, `${rememberKey}-products`);
     const [page, setPage] = useRemember(1, `${rememberKey}-page`);
     const [hasMore, setHasMore] = useRemember(true, `${rememberKey}-hasMore`);
     
@@ -62,7 +63,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     const [availableColors, setAvailableColors] = useRemember<{name: string, hex: string, count: number}[]>([], `${rememberKey}-colors`);
     const [availableSizes, setAvailableSizes] = useRemember<{name: string, count: number}[]>([], `${rememberKey}-sizes`);
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(products.length === 0 && initialProductList.length === 0);
     const [loadingMore, setLoadingMore] = useState(false);
     
     // Filters (cached so selected sort and filters persist across navigation)
@@ -239,8 +240,10 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
     useEffect(() => {
         if (isFirstMount.current) {
             isFirstMount.current = false;
-            if (products.length > 0) {
-                // State restored from useRemember, skip products re-fetch
+            if (products.length > 0 || initialProductList.length > 0) {
+                if (products.length === 0 && initialProductList.length > 0) {
+                    setProducts(initialProductList);
+                }
                 setLoading(false);
 
                 // If available filter options were not cached or empty, fetch them so sidebar is never blank
