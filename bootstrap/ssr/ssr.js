@@ -2,7 +2,7 @@ import { jsxs, jsx, Fragment } from "react/jsx-runtime";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
-import React, { useState, useRef, useEffect, Suspense, useMemo, useCallback, useId } from "react";
+import React, { useState, useRef, useEffect, useCallback, Suspense, useMemo, useId } from "react";
 import { Link, usePage, router, useForm, Head, useRemember, createInertiaApp } from "@inertiajs/react";
 import { ChevronDown, Search, User, ArrowRight, LogOut, Lock, MapPin, Package, Gift, Shield, ChevronRight, Wallet, AlertCircle, Check, EyeOff, Eye, Plus, Pencil, Trash2, Minus, Star, StarHalf, Mail, Phone, Sparkles, ShoppingBag, Heart, X, RefreshCcw, RotateCcw, Loader2, SlidersHorizontal, Filter, Tag, Ticket, CheckCircle, Truck, CreditCard, Zap, Smartphone, History, LayoutGrid, Clock, Copy, MessageCircle, TrendingUp, TrendingDown, Share2, BarChart2, Ruler, ChevronUp, ShieldCheck, Camera, Calendar, PhoneCall, Home as Home$1, Menu, Landmark, Settings, Cookie } from "lucide-react";
 import clsx$1, { clsx } from "clsx";
@@ -4682,15 +4682,88 @@ function MilestoneTimeline({
   const isApplied = (code) => {
     return appliedCoupon?.code?.toUpperCase() === code?.toUpperCase();
   };
+  const containerRef = useRef(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [showPopper, setShowPopper] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(null);
+  const prevBestIdRef = useRef(null);
+  const prevSubtotalRef = useRef(subtotal);
+  const isInitialRender = useRef(true);
+  const updateContainerSize = useCallback(() => {
+    if (containerRef.current) {
+      setContainerSize({
+        width: containerRef.current.offsetWidth,
+        height: containerRef.current.offsetHeight
+      });
+    }
+  }, []);
+  useEffect(() => {
+    updateContainerSize();
+    window.addEventListener("resize", updateContainerSize);
+    return () => window.removeEventListener("resize", updateContainerSize);
+  }, [updateContainerSize]);
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      prevBestIdRef.current = bestUnlocked ? bestUnlocked.id : null;
+      prevSubtotalRef.current = subtotal;
+      return;
+    }
+    if (bestUnlocked && subtotal > prevSubtotalRef.current) {
+      const isNewHigherMilestone = !prevBestIdRef.current || bestUnlocked.id !== prevBestIdRef.current;
+      if (isNewHigherMilestone) {
+        updateContainerSize();
+        setJustUnlocked(bestUnlocked);
+        setShowPopper(true);
+        const timer = setTimeout(() => {
+          setShowPopper(false);
+          setJustUnlocked(null);
+        }, 4e3);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevBestIdRef.current = bestUnlocked ? bestUnlocked.id : null;
+    prevSubtotalRef.current = subtotal;
+  }, [bestUnlocked?.id, subtotal, updateContainerSize]);
   return /* @__PURE__ */ jsxs(
     "div",
     {
-      className: "relative overflow-hidden rounded-2xl p-4 sm:p-5 shadow-xs transition-all mb-4 border",
+      ref: containerRef,
+      className: `relative overflow-hidden rounded-2xl p-4 sm:p-5 transition-all duration-300 mb-4 border ${justUnlocked ? "ring-2 ring-emerald-400 shadow-md" : "shadow-xs"}`,
       style: {
         background: containerBackground,
         borderColor
       },
       children: [
+        showPopper && typeof window !== "undefined" && containerSize.width > 0 && /* @__PURE__ */ jsx("div", { className: "absolute inset-0 pointer-events-none z-30 overflow-hidden rounded-2xl", children: /* @__PURE__ */ jsx(
+          Confetti,
+          {
+            width: containerSize.width,
+            height: containerSize.height,
+            recycle: false,
+            numberOfPieces: 80,
+            gravity: 0.25,
+            initialVelocityY: 12,
+            initialVelocityX: 8,
+            colors: ["#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#8b5cf6", "#14b8a6", "#ef4444"]
+          }
+        ) }),
+        showPopper && /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute -bottom-1 -left-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-left", children: "🎉" }),
+          /* @__PURE__ */ jsx("div", { className: "absolute -bottom-1 -right-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-right", children: "🎉" })
+        ] }),
+        justUnlocked && /* @__PURE__ */ jsxs("div", { className: "mb-3 flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-900 text-xs font-semibold shadow-xs", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-base animate-bounce", children: "🎉" }),
+            /* @__PURE__ */ jsxs("span", { children: [
+              /* @__PURE__ */ jsx("strong", { children: "Milestone Unlocked!" }),
+              " You earned",
+              " ",
+              /* @__PURE__ */ jsx("span", { className: "font-bold text-emerald-700 underline underline-offset-2", children: formatDiscount(justUnlocked) })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "text-sm shrink-0", children: "✨" })
+        ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
             /* @__PURE__ */ jsx("span", { className: "flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white", children: /* @__PURE__ */ jsx(Sparkles, { size: 9 }) }),
@@ -4760,13 +4833,14 @@ function MilestoneTimeline({
             const unlocked = subtotal >= Number(m.min_cart_value);
             const isNext = nextMilestone?.id === m.id;
             const applied = isApplied(m.code);
+            const isJustUnlockedNode = justUnlocked?.id === m.id;
             return /* @__PURE__ */ jsxs(
               "div",
               {
                 className: "absolute top-0 h-6 flex items-center justify-center -translate-x-1/2 select-none",
                 style: { left: `${pos}%` },
                 children: [
-                  /* @__PURE__ */ jsx(
+                  /* @__PURE__ */ jsxs(
                     "button",
                     {
                       type: "button",
@@ -4778,14 +4852,17 @@ function MilestoneTimeline({
                         borderColor: applied || unlocked ? "#ffffff" : isNext ? targetCircleColor : "#e5e7eb",
                         color: applied || unlocked ? unlockedIconColor : isNext ? targetCircleColor : "#9ca3af"
                       },
-                      className: `flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-xs ${unlocked ? "cursor-pointer hover:scale-105" : "cursor-default"}`,
-                      children: applied || unlocked ? /* @__PURE__ */ jsx(Check, { size: 11, strokeWidth: 3 }) : isNext ? /* @__PURE__ */ jsx(
-                        "span",
-                        {
-                          className: "h-2 w-2 rounded-full",
-                          style: { backgroundColor: targetCircleColor }
-                        }
-                      ) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                      className: `relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-xs ${unlocked ? "cursor-pointer hover:scale-105" : "cursor-default"}`,
+                      children: [
+                        isJustUnlockedNode && /* @__PURE__ */ jsx("span", { className: "absolute -inset-1.5 rounded-full bg-emerald-400 opacity-75 animate-ping pointer-events-none" }),
+                        applied || unlocked ? /* @__PURE__ */ jsx(Check, { size: 11, strokeWidth: 3 }) : isNext ? /* @__PURE__ */ jsx(
+                          "span",
+                          {
+                            className: "h-2 w-2 rounded-full",
+                            style: { backgroundColor: targetCircleColor }
+                          }
+                        ) : /* @__PURE__ */ jsx(Lock, { size: 10, strokeWidth: 2.5 })
+                      ]
                     }
                   ),
                   /* @__PURE__ */ jsxs("div", { className: "absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
@@ -4845,7 +4922,27 @@ function MilestoneTimeline({
               children: formatDiscount(bestUnlocked)
             }
           )
-        ] })
+        ] }),
+        /* @__PURE__ */ jsx("style", { children: `
+                @keyframes popperLeft {
+                    0% { transform: scale(0.2) rotate(-35deg) translate(-10px, 15px); opacity: 0; }
+                    50% { transform: scale(1.3) rotate(-10deg) translate(0, -6px); opacity: 1; }
+                    75% { transform: scale(0.95) rotate(-15deg); opacity: 1; }
+                    100% { transform: scale(1) rotate(-12deg); opacity: 1; }
+                }
+                @keyframes popperRight {
+                    0% { transform: scaleX(-1) scale(0.2) rotate(-35deg) translate(-10px, 15px); opacity: 0; }
+                    50% { transform: scaleX(-1) scale(1.3) rotate(-10deg) translate(0, -6px); opacity: 1; }
+                    75% { transform: scaleX(-1) scale(0.95) rotate(-15deg); opacity: 1; }
+                    100% { transform: scaleX(-1) scale(1) rotate(-12deg); opacity: 1; }
+                }
+                .milestone-popper-left {
+                    animation: popperLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+                .milestone-popper-right {
+                    animation: popperRight 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+            ` })
       ]
     }
   );

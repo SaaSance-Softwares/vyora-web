@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { usePage } from '@inertiajs/react';
 import { Sparkles, Check, Lock, ArrowRight } from 'lucide-react';
+import Confetti from 'react-confetti';
 
 export interface MilestoneCoupon {
     id: number;
@@ -166,14 +167,111 @@ export function MilestoneTimeline({
         return appliedCoupon?.code?.toUpperCase() === code?.toUpperCase();
     };
 
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [showPopper, setShowPopper] = useState(false);
+    const [justUnlocked, setJustUnlocked] = useState<MilestoneCoupon | null>(null);
+
+    const prevBestIdRef = useRef<number | null>(null);
+    const prevSubtotalRef = useRef<number>(subtotal);
+    const isInitialRender = useRef<boolean>(true);
+
+    const updateContainerSize = useCallback(() => {
+        if (containerRef.current) {
+            setContainerSize({
+                width: containerRef.current.offsetWidth,
+                height: containerRef.current.offsetHeight,
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        updateContainerSize();
+        window.addEventListener('resize', updateContainerSize);
+        return () => window.removeEventListener('resize', updateContainerSize);
+    }, [updateContainerSize]);
+
+    // Detect when user crosses a new milestone upwards
+    useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            prevBestIdRef.current = bestUnlocked ? bestUnlocked.id : null;
+            prevSubtotalRef.current = subtotal;
+            return;
+        }
+
+        if (bestUnlocked && subtotal > prevSubtotalRef.current) {
+            const isNewHigherMilestone = !prevBestIdRef.current || bestUnlocked.id !== prevBestIdRef.current;
+            if (isNewHigherMilestone) {
+                updateContainerSize();
+                setJustUnlocked(bestUnlocked);
+                setShowPopper(true);
+
+                const timer = setTimeout(() => {
+                    setShowPopper(false);
+                    setJustUnlocked(null);
+                }, 4000);
+
+                return () => clearTimeout(timer);
+            }
+        }
+
+        prevBestIdRef.current = bestUnlocked ? bestUnlocked.id : null;
+        prevSubtotalRef.current = subtotal;
+    }, [bestUnlocked?.id, subtotal, updateContainerSize]);
+
     return (
         <div
-            className="relative overflow-hidden rounded-2xl p-4 sm:p-5 shadow-xs transition-all mb-4 border"
+            ref={containerRef}
+            className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 transition-all duration-300 mb-4 border ${
+                justUnlocked ? 'ring-2 ring-emerald-400 shadow-md' : 'shadow-xs'
+            }`}
             style={{
                 background: containerBackground,
                 borderColor: borderColor,
             }}
         >
+            {/* Confetti & Party Poppers */}
+            {showPopper && typeof window !== 'undefined' && containerSize.width > 0 && (
+                <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden rounded-2xl">
+                    <Confetti
+                        width={containerSize.width}
+                        height={containerSize.height}
+                        recycle={false}
+                        numberOfPieces={80}
+                        gravity={0.25}
+                        initialVelocityY={12}
+                        initialVelocityX={8}
+                        colors={['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#ef4444']}
+                    />
+                </div>
+            )}
+
+            {showPopper && (
+                <>
+                    <div className="absolute -bottom-1 -left-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-left">
+                        🎉
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 text-2xl sm:text-3xl pointer-events-none z-30 select-none milestone-popper-right">
+                        🎉
+                    </div>
+                </>
+            )}
+
+            {/* Celebration Banner when a milestone is crossed */}
+            {justUnlocked && (
+                <div className="mb-3 flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-900 text-xs font-semibold shadow-xs">
+                    <div className="flex items-center gap-2">
+                        <span className="text-base animate-bounce">🎉</span>
+                        <span>
+                            <strong>Milestone Unlocked!</strong> You earned{' '}
+                            <span className="font-bold text-emerald-700 underline underline-offset-2">{formatDiscount(justUnlocked)}</span>
+                        </span>
+                    </div>
+                    <span className="text-sm shrink-0">✨</span>
+                </div>
+            )}
+
             {/* Header: Micro-badge & Add Items on top only once */}
             <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex items-center gap-1.5">
@@ -240,6 +338,7 @@ export function MilestoneTimeline({
                     const unlocked = subtotal >= Number(m.min_cart_value);
                     const isNext = nextMilestone?.id === m.id;
                     const applied = isApplied(m.code);
+                    const isJustUnlockedNode = justUnlocked?.id === m.id;
 
                     return (
                         <div
@@ -276,10 +375,13 @@ export function MilestoneTimeline({
                                         ? targetCircleColor
                                         : '#9ca3af',
                                 }}
-                                className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-xs ${
+                                className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-xs ${
                                     unlocked ? 'cursor-pointer hover:scale-105' : 'cursor-default'
                                 }`}
                             >
+                                {isJustUnlockedNode && (
+                                    <span className="absolute -inset-1.5 rounded-full bg-emerald-400 opacity-75 animate-ping pointer-events-none" />
+                                )}
                                 {applied || unlocked ? (
                                     <Check size={11} strokeWidth={3} />
                                 ) : isNext ? (
@@ -355,6 +457,27 @@ export function MilestoneTimeline({
                     </span>
                 </div>
             )}
+
+            <style>{`
+                @keyframes popperLeft {
+                    0% { transform: scale(0.2) rotate(-35deg) translate(-10px, 15px); opacity: 0; }
+                    50% { transform: scale(1.3) rotate(-10deg) translate(0, -6px); opacity: 1; }
+                    75% { transform: scale(0.95) rotate(-15deg); opacity: 1; }
+                    100% { transform: scale(1) rotate(-12deg); opacity: 1; }
+                }
+                @keyframes popperRight {
+                    0% { transform: scaleX(-1) scale(0.2) rotate(-35deg) translate(-10px, 15px); opacity: 0; }
+                    50% { transform: scaleX(-1) scale(1.3) rotate(-10deg) translate(0, -6px); opacity: 1; }
+                    75% { transform: scaleX(-1) scale(0.95) rotate(-15deg); opacity: 1; }
+                    100% { transform: scaleX(-1) scale(1) rotate(-12deg); opacity: 1; }
+                }
+                .milestone-popper-left {
+                    animation: popperLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+                .milestone-popper-right {
+                    animation: popperRight 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+            `}</style>
         </div>
     );
 }
