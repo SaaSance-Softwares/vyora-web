@@ -219,14 +219,14 @@ export default function Navbar({ settings }: { settings?: any }) {
                                                     item.root_type === 'page' ? `/${item.root_ref_id}` : '#'
                                     } className={`cursor-pointer text-sm font-medium hover:text-gray-600 flex items-center gap-1 py-5 relative ${getHoverClasses(false)}`} onClick={() => setForceOpenMenuId(null)}>
                                         {item.label} 
-                                        <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id); }} className="p-1 -mr-1">
+                                        <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id); }} className="p-1 -mr-1 cursor-pointer">
                                             <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-black transition-colors" />
                                         </span>
                                     </Link>
                                 ) : (
                                     <div className={`cursor-pointer text-sm font-medium hover:text-gray-600 flex items-center gap-1 py-5 relative ${getHoverClasses(false)}`}>
                                         {item.label} 
-                                        <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id); }} className="p-1 -mr-1">
+                                        <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id); }} className="p-1 -mr-1 cursor-pointer">
                                             <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-black transition-colors" />
                                         </span>
                                     </div>
@@ -377,7 +377,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                         <Link href={`/shop?category=${cat.slug}`} className="text-sm font-medium hover:text-gray-600 flex items-center gap-1 py-5">
                                             {cat.name} 
                                             {cat.children && cat.children.length > 0 && (
-                                                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === cat.id ? null : cat.id); }} className="p-1 -mr-1">
+                                                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setForceOpenMenuId(forceOpenMenuId === cat.id ? null : cat.id); }} className="p-1 -mr-1 cursor-pointer">
                                                     <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-black transition-colors" />
                                                 </span>
                                             )}

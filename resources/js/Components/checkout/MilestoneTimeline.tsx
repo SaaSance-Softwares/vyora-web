@@ -421,7 +421,12 @@ export function MilestoneTimeline({
                             </button>
 
                             {/* Node Labels below the circle */}
-                            <div className="absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap">
+                            <div 
+                                onClick={() => unlocked && onApply(m.code)}
+                                className={`absolute top-7 flex flex-col items-center whitespace-nowrap ${
+                                    unlocked ? 'cursor-pointer group/label' : 'pointer-events-none'
+                                }`}
+                            >
                                 <span
                                     className={`text-[11px] font-semibold leading-tight ${
                                         unlocked

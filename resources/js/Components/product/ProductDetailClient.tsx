@@ -682,7 +682,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                 key={color.value}
                                                 onClick={() => setSelectedColor(selectedColor === color.value ? null : color.value)}
                                                 className={cn(
-                                                    "relative w-[4.5rem] h-[5.5rem] rounded-xl overflow-hidden transition-all group outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black",
+                                                    "relative w-[4.5rem] h-[5.5rem] rounded-xl overflow-hidden transition-all group outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black cursor-pointer",
                                                     selectedColor === color.value ? "ring-2 ring-offset-2 ring-black shadow-lg scale-105" : "border-2 border-transparent hover:border-gray-300 opacity-80 hover:opacity-100"
                                                 )}
                                             >
@@ -711,7 +711,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                 <div className="flex justify-between items-center mb-3">
                                     <h3 className="text-sm font-semibold text-gray-900">Select Size</h3>
                                     {product.size_chart && (
-                                        <button onClick={() => setShowSizeChart(true)} className="text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1"><Ruler className="w-3 h-3" /> Size Chart</button>
+                                        <button onClick={() => setShowSizeChart(true)} className="text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1 cursor-pointer"><Ruler className="w-3 h-3" /> Size Chart</button>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-2.5">
@@ -729,9 +729,9 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                                 className={cn(
                                                     "w-[calc(25%-7.5px)] sm:w-16 py-3.5 flex items-center justify-center bg-white border rounded-xl text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-black",
                                                     selectedSize === size
-                                                        ? "border-black bg-black text-white shadow-md transform scale-[1.02]"
+                                                        ? "border-black bg-black text-white shadow-md transform scale-[1.02] cursor-pointer"
                                                         : isAvailable
-                                                            ? "border-gray-200 text-gray-900 hover:border-black hover:bg-gray-50"
+                                                            ? "border-gray-200 text-gray-900 hover:border-black hover:bg-gray-50 cursor-pointer"
                                                             : "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50 relative overflow-hidden"
                                                 )}
                                             >
@@ -816,7 +816,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                         <div className="order-10 md:order-10 border-t border-gray-200 mt-4 md:mt-10 divide-y divide-gray-100">
                             {/* Description */}
                             <div className="py-2">
-                                <button onClick={() => setOpenAccordion(openAccordion === 'description' ? null : 'description')} className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none">
+                                <button onClick={() => setOpenAccordion(openAccordion === 'description' ? null : 'description')} className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer">
                                     <span className="uppercase tracking-widest text-sm">Product Description</span>
                                     {openAccordion === 'description' ? <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" /> : <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />}
                                 </button>
@@ -832,7 +832,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
 
                             {/* Shipping & Returns — live from Policy Settings */}
                             <div className="py-2">
-                                <button onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')} className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none">
+                                <button onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')} className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer">
                                     <span className="uppercase tracking-widest text-sm">Shipping & Returns</span>
                                     {openAccordion === 'shipping' ? <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" /> : <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" />}
                                 </button>
@@ -909,7 +909,7 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
                                             <div key={i} className="py-2">
                                                 <button
                                                     onClick={() => setOpenAccordion(openAccordion === `extra-${i}` ? null : `extra-${i}`)}
-                                                    className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none"
+                                                    className="flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer"
                                                 >
                                                     <span className="uppercase tracking-widest text-sm">{sec.heading}</span>
                                                     {openAccordion === `extra-${i}`

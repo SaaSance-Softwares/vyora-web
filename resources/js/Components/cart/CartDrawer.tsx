@@ -1051,15 +1051,24 @@ export function CartDrawer() {
                         {cart.items.length > 0 && (
                             <div className="p-4 sm:px-6 border-t border-gray-100 bg-white space-y-3 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
                                 {/* Estimate Accordion */}
-                                <div className="border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
-                                        className="w-full flex items-center justify-between text-left group transition-colors"
-                                        aria-expanded={isBreakdownOpen}
+                                <div 
+                                    onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
+                                    className="border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2 cursor-pointer hover:bg-gray-100/70 transition-colors select-none"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-expanded={isBreakdownOpen}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            setIsBreakdownOpen(!isBreakdownOpen);
+                                        }
+                                    }}
+                                >
+                                    <div
+                                        className="w-full flex items-center justify-between text-left group cursor-pointer"
                                     >
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-bold text-gray-800 group-hover:text-black transition-colors">
+                                        <div className="flex items-center gap-1.5 cursor-pointer">
+                                            <span className="text-xs font-bold text-gray-800 group-hover:text-black transition-colors cursor-pointer">
                                                 Estimate
                                             </span>
                                             <ChevronDown
@@ -1075,14 +1084,17 @@ export function CartDrawer() {
                                             )}
                                         </div>
 
-                                        <span className="text-sm font-black text-gray-900 tracking-tight">
+                                        <span className="text-sm font-black text-gray-900 tracking-tight cursor-pointer">
                                             {formatPrice(estimatedTotal)}
                                         </span>
-                                    </button>
+                                    </div>
 
                                     {/* Expandable Breakdown List */}
                                     {isBreakdownOpen && (
-                                        <div className="pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <div 
+                                            onClick={(e) => e.stopPropagation()} 
+                                            className="pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150 cursor-default"
+                                        >
                                             {/* MRP Total */}
                                             <div className="flex justify-between text-gray-500">
                                                 <span>MRP Total</span>
@@ -1114,7 +1126,7 @@ export function CartDrawer() {
                                                                 e.stopPropagation();
                                                                 cart.setAppliedCoupon(null);
                                                             }}
-                                                            className="text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                                                            className="text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors cursor-pointer"
                                                             title="Remove coupon"
                                                         >
                                                             <X size={12} />
@@ -1157,7 +1169,7 @@ export function CartDrawer() {
                                 <button
                                     type="button"
                                     onClick={handleCheckout}
-                                    className="w-full py-3.5 px-4 bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group"
+                                    className="w-full py-3.5 px-4 bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer"
                                 >
                                     <span>Proceed to Checkout</span>
                                     <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
@@ -1168,7 +1180,7 @@ export function CartDrawer() {
                                     <button
                                         type="button"
                                         onClick={handleViewCart}
-                                        className="text-xs font-bold text-gray-500 hover:text-black underline underline-offset-4 transition-colors"
+                                        className="text-xs font-bold text-gray-500 hover:text-black underline underline-offset-4 transition-colors cursor-pointer"
                                     >
                                         View Full Cart Details
                                     </button>

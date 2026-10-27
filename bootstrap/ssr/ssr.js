@@ -4872,30 +4872,37 @@ function MilestoneTimeline({
                       ]
                     }
                   ),
-                  /* @__PURE__ */ jsxs("div", { className: "absolute top-7 flex flex-col items-center pointer-events-none whitespace-nowrap", children: [
-                    /* @__PURE__ */ jsxs(
-                      "span",
-                      {
-                        className: `text-[11px] font-semibold leading-tight ${unlocked ? "text-gray-900" : isNext ? "text-gray-800" : "text-gray-400"}`,
-                        children: [
-                          "₹",
-                          Number(m.min_cart_value).toLocaleString("en-IN")
-                        ]
-                      }
-                    ),
-                    /* @__PURE__ */ jsx(
-                      "span",
-                      {
-                        style: {
-                          backgroundColor: applied || unlocked ? badgeBg : isNext ? targetBadgeBg : "#f9fafb",
-                          color: applied || unlocked ? badgeTextColor : isNext ? targetBadgeText : "#9ca3af",
-                          borderColor: applied || unlocked ? badgeBorderColor : "#e5e7eb"
-                        },
-                        className: "text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors",
-                        children: formatDiscount(m)
-                      }
-                    )
-                  ] })
+                  /* @__PURE__ */ jsxs(
+                    "div",
+                    {
+                      onClick: () => unlocked && onApply(m.code),
+                      className: `absolute top-7 flex flex-col items-center whitespace-nowrap ${unlocked ? "cursor-pointer group/label" : "pointer-events-none"}`,
+                      children: [
+                        /* @__PURE__ */ jsxs(
+                          "span",
+                          {
+                            className: `text-[11px] font-semibold leading-tight ${unlocked ? "text-gray-900" : isNext ? "text-gray-800" : "text-gray-400"}`,
+                            children: [
+                              "₹",
+                              Number(m.min_cart_value).toLocaleString("en-IN")
+                            ]
+                          }
+                        ),
+                        /* @__PURE__ */ jsx(
+                          "span",
+                          {
+                            style: {
+                              backgroundColor: applied || unlocked ? badgeBg : isNext ? targetBadgeBg : "#f9fafb",
+                              color: applied || unlocked ? badgeTextColor : isNext ? targetBadgeText : "#9ca3af",
+                              borderColor: applied || unlocked ? badgeBorderColor : "#e5e7eb"
+                            },
+                            className: "text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded mt-1 border transition-colors",
+                            children: formatDiscount(m)
+                          }
+                        )
+                      ]
+                    }
+                  )
                 ]
               },
               m.id || idx
@@ -5696,13 +5703,14 @@ function FaqAccordion({ faqs }) {
     /* @__PURE__ */ jsx("div", { className: "space-y-4", children: faqs.map((faq, index) => /* @__PURE__ */ jsxs(
       "div",
       {
-        className: `border rounded-2xl overflow-hidden transition-all duration-300 ${openIndex === index ? "border-black shadow-md bg-white" : "border-gray-200 bg-gray-50 hover:bg-gray-100"}`,
+        className: `border rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer ${openIndex === index ? "border-black shadow-md bg-white" : "border-gray-200 bg-gray-50 hover:bg-gray-100"}`,
         children: [
           /* @__PURE__ */ jsxs(
             "button",
             {
+              type: "button",
               onClick: () => toggleFaq(index),
-              className: "w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none",
+              className: "w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none cursor-pointer",
               "aria-expanded": openIndex === index,
               children: [
                 /* @__PURE__ */ jsx("span", { className: `text-base md:text-lg font-bold pr-8 transition-colors ${openIndex === index ? "text-black" : "text-gray-800"}`, children: faq.question }),
@@ -6020,7 +6028,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
           "button",
           {
             onClick: () => setIsFilterOpen(true),
-            className: "flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm text-sm",
+            className: "flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm text-sm cursor-pointer",
             children: [
               /* @__PURE__ */ jsx(SlidersHorizontal, { size: 16 }),
               " Filters"
@@ -6043,7 +6051,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
       ] })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col lg:flex-row gap-8 items-start", children: [
-      isFilterOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 z-30 lg:hidden", onClick: () => setIsFilterOpen(false) }),
+      isFilterOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 z-30 lg:hidden cursor-pointer", onClick: () => setIsFilterOpen(false) }),
       /* @__PURE__ */ jsxs("div", { className: `
                     fixed lg:sticky top-[80px] pb-16 lg:pb-0 right-0 max-h-[calc(100vh-64px)] lg:max-h-[calc(100vh-100px)]
                     w-80 lg:w-64 bg-white z-40 lg:z-0 
@@ -6057,8 +6065,8 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             " Filters"
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-            /* @__PURE__ */ jsx("button", { onClick: clearFilters, className: "text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2", children: "Clear" }),
-            /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "lg:hidden p-2 -mr-2 text-gray-500", children: /* @__PURE__ */ jsx(X, { size: 20 }) })
+            /* @__PURE__ */ jsx("button", { onClick: clearFilters, className: "text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2 cursor-pointer", children: "Clear" }),
+            /* @__PURE__ */ jsx("button", { onClick: () => setIsFilterOpen(false), className: "lg:hidden p-2 -mr-2 text-gray-500 cursor-pointer", children: /* @__PURE__ */ jsx(X, { size: 20 }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto p-4 lg:p-0 space-y-6 lg:mt-2 custom-scrollbar min-h-0", children: [
@@ -6078,7 +6086,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             /* @__PURE__ */ jsx("span", { className: "text-sm font-medium text-gray-700 group-hover:text-black", children: "In Stock Only" })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("price"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("price"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer", children: [
               "Price ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.price ? "rotate-180" : ""}` })
             ] }),
@@ -6107,7 +6115,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             ] })
           ] }),
           availableSizes.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("size"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("size"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer", children: [
               "Size ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.size ? "rotate-180" : ""}` })
             ] }),
@@ -6115,7 +6123,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
               "button",
               {
                 onClick: () => toggleArrayFilter("size", s.name),
-                className: `min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 ${filters.size.includes(s.name) ? "bg-black text-white border-black" : "border-gray-200 text-gray-700 hover:border-gray-300"}`,
+                className: `min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 cursor-pointer ${filters.size.includes(s.name) ? "bg-black text-white border-black" : "border-gray-200 text-gray-700 hover:border-gray-300"}`,
                 children: [
                   /* @__PURE__ */ jsx("span", { children: s.name }),
                   /* @__PURE__ */ jsxs("span", { className: `text-xs opacity-60 ${filters.size.includes(s.name) ? "text-gray-300" : "text-gray-500"}`, children: [
@@ -6129,13 +6137,13 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             )) })
           ] }),
           availableColors.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("color"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("color"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer", children: [
               "Color ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.color ? "rotate-180" : ""}` })
             ] }),
             expandedSections.color && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: availableColors.map((c) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.color.includes(c.name), onChange: () => toggleArrayFilter("color", c.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.color.includes(c.name), onChange: () => toggleArrayFilter("color", c.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" }),
                 /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
                   /* @__PURE__ */ jsx(
                     "span",
@@ -6151,26 +6159,26 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             ] }, c.name)) })
           ] }),
           availableFits.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fit"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fit"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer", children: [
               "Fit ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.fit ? "rotate-180" : ""}` })
             ] }),
             expandedSections.fit && /* @__PURE__ */ jsx("div", { className: "space-y-2", children: availableFits.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fit.includes(f.name), onChange: () => toggleArrayFilter("fit", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fit.includes(f.name), onChange: () => toggleArrayFilter("fit", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" }),
                 /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f.name })
               ] }),
               /* @__PURE__ */ jsx("span", { className: "text-gray-400 text-xs mr-3", children: f.count })
             ] }, f.name)) })
           ] }),
           availableFabrics.length > 0 && /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-5", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fabric"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => toggleSection("fabric"), className: "flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2 cursor-pointer", children: [
               "Fabric ",
               /* @__PURE__ */ jsx(ChevronDown, { size: 16, className: `transition-transform ${expandedSections.fabric ? "rotate-180" : ""}` })
             ] }),
             expandedSections.fabric && /* @__PURE__ */ jsx("div", { className: "space-y-2 pt-2", children: availableFabrics.map((f) => /* @__PURE__ */ jsxs("label", { className: "flex items-center justify-between cursor-pointer group w-full", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fabric.includes(f.name), onChange: () => toggleArrayFilter("fabric", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black" }),
+                /* @__PURE__ */ jsx("input", { type: "checkbox", checked: filters.fabric.includes(f.name), onChange: () => toggleArrayFilter("fabric", f.name), className: "w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" }),
                 /* @__PURE__ */ jsx("span", { className: "text-sm text-gray-600 group-hover:text-black", children: f.name })
               ] }),
               /* @__PURE__ */ jsx("span", { className: "text-gray-400 text-xs mr-3", children: f.count })
@@ -12398,7 +12406,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                 {
                   onClick: () => setSelectedColor(selectedColor === color.value ? null : color.value),
                   className: cn(
-                    "relative w-[4.5rem] h-[5.5rem] rounded-xl overflow-hidden transition-all group outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black",
+                    "relative w-[4.5rem] h-[5.5rem] rounded-xl overflow-hidden transition-all group outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black cursor-pointer",
                     selectedColor === color.value ? "ring-2 ring-offset-2 ring-black shadow-lg scale-105" : "border-2 border-transparent hover:border-gray-300 opacity-80 hover:opacity-100"
                   ),
                   children: [
@@ -12416,7 +12424,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
           sizes.length > 0 && /* @__PURE__ */ jsxs("div", { className: "pt-2", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-3", children: [
               /* @__PURE__ */ jsx("h3", { className: "text-sm font-semibold text-gray-900", children: "Select Size" }),
-              product.size_chart && /* @__PURE__ */ jsxs("button", { onClick: () => setShowSizeChart(true), className: "text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1", children: [
+              product.size_chart && /* @__PURE__ */ jsxs("button", { onClick: () => setShowSizeChart(true), className: "text-xs font-bold text-gray-500 underline uppercase tracking-wider hover:text-black transition-colors underline-offset-4 flex items-center gap-1 cursor-pointer", children: [
                 /* @__PURE__ */ jsx(Ruler, { className: "w-3 h-3" }),
                 " Size Chart"
               ] })
@@ -12432,7 +12440,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                   disabled: !isAvailable,
                   className: cn(
                     "w-[calc(25%-7.5px)] sm:w-16 py-3.5 flex items-center justify-center bg-white border rounded-xl text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-black",
-                    selectedSize === size ? "border-black bg-black text-white shadow-md transform scale-[1.02]" : isAvailable ? "border-gray-200 text-gray-900 hover:border-black hover:bg-gray-50" : "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50 relative overflow-hidden"
+                    selectedSize === size ? "border-black bg-black text-white shadow-md transform scale-[1.02] cursor-pointer" : isAvailable ? "border-gray-200 text-gray-900 hover:border-black hover:bg-gray-50 cursor-pointer" : "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50 relative overflow-hidden"
                   ),
                   children: [
                     size,
@@ -12511,14 +12519,14 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "order-10 md:order-10 border-t border-gray-200 mt-4 md:mt-10 divide-y divide-gray-100", children: [
           /* @__PURE__ */ jsxs("div", { className: "py-2", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => setOpenAccordion(openAccordion === "description" ? null : "description"), className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => setOpenAccordion(openAccordion === "description" ? null : "description"), className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer", children: [
               /* @__PURE__ */ jsx("span", { className: "uppercase tracking-widest text-sm", children: "Product Description" }),
               openAccordion === "description" ? /* @__PURE__ */ jsx(ChevronUp, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" }) : /* @__PURE__ */ jsx(ChevronDown, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" })
             ] }),
             /* @__PURE__ */ jsx("div", { className: cn("overflow-hidden transition-all duration-300 ease-in-out", openAccordion === "description" ? "max-h-[2000px] opacity-100 pb-4" : "max-h-0 opacity-0"), children: /* @__PURE__ */ jsx("div", { className: "text-sm text-gray-500 leading-relaxed bg-white", children: product.long_description ? /* @__PURE__ */ jsx("div", { className: "prose prose-sm max-w-none text-gray-600", dangerouslySetInnerHTML: { __html: product.long_description } }) : /* @__PURE__ */ jsx("p", { children: "Premium quality guarantees unmatched durability and comfort. Built identically to exact specifications required for luxury wear. This product maps perfectly to modern street aesthetics." }) }) })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "py-2", children: [
-            /* @__PURE__ */ jsxs("button", { onClick: () => setOpenAccordion(openAccordion === "shipping" ? null : "shipping"), className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none", children: [
+            /* @__PURE__ */ jsxs("button", { onClick: () => setOpenAccordion(openAccordion === "shipping" ? null : "shipping"), className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer", children: [
               /* @__PURE__ */ jsx("span", { className: "uppercase tracking-widest text-sm", children: "Shipping & Returns" }),
               openAccordion === "shipping" ? /* @__PURE__ */ jsx(ChevronUp, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" }) : /* @__PURE__ */ jsx(ChevronDown, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" })
             ] }),
@@ -12592,7 +12600,7 @@ function ProductDetailClient({ product, policies = {}, coupons = [] }) {
                     "button",
                     {
                       onClick: () => setOpenAccordion(openAccordion === `extra-${i}` ? null : `extra-${i}`),
-                      className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none",
+                      className: "flex w-full items-center justify-between py-4 font-bold text-gray-900 group outline-none cursor-pointer",
                       children: [
                         /* @__PURE__ */ jsx("span", { className: "uppercase tracking-widest text-sm", children: sec.heading }),
                         openAccordion === `extra-${i}` ? /* @__PURE__ */ jsx(ChevronUp, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" }) : /* @__PURE__ */ jsx(ChevronDown, { className: "w-5 h-5 text-gray-400 group-hover:text-black transition-colors" })
@@ -13568,14 +13576,14 @@ function Navbar({ settings }) {
           e.preventDefault();
           e.stopPropagation();
           setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id);
-        }, className: "p-1 -mr-1", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
+        }, className: "p-1 -mr-1 cursor-pointer", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
       ] }) : /* @__PURE__ */ jsxs("div", { className: `cursor-pointer text-sm font-medium hover:text-gray-600 flex items-center gap-1 py-5 relative ${getHoverClasses(false)}`, children: [
         item.label,
         /* @__PURE__ */ jsx("span", { onClick: (e) => {
           e.preventDefault();
           e.stopPropagation();
           setForceOpenMenuId(forceOpenMenuId === item.id ? null : item.id);
-        }, className: "p-1 -mr-1", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
+        }, className: "p-1 -mr-1 cursor-pointer", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
       ] }),
       /* @__PURE__ */ jsx("div", { className: `absolute left-0 top-full mt-0 w-full bg-white border-b border-t shadow-xl transition-all duration-300 transform origin-top z-[100] ${hiddenMenuId === item.id && forceOpenMenuId !== item.id ? "opacity-0 invisible pointer-events-none" : forceOpenMenuId === item.id ? "opacity-100 visible translate-y-0" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible -translate-y-2 group-hover:translate-y-0"}`, children: /* @__PURE__ */ jsx("div", { className: "max-w-7xl mx-auto px-4 py-8", children: /* @__PURE__ */ jsx("div", { className: `grid gap-8 grid-cols-${item.columns || 4} items-start`, children: item.layout_columns?.map((col) => /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6", children: col.blocks?.map((block) => /* @__PURE__ */ jsx("div", { children: block.type === "image" ? renderDynamicLink(block, true, item.id) : /* @__PURE__ */ jsxs("div", { children: [
         block.label && /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 pb-2 mb-3", children: block.link ? /* @__PURE__ */ jsx(Link, { href: block.link, className: "text-sm font-black text-gray-900 uppercase tracking-wide hover:text-black", onClick: () => {
@@ -13651,7 +13659,7 @@ function Navbar({ settings }) {
               e.preventDefault();
               e.stopPropagation();
               setForceOpenMenuId(forceOpenMenuId === cat.id ? null : cat.id);
-            }, className: "p-1 -mr-1", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
+            }, className: "p-1 -mr-1 cursor-pointer", children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 text-gray-400 group-hover:text-black transition-colors" }) })
           ] }),
           cat.children && cat.children.length > 0 && /* @__PURE__ */ jsx("div", { className: `absolute left-0 top-[64px] w-full bg-white border-b border-t shadow-xl transition-all duration-300 transform origin-top z-[100] ${hiddenMenuId === cat.id && forceOpenMenuId !== cat.id ? "opacity-0 invisible pointer-events-none" : forceOpenMenuId === cat.id ? "opacity-100 visible translate-y-0" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible -translate-y-2 group-hover:translate-y-0"}`, children: /* @__PURE__ */ jsx("div", { className: "max-w-7xl mx-auto px-4 py-8", children: /* @__PURE__ */ jsx("div", { className: "flex gap-16", children: /* @__PURE__ */ jsx("div", { className: "flex-1 grid grid-cols-3 gap-8", children: cat.children.map((sub) => /* @__PURE__ */ jsxs("div", { children: [
             /* @__PURE__ */ jsx(Link, { href: `/shop?category=${sub.slug}`, className: "text-sm font-bold text-gray-900 border-b pb-2 mb-3 block hover:text-gray-600 uppercase tracking-wide", onClick: () => setHiddenMenuId(cat.id), children: sub.name }),
@@ -15218,102 +15226,122 @@ function CartDrawer() {
                   ] })
                 ] }),
                 cart.items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "p-4 sm:px-6 border-t border-gray-100 bg-white space-y-3 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]", children: [
-                  /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2", children: [
-                    /* @__PURE__ */ jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: () => setIsBreakdownOpen(!isBreakdownOpen),
-                        className: "w-full flex items-center justify-between text-left group transition-colors",
-                        "aria-expanded": isBreakdownOpen,
-                        children: [
-                          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-                            /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-gray-800 group-hover:text-black transition-colors", children: "Estimate" }),
-                            /* @__PURE__ */ jsx(
-                              ChevronDown,
-                              {
-                                size: 14,
-                                className: `text-gray-500 transition-transform duration-200 transform ${isBreakdownOpen ? "rotate-180 text-black" : ""}`
-                              }
-                            ),
-                            mrpDiscount > 0 && !isBreakdownOpen && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded ml-1", children: [
-                              "Save ",
-                              formatPrice(mrpDiscount + discount)
-                            ] })
-                          ] }),
-                          /* @__PURE__ */ jsx("span", { className: "text-sm font-black text-gray-900 tracking-tight", children: formatPrice(estimatedTotal) })
-                        ]
-                      }
-                    ),
-                    isBreakdownOpen && /* @__PURE__ */ jsxs("div", { className: "pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150", children: [
-                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
-                        /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
-                        /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-800", children: formatPrice(mrpTotal) })
-                      ] }),
-                      mrpDiscount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
-                        /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
-                        /* @__PURE__ */ jsxs("span", { children: [
-                          "−",
-                          formatPrice(mrpDiscount)
-                        ] })
-                      ] }),
-                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
-                        /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
-                        /* @__PURE__ */ jsx("span", { children: formatPrice(subtotal) })
-                      ] }),
-                      cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-emerald-600 font-medium", children: [
-                        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
-                          /* @__PURE__ */ jsxs("span", { children: [
-                            "Coupon (",
-                            cart.appliedCoupon.code,
-                            ")"
-                          ] }),
-                          /* @__PURE__ */ jsx(
-                            "button",
-                            {
-                              type: "button",
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                cart.setAppliedCoupon(null);
-                              },
-                              className: "text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors",
-                              title: "Remove coupon",
-                              children: /* @__PURE__ */ jsx(X, { size: 12 })
-                            }
-                          )
-                        ] }),
-                        /* @__PURE__ */ jsxs("span", { children: [
-                          "−",
-                          formatPrice(discount)
-                        ] })
-                      ] }),
-                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
-                        /* @__PURE__ */ jsx("span", { children: "Shipping" }),
-                        /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-700", children: shippingLabel })
-                      ] }),
-                      isTaxEnabled && sharedSettings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-400 text-[11px]", children: [
-                        /* @__PURE__ */ jsxs("span", { children: [
-                          taxLabel,
-                          " @ ",
-                          rate,
-                          "% ",
-                          taxInclusive ? "(Included)" : "(Excluded)"
-                        ] }),
-                        /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
-                      ] }, rate)) }),
-                      /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-200/80 my-1" }),
-                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-xs pt-0.5", children: [
-                        /* @__PURE__ */ jsx("span", { children: "Estimated Total" }),
-                        /* @__PURE__ */ jsx("span", { className: "font-black text-sm", children: formatPrice(estimatedTotal) })
-                      ] })
-                    ] })
-                  ] }),
+                  /* @__PURE__ */ jsxs(
+                    "div",
+                    {
+                      onClick: () => setIsBreakdownOpen(!isBreakdownOpen),
+                      className: "border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2 cursor-pointer hover:bg-gray-100/70 transition-colors select-none",
+                      role: "button",
+                      tabIndex: 0,
+                      "aria-expanded": isBreakdownOpen,
+                      onKeyDown: (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setIsBreakdownOpen(!isBreakdownOpen);
+                        }
+                      },
+                      children: [
+                        /* @__PURE__ */ jsxs(
+                          "div",
+                          {
+                            className: "w-full flex items-center justify-between text-left group cursor-pointer",
+                            children: [
+                              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5 cursor-pointer", children: [
+                                /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-gray-800 group-hover:text-black transition-colors cursor-pointer", children: "Estimate" }),
+                                /* @__PURE__ */ jsx(
+                                  ChevronDown,
+                                  {
+                                    size: 14,
+                                    className: `text-gray-500 transition-transform duration-200 transform ${isBreakdownOpen ? "rotate-180 text-black" : ""}`
+                                  }
+                                ),
+                                mrpDiscount > 0 && !isBreakdownOpen && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded ml-1", children: [
+                                  "Save ",
+                                  formatPrice(mrpDiscount + discount)
+                                ] })
+                              ] }),
+                              /* @__PURE__ */ jsx("span", { className: "text-sm font-black text-gray-900 tracking-tight cursor-pointer", children: formatPrice(estimatedTotal) })
+                            ]
+                          }
+                        ),
+                        isBreakdownOpen && /* @__PURE__ */ jsxs(
+                          "div",
+                          {
+                            onClick: (e) => e.stopPropagation(),
+                            className: "pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150 cursor-default",
+                            children: [
+                              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+                                /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
+                                /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-800", children: formatPrice(mrpTotal) })
+                              ] }),
+                              mrpDiscount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
+                                /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
+                                /* @__PURE__ */ jsxs("span", { children: [
+                                  "−",
+                                  formatPrice(mrpDiscount)
+                                ] })
+                              ] }),
+                              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
+                                /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
+                                /* @__PURE__ */ jsx("span", { children: formatPrice(subtotal) })
+                              ] }),
+                              cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-emerald-600 font-medium", children: [
+                                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+                                  /* @__PURE__ */ jsxs("span", { children: [
+                                    "Coupon (",
+                                    cart.appliedCoupon.code,
+                                    ")"
+                                  ] }),
+                                  /* @__PURE__ */ jsx(
+                                    "button",
+                                    {
+                                      type: "button",
+                                      onClick: (e) => {
+                                        e.stopPropagation();
+                                        cart.setAppliedCoupon(null);
+                                      },
+                                      className: "text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors cursor-pointer",
+                                      title: "Remove coupon",
+                                      children: /* @__PURE__ */ jsx(X, { size: 12 })
+                                    }
+                                  )
+                                ] }),
+                                /* @__PURE__ */ jsxs("span", { children: [
+                                  "−",
+                                  formatPrice(discount)
+                                ] })
+                              ] }),
+                              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+                                /* @__PURE__ */ jsx("span", { children: "Shipping" }),
+                                /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-700", children: shippingLabel })
+                              ] }),
+                              isTaxEnabled && sharedSettings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-400 text-[11px]", children: [
+                                /* @__PURE__ */ jsxs("span", { children: [
+                                  taxLabel,
+                                  " @ ",
+                                  rate,
+                                  "% ",
+                                  taxInclusive ? "(Included)" : "(Excluded)"
+                                ] }),
+                                /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
+                              ] }, rate)) }),
+                              /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-200/80 my-1" }),
+                              /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-xs pt-0.5", children: [
+                                /* @__PURE__ */ jsx("span", { children: "Estimated Total" }),
+                                /* @__PURE__ */ jsx("span", { className: "font-black text-sm", children: formatPrice(estimatedTotal) })
+                              ] })
+                            ]
+                          }
+                        )
+                      ]
+                    }
+                  ),
                   /* @__PURE__ */ jsxs(
                     "button",
                     {
                       type: "button",
                       onClick: handleCheckout,
-                      className: "w-full py-3.5 px-4 bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group",
+                      className: "w-full py-3.5 px-4 bg-black text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer",
                       children: [
                         /* @__PURE__ */ jsx("span", { children: "Proceed to Checkout" }),
                         /* @__PURE__ */ jsx(ArrowRight, { size: 15, className: "group-hover:translate-x-1 transition-transform" })
@@ -15326,7 +15354,7 @@ function CartDrawer() {
                       {
                         type: "button",
                         onClick: handleViewCart,
-                        className: "text-xs font-bold text-gray-500 hover:text-black underline underline-offset-4 transition-colors",
+                        className: "text-xs font-bold text-gray-500 hover:text-black underline underline-offset-4 transition-colors cursor-pointer",
                         children: "View Full Cart Details"
                       }
                     ),

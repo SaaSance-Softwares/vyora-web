@@ -383,7 +383,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                 <div className="flex justify-between lg:justify-end items-center gap-3 w-full border-t border-gray-100 pt-4">
                     <button 
                         onClick={() => setIsFilterOpen(true)}
-                        className="flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm text-sm"
+                        className="flex items-center justify-center gap-2 border px-4 py-2 rounded-xl lg:hidden font-medium bg-white shadow-sm text-sm cursor-pointer"
                     >
                         <SlidersHorizontal size={16} /> Filters
                     </button>
@@ -406,7 +406,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
             <div className="flex flex-col lg:flex-row gap-8 items-start">
                 {/* Mobile Filter Overlay */}
                 {isFilterOpen && (
-                    <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsFilterOpen(false)} />
+                    <div className="fixed inset-0 bg-black/50 z-30 lg:hidden cursor-pointer" onClick={() => setIsFilterOpen(false)} />
                 )}
 
                 {/* Sidebar Filters */}
@@ -420,10 +420,10 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                     <div className="flex items-center justify-between p-4 lg:p-0 lg:pb-4 border-b lg:border-none shrink-0">
                         <h2 className="text-lg font-bold flex items-center gap-2"><Filter size={18} /> Filters</h2>
                         <div className="flex items-center gap-3">
-                            <button onClick={clearFilters} className="text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2">
+                            <button onClick={clearFilters} className="text-sm font-bold text-gray-500 hover:text-black underline underline-offset-2 cursor-pointer">
                                 Clear
                             </button>
-                            <button onClick={() => setIsFilterOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500"><X size={20} /></button>
+                            <button onClick={() => setIsFilterOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500 cursor-pointer"><X size={20} /></button>
                         </div>
                     </div>
 
@@ -449,7 +449,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
 
                         {/* Price Range */}
                         <div className="border-t border-gray-100 pt-5">
-                            <button onClick={() => toggleSection('price')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                            <button onClick={() => toggleSection('price')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer">
                                 Price <ChevronDown size={16} className={`transition-transform ${expandedSections.price ? 'rotate-180' : ''}`} />
                             </button>
                             {expandedSections.price && (
@@ -476,7 +476,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         {/* Size */}
                         {availableSizes.length > 0 && (
                             <div className="border-t border-gray-100 pt-5">
-                                <button onClick={() => toggleSection('size')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                <button onClick={() => toggleSection('size')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer">
                                     Size <ChevronDown size={16} className={`transition-transform ${expandedSections.size ? 'rotate-180' : ''}`} />
                                 </button>
                                 {expandedSections.size && (
@@ -485,7 +485,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                             <button 
                                                 key={s.name}
                                                 onClick={() => toggleArrayFilter('size', s.name)}
-                                                className={`min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 ${filters.size.includes(s.name) ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}
+                                                className={`min-w-[40px] h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-1 cursor-pointer ${filters.size.includes(s.name) ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}
                                             >
                                                 <span>{s.name}</span>
                                                 <span className={`text-xs opacity-60 ${filters.size.includes(s.name) ? 'text-gray-300' : 'text-gray-500'}`}>({s.count})</span>
@@ -499,7 +499,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         {/* Color */}
                         {availableColors.length > 0 && (
                             <div className="border-t border-gray-100 pt-5">
-                                <button onClick={() => toggleSection('color')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                <button onClick={() => toggleSection('color')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer">
                                     Color <ChevronDown size={16} className={`transition-transform ${expandedSections.color ? 'rotate-180' : ''}`} />
                                 </button>
                                 {expandedSections.color && (
@@ -507,7 +507,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                         {availableColors.map(c => (
                                             <label key={c.name} className="flex items-center justify-between cursor-pointer group w-full">
                                                 <div className="flex items-center gap-3">
-                                                    <input type="checkbox" checked={filters.color.includes(c.name)} onChange={() => toggleArrayFilter('color', c.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <input type="checkbox" checked={filters.color.includes(c.name)} onChange={() => toggleArrayFilter('color', c.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" />
                                                     <div className="flex items-center gap-2">
                                                         <span 
                                                             className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" 
@@ -527,7 +527,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         {/* Fit */}
                         {availableFits.length > 0 && (
                             <div className="border-t border-gray-100 pt-5">
-                                <button onClick={() => toggleSection('fit')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4">
+                                <button onClick={() => toggleSection('fit')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 mb-4 cursor-pointer">
                                     Fit <ChevronDown size={16} className={`transition-transform ${expandedSections.fit ? 'rotate-180' : ''}`} />
                                 </button>
                                 {expandedSections.fit && (
@@ -535,7 +535,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                         {availableFits.map(f => (
                                             <label key={f.name} className="flex items-center justify-between cursor-pointer group w-full">
                                                 <div className="flex items-center gap-3">
-                                                    <input type="checkbox" checked={filters.fit.includes(f.name)} onChange={() => toggleArrayFilter('fit', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <input type="checkbox" checked={filters.fit.includes(f.name)} onChange={() => toggleArrayFilter('fit', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" />
                                                     <span className="text-sm text-gray-600 group-hover:text-black">{f.name}</span>
                                                 </div>
                                                 <span className="text-gray-400 text-xs mr-3">{f.count}</span>
@@ -549,7 +549,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                         {/* Fabric */}
                         {availableFabrics.length > 0 && (
                             <div className="border-t border-gray-100 pt-5">
-                                <button onClick={() => toggleSection('fabric')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2">
+                                <button onClick={() => toggleSection('fabric')} className="flex items-center justify-between w-full font-bold uppercase text-xs tracking-wider text-gray-900 pb-2 cursor-pointer">
                                     Fabric <ChevronDown size={16} className={`transition-transform ${expandedSections.fabric ? 'rotate-180' : ''}`} />
                                 </button>
                                 {expandedSections.fabric && (
@@ -557,7 +557,7 @@ function ProductListingInner({ title, subtitle, bannerImage, description, faqs, 
                                         {availableFabrics.map(f => (
                                             <label key={f.name} className="flex items-center justify-between cursor-pointer group w-full">
                                                 <div className="flex items-center gap-3">
-                                                    <input type="checkbox" checked={filters.fabric.includes(f.name)} onChange={() => toggleArrayFilter('fabric', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black" />
+                                                    <input type="checkbox" checked={filters.fabric.includes(f.name)} onChange={() => toggleArrayFilter('fabric', f.name)} className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer" />
                                                     <span className="text-sm text-gray-600 group-hover:text-black">{f.name}</span>
                                                 </div>
                                                 <span className="text-gray-400 text-xs mr-3">{f.count}</span>

@@ -31,11 +31,12 @@ export function FaqAccordion({ faqs }: Props) {
                 {faqs.map((faq, index) => (
                     <div 
                         key={faq.id} 
-                        className={`border rounded-2xl overflow-hidden transition-all duration-300 ${openIndex === index ? 'border-black shadow-md bg-white' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'}`}
+                        className={`border rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer ${openIndex === index ? 'border-black shadow-md bg-white' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'}`}
                     >
                         <button
+                            type="button"
                             onClick={() => toggleFaq(index)}
-                            className="w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none"
+                            className="w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none cursor-pointer"
                             aria-expanded={openIndex === index}
                         >
                             <span className={`text-base md:text-lg font-bold pr-8 transition-colors ${openIndex === index ? 'text-black' : 'text-gray-800'}`}>
