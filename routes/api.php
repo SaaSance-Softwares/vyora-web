@@ -159,6 +159,7 @@ Route::middleware('throttle:public_api')->group(function () {
     // Delivery Pincode Check
     Route::post('/check-delivery', [DeliveryPinApiController::class, 'check']);
     Route::post('/cart/sync', [\App\Http\Controllers\Api\CartController::class, 'sync']);
+    Route::get('/cart/recommendations', [\App\Http\Controllers\Api\CartRecommendationController::class, 'index']);
 
     Route::get('/debug-wa', function() {
         return response()->json([

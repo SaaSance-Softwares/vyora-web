@@ -7,6 +7,7 @@ import axios from "axios";
 import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
 import { useUIStore } from "@/store/ui";
+import { useCartDrawerStore } from "@/store/cartDrawer";
 import { usePage, router, useForm } from '@inertiajs/react';
 import { Star, StarHalf, Heart, ShoppingBag, Truck, ShieldCheck, ChevronDown, ChevronUp, X, Ruler, Zap, Camera, Share2, BarChart2 } from "lucide-react";
 import PriceHistoryModal from "./PriceHistoryModal";
@@ -303,6 +304,9 @@ export default function ProductDetailClient({ product, policies = {}, coupons = 
             returnDays: product.is_returnable ? product.return_days : null,
         });
         trackAddToCart(product, 1, currentVariant.code);
+        if (settings?.cart_drawer_enabled !== '0') {
+            useCartDrawerStore.getState().openCartDrawer();
+        }
     }
 
     function handleWishlistToggle() {

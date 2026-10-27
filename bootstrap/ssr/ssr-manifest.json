@@ -12,6 +12,7 @@
   "resources/js/Components/auth/CountryCodePicker.tsx": [],
   "resources/js/Components/auth/LoginForm.tsx": [],
   "resources/js/Components/auth/RegisterForm.tsx": [],
+  "resources/js/Components/cart/CartDrawer.tsx": [],
   "resources/js/Components/checkout/CheckoutAddress.tsx": [],
   "resources/js/Components/checkout/MilestoneTimeline.tsx": [],
   "resources/js/Components/product/PriceHistoryModal.tsx": [],
@@ -71,6 +72,7 @@
   "resources/js/ssr.jsx": [],
   "resources/js/store/auth.ts": [],
   "resources/js/store/cart.ts": [],
+  "resources/js/store/cartDrawer.ts": [],
   "resources/js/store/ui.ts": [],
   "resources/js/store/wishlist.ts": []
 }

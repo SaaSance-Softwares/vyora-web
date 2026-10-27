@@ -79,7 +79,7 @@ class HandleInertiaRequests extends Middleware
                 if (isset($allData['footer_structure'])) {
                     $allData['footer_structure'] = json_decode($allData['footer_structure'], true) ?? [];
                 }
-                $jsonFieldsToDecode = ['marketing_consent_fields', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer'];
+                $jsonFieldsToDecode = ['marketing_consent_fields', 'auth_fields', 'auth_appearance', 'auth_header', 'auth_footer', 'cart_drawer_fixed_product_ids'];
                 foreach ($jsonFieldsToDecode as $field) {
                     if (isset($allData[$field]) && is_string($allData[$field])) {
                         $allData[$field] = json_decode($allData[$field], true) ?? [];

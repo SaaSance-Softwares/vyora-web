@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { ShoppingBag, User, LogOut, ChevronDown, Heart, Search, TrendingUp, Menu, X, Home } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { useCartDrawerStore } from '@/store/cartDrawer';
 import { useState, useEffect } from 'react';
 import { useUIStore } from '@/store/ui';
 import { useWishlistStore } from '@/store/wishlist';
@@ -329,7 +330,16 @@ export default function Navbar({ settings }: { settings?: any }) {
                 )}
             </Link>
 
-            <Link href="/cart" className="relative text-gray-900 hover:text-gray-600">
+            <Link
+                href="/cart"
+                onClick={(e) => {
+                    if ((settings?.cart_drawer_enabled ?? '1') !== '0') {
+                        e.preventDefault();
+                        useCartDrawerStore.getState().openCartDrawer();
+                    }
+                }}
+                className="relative text-gray-900 hover:text-gray-600"
+            >
                 <ShoppingBag className="w-5 h-5" />
                 {cart.items.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
@@ -591,7 +601,16 @@ export default function Navbar({ settings }: { settings?: any }) {
                         <span className="text-[9px] font-medium tracking-wide">Wishlist</span>
                     </Link>
 
-                    <Link href="/cart" className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black relative">
+                    <Link
+                        href="/cart"
+                        onClick={(e) => {
+                            if ((settings?.cart_drawer_enabled ?? '1') !== '0') {
+                                e.preventDefault();
+                                useCartDrawerStore.getState().openCartDrawer();
+                            }
+                        }}
+                        className="flex flex-col items-center justify-center w-full gap-1 text-gray-500 hover:text-black relative"
+                    >
                         <div className="relative">
                             <ShoppingBag className="w-5 h-5" />
                             {cart.items.length > 0 && (

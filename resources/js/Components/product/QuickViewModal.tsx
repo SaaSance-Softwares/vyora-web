@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useUIStore } from '@/store/ui';
 import { useCartStore } from '@/store/cart';
-import { router, Link } from '@inertiajs/react';
+import { router, Link, usePage } from '@inertiajs/react';
+import { useCartDrawerStore } from '@/store/cartDrawer';
 import { formatPrice } from '@/lib/utils';
 import { trackAddToCart } from '@/lib/tracking';
 import { X, Ruler } from 'lucide-react';
 
 export default function QuickViewModal() {
+    const { settings } = usePage<any>().props;
     const { quickViewProduct: product, quickViewAction: action, closeQuickView } = useUIStore();
     const cart = useCartStore();
 
@@ -110,6 +112,8 @@ export default function QuickViewModal() {
         
         if (action === 'buy') {
             router.visit('/checkout');
+        } else if (settings?.cart_drawer_enabled !== '0') {
+            useCartDrawerStore.getState().openCartDrawer();
         }
     };
 

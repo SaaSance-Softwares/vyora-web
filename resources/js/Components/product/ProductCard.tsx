@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import { useUIStore } from "@/store/ui";
 import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
+import { useCartDrawerStore } from "@/store/cartDrawer";
 
 export function ProductCard({ product, activeCategory, onRemove }: { product: ProductList, activeCategory?: string, onRemove?: () => void }) {
     const { settings: settings } = usePage().props as any;
@@ -56,6 +57,8 @@ export function ProductCard({ product, activeCategory, onRemove }: { product: Pr
                 trackAddToCart(data, 1, v?.code);
                 if (action === 'buy') {
                     router.visit('/checkout');
+                } else if (settings?.cart_drawer_enabled !== '0') {
+                    useCartDrawerStore.getState().openCartDrawer();
                 }
             }
         } catch (error) {

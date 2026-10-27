@@ -5,6 +5,7 @@ import AuthModal from './auth/AuthModal';
 import QuickViewModal from './product/QuickViewModal';
 import Footer from './Footer';
 import CookieConsent from './CookieConsent';
+import { CartDrawer } from './cart/CartDrawer';
 import { useAuthStore } from '@/store/auth';
 
 // A mock context provider for Settings, since some components might still use it
@@ -72,6 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Footer />
                 <AuthModal />
                 <QuickViewModal />
+                <CartDrawer />
                 <CookieConsent />
             </div>
         </SettingsContext.Provider>
