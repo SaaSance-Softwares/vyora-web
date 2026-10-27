@@ -333,10 +333,13 @@
 
                         <!-- Sticky Footer Mockup -->
                         <div class="p-4 border-t border-gray-100 bg-white space-y-3 shrink-0">
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-gray-500 font-medium">Subtotal</span>
-                                <div class="text-right">
-                                    <span class="font-extrabold text-sm text-gray-900">₹999.00</span>
+                            <div class="border border-gray-100 rounded-xl bg-gray-50/80 p-2.5 space-y-1.5">
+                                <div class="flex items-center justify-between text-xs cursor-pointer">
+                                    <div class="flex items-center gap-1">
+                                        <span class="font-bold text-gray-800">Estimate</span>
+                                        <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                    <span class="font-black text-sm text-gray-900">₹999.00</span>
                                 </div>
                             </div>
 

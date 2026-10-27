@@ -14443,6 +14443,49 @@ function CartDrawer() {
   const [addedSuccess, setAddedSuccess] = useState(false);
   const subtotal = cart.items.reduce((sum, item) => sum + Number(item.price) * (item.quantity || 1), 0);
   const totalItemsCount = cart.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const mrpTotal = cart.items.reduce((s, i) => s + Math.max(Number(i.mrp) || 0, Number(i.price)) * (i.quantity || 1), 0);
+  const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
+  const discount = cart.appliedCoupon?.discountAmount || 0;
+  let shippingLabel = "Calculated at checkout";
+  if (sharedSettings?.shipping_rules?.prepaid) {
+    const p = sharedSettings.shipping_rules.prepaid;
+    if (p.type === "free") shippingLabel = "Free";
+    else if (p.type === "included") shippingLabel = "Included";
+    else if (p.type === "flat" && parseFloat(p.fee) === 0) shippingLabel = "Free";
+  }
+  const isTaxEnabled = sharedSettings?.is_tax_enabled == "1";
+  const taxLabel = sharedSettings?.tax_label || "Tax";
+  const taxInclusive = sharedSettings?.tax_inclusion === "include";
+  const taxBreakdown = {};
+  let trueSubtotal = 0;
+  let taxAmount = 0;
+  cart.items.forEach((item) => {
+    const itemTotal = Number(item.price) * (item.quantity || 1);
+    let itemTax = 0;
+    let trueItemTotal = itemTotal;
+    if (isTaxEnabled) {
+      let taxRate = 0;
+      if (item.tax_class && sharedSettings?.taxes) {
+        const t = sharedSettings.taxes.find((tax) => tax.id === item.tax_class);
+        if (t) taxRate = parseFloat(t.rate);
+      }
+      if (taxRate > 0) {
+        if (taxInclusive) {
+          trueItemTotal = itemTotal / (1 + taxRate / 100);
+          itemTax = itemTotal - trueItemTotal;
+        } else {
+          trueItemTotal = itemTotal;
+          itemTax = itemTotal * (taxRate / 100);
+        }
+        const rateKey = taxRate.toString();
+        taxBreakdown[rateKey] = (taxBreakdown[rateKey] || 0) + itemTax;
+        taxAmount += itemTax;
+      }
+    }
+    trueSubtotal += trueItemTotal;
+  });
+  const estimatedTotal = Math.max(0, (taxInclusive ? subtotal : trueSubtotal + taxAmount) - discount);
   const handleClose = useCallback(() => {
     setSelectedProduct(null);
     setShowSizeChart(false);
@@ -15175,23 +15218,93 @@ function CartDrawer() {
                   ] })
                 ] }),
                 cart.items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "p-4 sm:px-6 border-t border-gray-100 bg-white space-y-3 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]", children: [
-                  /* @__PURE__ */ jsxs("div", { className: "space-y-1.5", children: [
-                    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-                      /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-medium", children: "Subtotal" }),
-                      /* @__PURE__ */ jsx("span", { className: "text-base font-extrabold text-gray-900", children: formatPrice(subtotal) })
-                    ] }),
-                    cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg", children: [
-                      /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
-                        /* @__PURE__ */ jsx(Sparkles, { size: 12 }),
+                  /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2", children: [
+                    /* @__PURE__ */ jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setIsBreakdownOpen(!isBreakdownOpen),
+                        className: "w-full flex items-center justify-between text-left group transition-colors",
+                        "aria-expanded": isBreakdownOpen,
+                        children: [
+                          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+                            /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-gray-800 group-hover:text-black transition-colors", children: "Estimate" }),
+                            /* @__PURE__ */ jsx(
+                              ChevronDown,
+                              {
+                                size: 14,
+                                className: `text-gray-500 transition-transform duration-200 transform ${isBreakdownOpen ? "rotate-180 text-black" : ""}`
+                              }
+                            ),
+                            mrpDiscount > 0 && !isBreakdownOpen && /* @__PURE__ */ jsxs("span", { className: "text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded ml-1", children: [
+                              "Save ",
+                              formatPrice(mrpDiscount + discount)
+                            ] })
+                          ] }),
+                          /* @__PURE__ */ jsx("span", { className: "text-sm font-black text-gray-900 tracking-tight", children: formatPrice(estimatedTotal) })
+                        ]
+                      }
+                    ),
+                    isBreakdownOpen && /* @__PURE__ */ jsxs("div", { className: "pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150", children: [
+                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+                        /* @__PURE__ */ jsx("span", { children: "MRP Total" }),
+                        /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-800", children: formatPrice(mrpTotal) })
+                      ] }),
+                      mrpDiscount > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Discount on MRP" }),
                         /* @__PURE__ */ jsxs("span", { children: [
-                          "Coupon (",
-                          cart.appliedCoupon.code,
-                          ")"
+                          "−",
+                          formatPrice(mrpDiscount)
                         ] })
                       ] }),
-                      /* @__PURE__ */ jsxs("span", { children: [
-                        "-",
-                        formatPrice(cart.appliedCoupon.discountAmount)
+                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600 font-medium", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Cart Subtotal" }),
+                        /* @__PURE__ */ jsx("span", { children: formatPrice(subtotal) })
+                      ] }),
+                      cart.appliedCoupon && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-emerald-600 font-medium", children: [
+                        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+                          /* @__PURE__ */ jsxs("span", { children: [
+                            "Coupon (",
+                            cart.appliedCoupon.code,
+                            ")"
+                          ] }),
+                          /* @__PURE__ */ jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                cart.setAppliedCoupon(null);
+                              },
+                              className: "text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors",
+                              title: "Remove coupon",
+                              children: /* @__PURE__ */ jsx(X, { size: 12 })
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ jsxs("span", { children: [
+                          "−",
+                          formatPrice(discount)
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-500", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Shipping" }),
+                        /* @__PURE__ */ jsx("span", { className: "font-medium text-gray-700", children: shippingLabel })
+                      ] }),
+                      isTaxEnabled && sharedSettings?.show_tax_in_cart_checkout !== "0" && /* @__PURE__ */ jsx(Fragment, { children: Object.entries(taxBreakdown).map(([rate, amount]) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-400 text-[11px]", children: [
+                        /* @__PURE__ */ jsxs("span", { children: [
+                          taxLabel,
+                          " @ ",
+                          rate,
+                          "% ",
+                          taxInclusive ? "(Included)" : "(Excluded)"
+                        ] }),
+                        /* @__PURE__ */ jsx("span", { children: formatPrice(amount) })
+                      ] }, rate)) }),
+                      /* @__PURE__ */ jsx("div", { className: "h-px bg-gray-200/80 my-1" }),
+                      /* @__PURE__ */ jsxs("div", { className: "flex justify-between font-bold text-gray-900 text-xs pt-0.5", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Estimated Total" }),
+                        /* @__PURE__ */ jsx("span", { className: "font-black text-sm", children: formatPrice(estimatedTotal) })
                       ] })
                     ] })
                   ] }),

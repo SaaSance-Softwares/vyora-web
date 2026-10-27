@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, Sparkles, Check, Loader2, ArrowLeft, Ruler } from 'lucide-react';
+import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, Sparkles, Check, Loader2, ArrowLeft, Ruler, ChevronDown } from 'lucide-react';
 import { useCartStore, CartItem } from '@/store/cart';
 import { useCartDrawerStore } from '@/store/cartDrawer';
 import { MilestoneTimeline, MilestoneCoupon } from '@/Components/checkout/MilestoneTimeline';
@@ -56,6 +56,58 @@ export function CartDrawer() {
 
     const subtotal = cart.items.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
     const totalItemsCount = cart.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+    const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+
+    // Summary calculations (matching Cart.tsx)
+    const mrpTotal = cart.items.reduce((s, i) => s + Math.max(Number(i.mrp) || 0, Number(i.price)) * (i.quantity || 1), 0);
+    const mrpDiscount = mrpTotal > subtotal ? mrpTotal - subtotal : 0;
+    const discount = cart.appliedCoupon?.discountAmount || 0;
+
+    let shippingLabel = 'Calculated at checkout';
+    if (sharedSettings?.shipping_rules?.prepaid) {
+        const p = sharedSettings.shipping_rules.prepaid;
+        if (p.type === 'free') shippingLabel = 'Free';
+        else if (p.type === 'included') shippingLabel = 'Included';
+        else if (p.type === 'flat' && parseFloat(p.fee) === 0) shippingLabel = 'Free';
+    }
+
+    const isTaxEnabled = sharedSettings?.is_tax_enabled == '1';
+    const taxLabel = sharedSettings?.tax_label || 'Tax';
+    const taxInclusive = sharedSettings?.tax_inclusion === 'include';
+
+    const taxBreakdown: Record<string, number> = {};
+    let trueSubtotal = 0;
+    let taxAmount = 0;
+
+    cart.items.forEach(item => {
+        const itemTotal = Number(item.price) * (item.quantity || 1);
+        let itemTax = 0;
+        let trueItemTotal = itemTotal;
+
+        if (isTaxEnabled) {
+            let taxRate = 0;
+            if (item.tax_class && sharedSettings?.taxes) {
+                const t = sharedSettings.taxes.find((tax: any) => tax.id === item.tax_class);
+                if (t) taxRate = parseFloat(t.rate);
+            }
+            if (taxRate > 0) {
+                if (taxInclusive) {
+                    trueItemTotal = itemTotal / (1 + (taxRate / 100));
+                    itemTax = itemTotal - trueItemTotal;
+                } else {
+                    trueItemTotal = itemTotal;
+                    itemTax = itemTotal * (taxRate / 100);
+                }
+                const rateKey = taxRate.toString();
+                taxBreakdown[rateKey] = (taxBreakdown[rateKey] || 0) + itemTax;
+                taxAmount += itemTax;
+            }
+        }
+        trueSubtotal += trueItemTotal;
+    });
+
+    const estimatedTotal = Math.max(0, (taxInclusive ? subtotal : trueSubtotal + taxAmount) - discount);
 
     const handleClose = useCallback(() => {
         setSelectedProduct(null);
@@ -998,22 +1050,105 @@ export function CartDrawer() {
                         {/* Sticky Drawer Footer */}
                         {cart.items.length > 0 && (
                             <div className="p-4 sm:px-6 border-t border-gray-100 bg-white space-y-3 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
-                                {/* Totals */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500 font-medium">Subtotal</span>
-                                        <span className="text-base font-extrabold text-gray-900">
-                                            {formatPrice(subtotal)}
-                                        </span>
-                                    </div>
-
-                                    {cart.appliedCoupon && (
-                                        <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                                            <span className="flex items-center gap-1">
-                                                <Sparkles size={12} />
-                                                <span>Coupon ({cart.appliedCoupon.code})</span>
+                                {/* Estimate Accordion */}
+                                <div className="border border-gray-100 rounded-xl bg-gray-50/70 p-3 space-y-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
+                                        className="w-full flex items-center justify-between text-left group transition-colors"
+                                        aria-expanded={isBreakdownOpen}
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-bold text-gray-800 group-hover:text-black transition-colors">
+                                                Estimate
                                             </span>
-                                            <span>-{formatPrice(cart.appliedCoupon.discountAmount)}</span>
+                                            <ChevronDown
+                                                size={14}
+                                                className={`text-gray-500 transition-transform duration-200 transform ${
+                                                    isBreakdownOpen ? 'rotate-180 text-black' : ''
+                                                }`}
+                                            />
+                                            {mrpDiscount > 0 && !isBreakdownOpen && (
+                                                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded ml-1">
+                                                    Save {formatPrice(mrpDiscount + discount)}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <span className="text-sm font-black text-gray-900 tracking-tight">
+                                            {formatPrice(estimatedTotal)}
+                                        </span>
+                                    </button>
+
+                                    {/* Expandable Breakdown List */}
+                                    {isBreakdownOpen && (
+                                        <div className="pt-2 border-t border-gray-200/60 space-y-2 text-xs animate-in fade-in slide-in-from-top-1 duration-150">
+                                            {/* MRP Total */}
+                                            <div className="flex justify-between text-gray-500">
+                                                <span>MRP Total</span>
+                                                <span className="font-medium text-gray-800">{formatPrice(mrpTotal)}</span>
+                                            </div>
+
+                                            {/* Discount on MRP */}
+                                            {mrpDiscount > 0 && (
+                                                <div className="flex justify-between text-emerald-600 font-medium">
+                                                    <span>Discount on MRP</span>
+                                                    <span>−{formatPrice(mrpDiscount)}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Cart Subtotal */}
+                                            <div className="flex justify-between text-gray-600 font-medium">
+                                                <span>Cart Subtotal</span>
+                                                <span>{formatPrice(subtotal)}</span>
+                                            </div>
+
+                                            {/* Coupon Discount */}
+                                            {cart.appliedCoupon && (
+                                                <div className="flex justify-between items-center text-emerald-600 font-medium">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>Coupon ({cart.appliedCoupon.code})</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                cart.setAppliedCoupon(null);
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                                                            title="Remove coupon"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                    <span>−{formatPrice(discount)}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Shipping */}
+                                            <div className="flex justify-between text-gray-500">
+                                                <span>Shipping</span>
+                                                <span className="font-medium text-gray-700">{shippingLabel}</span>
+                                            </div>
+
+                                            {/* Tax Breakdown */}
+                                            {isTaxEnabled && sharedSettings?.show_tax_in_cart_checkout !== '0' && (
+                                                <>
+                                                    {Object.entries(taxBreakdown).map(([rate, amount]) => (
+                                                        <div key={rate} className="flex justify-between text-gray-400 text-[11px]">
+                                                            <span>{taxLabel} @ {rate}% {taxInclusive ? '(Included)' : '(Excluded)'}</span>
+                                                            <span>{formatPrice(amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            )}
+
+                                            <div className="h-px bg-gray-200/80 my-1" />
+
+                                            {/* Final Estimate Row in Breakdown */}
+                                            <div className="flex justify-between font-bold text-gray-900 text-xs pt-0.5">
+                                                <span>Estimated Total</span>
+                                                <span className="font-black text-sm">{formatPrice(estimatedTotal)}</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
