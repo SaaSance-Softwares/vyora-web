@@ -118,8 +118,16 @@ class SystemUpdateController extends Controller
 
                 // 1. Clear old cache so new configs/classes are recognized
                 Artisan::call('optimize:clear');
+
+                // 2. Clear PHP OPcache if active so newly extracted files are immediately compiled by PHP-FPM
+                if (function_exists('opcache_reset')) {
+                    @opcache_reset();
+                }
+
+                // 3. Clear PHP stat cache
+                clearstatcache(true);
                 
-                // 2. Run database migrations safely
+                // 4. Run database migrations safely
                 Artisan::call('migrate', ['--force' => true]);
                 
                 // Note: We intentionally avoid calling 'optimize' here because Artisan::call('route:cache')
@@ -130,7 +138,7 @@ class SystemUpdateController extends Controller
 
                 File::delete($tempZipPath);
 
-                return redirect()->back()->with('success', $message);
+                return redirect()->route('admin.settings.update.index')->with('success', $message);
             } else {
                 throw new \Exception('Could not extract the update package.');
             }

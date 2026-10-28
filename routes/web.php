@@ -530,15 +530,15 @@ Route::prefix($adminPath)->name('admin.')->middleware(\App\Http\Middleware\Admin
             // Widget Customisation (formerly PDP Settings)
             Route::get('/widget-customisation', [PdpSettingsController::class, 'index'])->name('widget-customisation.index');
             Route::put('/widget-customisation', [PdpSettingsController::class, 'update'])->name('widget-customisation.update');
-            Route::redirect('/widget-customization', '/occ/online-store/widget-customisation', 301);
-            Route::redirect('/pdp-settings', '/occ/online-store/widget-customisation', 301);
+            Route::redirect('/widget-customization', '/' . config('app.admin_path', 'admin') . '/online-store/widget-customisation', 301);
+            Route::redirect('/pdp-settings', '/' . config('app.admin_path', 'admin') . '/online-store/widget-customisation', 301);
             Route::get('/pdp-settings', [PdpSettingsController::class, 'index'])->name('pdp-settings.index');
             Route::put('/pdp-settings', [PdpSettingsController::class, 'update'])->name('pdp-settings.update');
 
             // Cart Offcanvas / Drawer Settings
             Route::get('/cart-drawer', [\App\Http\Controllers\Admin\CartDrawerSettingsController::class, 'index'])->name('cart-drawer.index');
             Route::put('/cart-drawer', [\App\Http\Controllers\Admin\CartDrawerSettingsController::class, 'update'])->name('cart-drawer.update');
-            Route::redirect('/cart-offcanvas', '/occ/online-store/cart-drawer', 301);
+            Route::redirect('/cart-offcanvas', '/' . config('app.admin_path', 'admin') . '/online-store/cart-drawer', 301);
 
             // Auth Settings
             Route::get('/auth-settings', [AuthSettingsController::class, 'index'])->name('auth-settings.index');
