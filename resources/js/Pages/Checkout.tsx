@@ -332,7 +332,13 @@ export default function CheckoutPage() {
 
     // Reactive Auto-Apply, Auto-Upgrade, Auto-Downgrade & Recalculate for Milestone Coupons in Checkout
     useEffect(() => {
-        if (!mounted || cart.items.length === 0) return;
+        if (!mounted) return;
+        if (cart.items.length === 0) {
+            if (cart.appliedCoupon) {
+                cart.setAppliedCoupon(null);
+            }
+            return;
+        }
 
         const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
         const items = cart.items.map(i => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));

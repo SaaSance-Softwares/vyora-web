@@ -5185,7 +5185,13 @@ function CartPage() {
     });
   }, []);
   useEffect(() => {
-    if (!mounted || cart.items.length === 0) return;
+    if (!mounted) return;
+    if (cart.items.length === 0) {
+      if (cart.appliedCoupon) {
+        cart.setAppliedCoupon(null);
+      }
+      return;
+    }
     const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const items = cart.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
     const eligibleMilestones = milestoneCoupons.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
@@ -6740,7 +6746,13 @@ function CheckoutPage() {
     }
   }, [guest.email]);
   useEffect(() => {
-    if (!mounted || cart.items.length === 0) return;
+    if (!mounted) return;
+    if (cart.items.length === 0) {
+      if (cart.appliedCoupon) {
+        cart.setAppliedCoupon(null);
+      }
+      return;
+    }
     const sub = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const items = cart.items.map((i) => ({ product_id: i.productId, price: i.price, original_price: i.mrp || i.price, quantity: i.quantity }));
     const eligibleMilestones = milestoneCoupons.filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
@@ -14584,6 +14596,97 @@ function CartDrawer() {
       setApplyingCoupon(false);
     }
   };
+  useEffect(() => {
+    if (!isOpen) return;
+    if (cart.items.length === 0) {
+      if (cart.appliedCoupon) {
+        cart.setAppliedCoupon(null);
+      }
+      return;
+    }
+    const sub = cart.items.reduce((s, i) => s + Number(i.price) * (i.quantity || 1), 0);
+    const items = cart.items.map((i) => ({
+      product_id: i.productId,
+      price: i.price,
+      original_price: i.mrp || i.price,
+      quantity: i.quantity || 1
+    }));
+    const eligibleMilestones = (milestones || []).filter((m) => sub >= Number(m.min_cart_value)).sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+    const bestMilestone = eligibleMilestones[0];
+    const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+    const isCurrentAMilestone = (milestones || []).some((m) => m.code?.toUpperCase() === currentCode);
+    if (bestMilestone) {
+      if (!cart.appliedCoupon || isCurrentAMilestone) {
+        if (currentCode !== bestMilestone.code.toUpperCase()) {
+          const autoApply = async () => {
+            try {
+              const res = await api.post("/api/coupons/apply", {
+                code: bestMilestone.code,
+                cart: { subtotal: sub, items }
+              });
+              if (res.data.success) {
+                cart.setAppliedCoupon({
+                  code: res.data.data.coupon.code,
+                  discountAmount: res.data.data.discount_amount
+                });
+              }
+            } catch (e) {
+            }
+          };
+          autoApply();
+        } else {
+          const revalidate = async () => {
+            try {
+              const res = await api.post("/api/coupons/apply", {
+                code: bestMilestone.code,
+                cart: { subtotal: sub, items }
+              });
+              if (res.data.success) {
+                if (res.data.data.discount_amount !== cart.appliedCoupon?.discountAmount) {
+                  cart.setAppliedCoupon({
+                    code: res.data.data.coupon.code,
+                    discountAmount: res.data.data.discount_amount
+                  });
+                }
+              } else {
+                cart.setAppliedCoupon(null);
+              }
+            } catch (e) {
+              cart.setAppliedCoupon(null);
+            }
+          };
+          revalidate();
+        }
+      }
+    } else {
+      if (isCurrentAMilestone) {
+        cart.setAppliedCoupon(null);
+      }
+    }
+    if (cart.appliedCoupon && !isCurrentAMilestone) {
+      const revalidateManual = async () => {
+        try {
+          const res = await api.post("/api/coupons/apply", {
+            code: cart.appliedCoupon.code,
+            cart: { subtotal: sub, items }
+          });
+          if (res.data.success) {
+            if (res.data.data.discount_amount !== cart.appliedCoupon.discountAmount) {
+              cart.setAppliedCoupon({
+                code: cart.appliedCoupon.code,
+                discountAmount: res.data.data.discount_amount
+              });
+            }
+          } else {
+            cart.setAppliedCoupon(null);
+          }
+        } catch (e) {
+          cart.setAppliedCoupon(null);
+        }
+      };
+      revalidateManual();
+    }
+  }, [isOpen, subtotal, cart.items, milestones]);
   const handleQuickAdd = async (product) => {
     setAddingProductId(product.id);
     try {

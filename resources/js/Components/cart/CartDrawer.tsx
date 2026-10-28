@@ -213,6 +213,112 @@ export function CartDrawer() {
         }
     };
 
+    // Reactive Auto-Apply, Auto-Upgrade, Auto-Downgrade & Recalculate for Milestone/Applied Coupons in Cart Drawer
+    useEffect(() => {
+        if (!isOpen) return;
+
+        if (cart.items.length === 0) {
+            if (cart.appliedCoupon) {
+                cart.setAppliedCoupon(null);
+            }
+            return;
+        }
+
+        const sub = cart.items.reduce((s, i) => s + Number(i.price) * (i.quantity || 1), 0);
+        const items = cart.items.map(i => ({
+            product_id: i.productId,
+            price: i.price,
+            original_price: i.mrp || i.price,
+            quantity: i.quantity || 1
+        }));
+
+        const eligibleMilestones = (milestones || [])
+            .filter(m => sub >= Number(m.min_cart_value))
+            .sort((a, b) => Number(b.min_cart_value) - Number(a.min_cart_value));
+
+        const bestMilestone = eligibleMilestones[0];
+        const currentCode = cart.appliedCoupon?.code?.toUpperCase();
+        const isCurrentAMilestone = (milestones || []).some(m => m.code?.toUpperCase() === currentCode);
+
+        // Case A: Best milestone available
+        if (bestMilestone) {
+            if (!cart.appliedCoupon || isCurrentAMilestone) {
+                if (currentCode !== bestMilestone.code.toUpperCase()) {
+                    // Upgrade or downgrade to best milestone
+                    const autoApply = async () => {
+                        try {
+                            const res = await api.post('/api/coupons/apply', {
+                                code: bestMilestone.code,
+                                cart: { subtotal: sub, items }
+                            });
+                            if (res.data.success) {
+                                cart.setAppliedCoupon({
+                                    code: res.data.data.coupon.code,
+                                    discountAmount: res.data.data.discount_amount
+                                });
+                            }
+                        } catch (e) {}
+                    };
+                    autoApply();
+                } else {
+                    // Already on this milestone, re-sync discount amount if subtotal changed
+                    const revalidate = async () => {
+                        try {
+                            const res = await api.post('/api/coupons/apply', {
+                                code: bestMilestone.code,
+                                cart: { subtotal: sub, items }
+                            });
+                            if (res.data.success) {
+                                if (res.data.data.discount_amount !== cart.appliedCoupon?.discountAmount) {
+                                    cart.setAppliedCoupon({
+                                        code: res.data.data.coupon.code,
+                                        discountAmount: res.data.data.discount_amount
+                                    });
+                                }
+                            } else {
+                                cart.setAppliedCoupon(null);
+                            }
+                        } catch (e) {
+                            cart.setAppliedCoupon(null);
+                        }
+                    };
+                    revalidate();
+                }
+            }
+        } else {
+            // Case B: Subtotal dropped below all milestone tiers
+            if (isCurrentAMilestone) {
+                cart.setAppliedCoupon(null);
+            }
+        }
+
+        // Case C: A manual/custom coupon is applied (not a milestone)
+        if (cart.appliedCoupon && !isCurrentAMilestone) {
+            const revalidateManual = async () => {
+                try {
+                    const res = await api.post('/api/coupons/apply', {
+                        code: cart.appliedCoupon!.code,
+                        cart: { subtotal: sub, items }
+                    });
+                    if (res.data.success) {
+                        if (res.data.data.discount_amount !== cart.appliedCoupon!.discountAmount) {
+                            cart.setAppliedCoupon({
+                                code: cart.appliedCoupon!.code,
+                                discountAmount: res.data.data.discount_amount
+                            });
+                        }
+                    } else {
+                        // Requirements no longer met (e.g. min cart value)
+                        cart.setAppliedCoupon(null);
+                    }
+                } catch (e) {
+                    cart.setAppliedCoupon(null);
+                }
+            };
+            revalidateManual();
+        }
+    }, [isOpen, subtotal, cart.items, milestones]);
+
     // Quick add recommended product
     const handleQuickAdd = async (product: RecommendedProduct) => {
         setAddingProductId(product.id);
