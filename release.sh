@@ -2,22 +2,18 @@
 VERSION="2.6.0"
 OUTPUT="release-v${VERSION}.zip"
 
-echo "Optimizing Composer autoloader..."
-composer dump-autoload -o --no-interaction
-
 echo "Building frontend..."
 npm run build
 
-echo "Creating Complete Installation release zip..."
+echo "Creating OTA update zip (release-v${VERSION}.zip)..."
 rm -f "$OUTPUT"
 zip -r "$OUTPUT" . \
   -x "*.git*" \
   -x "node_modules/*" \
-  -x ".env" \
-  -x ".env.backup" \
-  -x ".env.production" \
-  -x ".env.local" \
-  -x ".env.testing" \
+  -x "vendor/*" \
+  -x ".env*" \
+  -x "public/.htaccess" \
+  -x ".htaccess" \
   -x "storage/installed" \
   -x "storage/app/public/*" \
   -x "storage/uploads/*" \
