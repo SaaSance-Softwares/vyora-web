@@ -1,21 +1,23 @@
 #!/bin/bash
 VERSION="2.6.0"
 OUTPUT="release-v${VERSION}.zip"
+
+echo "Optimizing Composer autoloader..."
+composer dump-autoload -o --no-interaction
+
 echo "Building frontend..."
 npm run build
-echo "Creating release zip..."
+
+echo "Creating Complete Installation release zip..."
 rm -f "$OUTPUT"
 zip -r "$OUTPUT" . \
   -x "*.git*" \
   -x "node_modules/*" \
-  -x "vendor/*" \
   -x ".env" \
   -x ".env.backup" \
   -x ".env.production" \
   -x ".env.local" \
   -x ".env.testing" \
-  -x "public/.htaccess" \
-  -x ".htaccess" \
   -x "storage/installed" \
   -x "storage/app/public/*" \
   -x "storage/uploads/*" \
@@ -41,4 +43,5 @@ zip -r "$OUTPUT" . \
   -x "*scratch*" \
   -x "brain.md" \
   -x ".gemini/*"
-echo "Done."
+
+echo "Done. Created $OUTPUT successfully."
