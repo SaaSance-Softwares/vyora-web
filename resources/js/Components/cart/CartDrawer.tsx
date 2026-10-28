@@ -1185,7 +1185,7 @@ export function CartDrawer() {
                                         View Full Cart Details
                                     </button>
                                     <span className="text-[10px] text-gray-400 font-medium">
-                                        🔒 100% Secure Checkout
+                                        🔒 Secure Checkout
                                     </span>
                                 </div>
                             </div>

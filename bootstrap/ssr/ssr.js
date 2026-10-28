@@ -15358,7 +15358,7 @@ function CartDrawer() {
                         children: "View Full Cart Details"
                       }
                     ),
-                    /* @__PURE__ */ jsx("span", { className: "text-[10px] text-gray-400 font-medium", children: "🔒 100% Secure Checkout" })
+                    /* @__PURE__ */ jsx("span", { className: "text-[10px] text-gray-400 font-medium", children: "🔒 Secure Checkout" })
                   ] })
                 ] })
               ] })
