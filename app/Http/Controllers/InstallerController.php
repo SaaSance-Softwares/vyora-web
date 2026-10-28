@@ -153,6 +153,9 @@ class InstallerController extends Controller
     private function updateEnv($data)
     {
         $path = base_path('.env');
+        if (! file_exists($path) && file_exists(base_path('.env.example'))) {
+            copy(base_path('.env.example'), $path);
+        }
         if (file_exists($path)) {
             $env = file_get_contents($path);
             foreach ($data as $key => $value) {
