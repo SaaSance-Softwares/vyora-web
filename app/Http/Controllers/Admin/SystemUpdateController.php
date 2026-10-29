@@ -138,7 +138,11 @@ class SystemUpdateController extends Controller
 
                 File::delete($tempZipPath);
 
-                return redirect()->route('admin.settings.update.index')->with('success', $message);
+                $updateUrl = Route::has('admin.settings.update.index') 
+                    ? route('admin.settings.update.index') 
+                    : url('/' . config('app.admin_path', 'admin') . '/settings/update');
+
+                return redirect($updateUrl)->with('success', $message);
             } else {
                 throw new \Exception('Could not extract the update package.');
             }

@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <form action="{{ route('admin.online-store.widget-customisation.update') }}" method="POST">
+    <form action="{{ Route::has('admin.online-store.widget-customisation.update') ? route('admin.online-store.widget-customisation.update') : (Route::has('admin.online-store.pdp-settings.update') ? route('admin.online-store.pdp-settings.update') : url(config('app.admin_path', 'admin').'/online-store/widget-customisation')) }}" method="POST">
         @csrf
         @method('PUT')
         
