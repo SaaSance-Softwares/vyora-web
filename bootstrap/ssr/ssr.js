@@ -4909,7 +4909,7 @@ function MilestoneTimeline({
             );
           })
         ] }),
-        bestUnlocked && /* @__PURE__ */ jsxs("div", { className: "mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: [
+        bestUnlocked && /* @__PURE__ */ jsx("div", { className: "mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs", children: appliedCoupon?.code?.toUpperCase() === bestUnlocked.code.toUpperCase() ? /* @__PURE__ */ jsxs(Fragment, { children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
             /* @__PURE__ */ jsx(
               "span",
@@ -4921,7 +4921,7 @@ function MilestoneTimeline({
             /* @__PURE__ */ jsxs("span", { children: [
               "Code ",
               /* @__PURE__ */ jsx("span", { className: "font-mono font-semibold text-gray-900", children: bestUnlocked.code }),
-              " auto-applied"
+              " applied"
             ] })
           ] }),
           /* @__PURE__ */ jsx(
@@ -4936,7 +4936,36 @@ function MilestoneTimeline({
               children: formatDiscount(bestUnlocked)
             }
           )
-        ] }),
+        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-gray-600", children: [
+            /* @__PURE__ */ jsx(
+              "span",
+              {
+                className: "flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+              }
+            ),
+            /* @__PURE__ */ jsxs("span", { children: [
+              "Code ",
+              /* @__PURE__ */ jsx("span", { className: "font-mono font-semibold text-gray-900", children: bestUnlocked.code }),
+              " unlocked!"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => onApply(bestUnlocked.code),
+              disabled: applying,
+              style: {
+                backgroundColor: badgeBg,
+                color: badgeTextColor,
+                borderColor: badgeBorderColor
+              },
+              className: "text-[11px] font-bold px-2.5 py-1 rounded-full border hover:opacity-80 active:scale-95 transition-all flex items-center gap-1 cursor-pointer",
+              children: applying ? "Applying..." : `Apply ${formatDiscount(bestUnlocked)} →`
+            }
+          )
+        ] }) }),
         /* @__PURE__ */ jsx("style", { children: `
                 @keyframes popperLeft {
                     0% { transform: scale(0.2) rotate(-35deg) translate(-10px, 15px); opacity: 0; }

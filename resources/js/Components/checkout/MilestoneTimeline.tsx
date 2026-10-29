@@ -464,28 +464,56 @@ export function MilestoneTimeline({
                 })}
             </div>
 
-            {/* Bottom Status: Clean auto-applied confirmation */}
+            {/* Bottom Status: Clean applied confirmation or 1-click apply action */}
             {bestUnlocked && (
                 <div className="mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 text-gray-600">
-                        <span
-                            className="flex h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: progressColor }}
-                        />
-                        <span>
-                            Code <span className="font-mono font-semibold text-gray-900">{bestUnlocked.code}</span> auto-applied
-                        </span>
-                    </div>
-                    <span
-                        style={{
-                            backgroundColor: badgeBg,
-                            color: badgeTextColor,
-                            borderColor: badgeBorderColor,
-                        }}
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-full border"
-                    >
-                        {formatDiscount(bestUnlocked)}
-                    </span>
+                    {appliedCoupon?.code?.toUpperCase() === bestUnlocked.code.toUpperCase() ? (
+                        <>
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <span
+                                    className="flex h-1.5 w-1.5 rounded-full"
+                                    style={{ backgroundColor: progressColor }}
+                                />
+                                <span>
+                                    Code <span className="font-mono font-semibold text-gray-900">{bestUnlocked.code}</span> applied
+                                </span>
+                            </div>
+                            <span
+                                style={{
+                                    backgroundColor: badgeBg,
+                                    color: badgeTextColor,
+                                    borderColor: badgeBorderColor,
+                                }}
+                                className="text-[11px] font-bold px-2 py-0.5 rounded-full border"
+                            >
+                                {formatDiscount(bestUnlocked)}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <span
+                                    className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                                />
+                                <span>
+                                    Code <span className="font-mono font-semibold text-gray-900">{bestUnlocked.code}</span> unlocked!
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => onApply(bestUnlocked.code)}
+                                disabled={applying}
+                                style={{
+                                    backgroundColor: badgeBg,
+                                    color: badgeTextColor,
+                                    borderColor: badgeBorderColor,
+                                }}
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-full border hover:opacity-80 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                {applying ? 'Applying...' : `Apply ${formatDiscount(bestUnlocked)} →`}
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 
