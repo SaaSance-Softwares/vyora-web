@@ -13560,6 +13560,27 @@ function Navbar({ settings }) {
       fetch(`${apiUrl}/categories`).then((res) => res.json()).then((data) => setCategories(data)).catch((err) => console.error("Failed to load categories", err));
     }
   }, [isMegaMenu]);
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    const unbindNavigate = router.on("navigate", () => {
+      setIsMobileMenuOpen(false);
+    });
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+      unbindNavigate();
+    };
+  }, [isMobileMenuOpen]);
   if (!mounted) return /* @__PURE__ */ jsx("nav", { className: "h-16 border-b" });
   const storeName = settings?.store_name || "VYORA";
   const logoRelPath = settings?.main_logo;
@@ -13689,7 +13710,7 @@ function Navbar({ settings }) {
       }
     )
   ] });
-  return /* @__PURE__ */ jsxs("header", { className: "bg-white sticky top-0 z-50 shadow-sm relative", children: [
+  return /* @__PURE__ */ jsxs("header", { className: `bg-white sticky top-0 shadow-sm relative ${isMobileMenuOpen ? "z-[105]" : "z-50"}`, children: [
     /* @__PURE__ */ jsxs("div", { className: "max-w-7xl mx-auto px-4 h-16 flex items-center justify-center md:justify-between relative", children: [
       /* @__PURE__ */ jsx("div", { className: "flex items-center gap-4 absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0", children: /* @__PURE__ */ jsx(Link, { href: "/", className: "flex items-center gap-2 shrink-0", children: logoRelPath ? /* @__PURE__ */ jsx("img", { src: `/${logoRelPath}`, alt: storeName, className: "h-8 w-auto object-contain" }) : /* @__PURE__ */ jsx("span", { className: "text-xl font-bold tracking-tighter", style: { fontFamily: "var(--font-heading)" }, children: storeName }) }) }),
       position === "inline" && /* @__PURE__ */ jsxs("div", { className: `${alignmentClasses} hidden md:flex`, children: [
@@ -13713,43 +13734,75 @@ function Navbar({ settings }) {
       /* @__PURE__ */ jsx(ActionsComponent, {})
     ] }),
     position === "below" && isCustom && /* @__PURE__ */ jsx("div", { className: "border-t border-gray-100 bg-gray-50/50 hidden md:block relative", children: /* @__PURE__ */ jsx("div", { className: "max-w-7xl mx-auto px-4", children: /* @__PURE__ */ jsx("div", { className: `flex items-center ${alignment === "left" ? "justify-start" : alignment === "right" ? "justify-end" : "justify-center"} space-x-8`, children: /* @__PURE__ */ jsx(DynamicNavItems, {}) }) }) }),
-    isMobileMenuOpen && /* @__PURE__ */ jsx("div", { className: "md:hidden absolute top-16 left-0 w-full bg-white border-b shadow-lg overflow-y-auto z-50 flex flex-col", style: { maxHeight: "calc(100vh - 7.5rem - env(safe-area-inset-bottom))" }, children: /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-4 pb-20", children: [
-      isMegaMenu && categories.map((cat) => /* @__PURE__ */ jsxs("div", { className: "border-b pb-2", children: [
-        /* @__PURE__ */ jsxs(
-          "div",
-          {
-            className: "flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer",
-            onClick: () => setActiveMobileMenuId(activeMobileMenuId === cat.id ? null : cat.id),
-            children: [
-              /* @__PURE__ */ jsx("span", { children: cat.name }),
-              cat.children && cat.children.length > 0 && /* @__PURE__ */ jsx(ChevronDown, { className: `w-4 h-4 transition-transform ${activeMobileMenuId === cat.id ? "rotate-180" : ""}` })
-            ]
-          }
-        ),
-        activeMobileMenuId === cat.id && cat.children && /* @__PURE__ */ jsx("div", { className: "pl-4 py-2 flex flex-col gap-3", children: cat.children.map((sub) => /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx(Link, { href: `/shop?category=${sub.slug}`, className: "font-semibold text-gray-800 text-sm py-1 block", onClick: () => setIsMobileMenuOpen(false), children: sub.name }),
-          sub.children && sub.children.length > 0 && /* @__PURE__ */ jsx("div", { className: "pl-3 mt-1 flex flex-col gap-2", children: sub.children.map((deep) => /* @__PURE__ */ jsx(Link, { href: `/shop?category=${deep.slug}`, className: "text-gray-500 text-sm hover:text-black py-1 block", onClick: () => setIsMobileMenuOpen(false), children: deep.name }, deep.id)) })
-        ] }, sub.id)) })
-      ] }, cat.id)),
-      isCustom && menuItems.map((item) => /* @__PURE__ */ jsx("div", { className: "border-b pb-2", children: item.type === "mega_menu" ? /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsxs(
-          "div",
-          {
-            className: "flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer",
-            onClick: () => setActiveMobileMenuId(activeMobileMenuId === item.id ? null : item.id),
-            children: [
-              /* @__PURE__ */ jsx("span", { children: item.label }),
-              /* @__PURE__ */ jsx(ChevronDown, { className: `w-4 h-4 transition-transform ${activeMobileMenuId === item.id ? "rotate-180" : ""}` })
-            ]
-          }
-        ),
-        activeMobileMenuId === item.id && /* @__PURE__ */ jsx("div", { className: "pl-4 py-2 flex flex-col gap-4", children: item.layout_columns?.map((col) => /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: col.blocks?.map((block) => /* @__PURE__ */ jsx("div", { children: block.type === "image" ? /* @__PURE__ */ jsx("div", { className: "w-[150px] mt-2", onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(block, true) }) : /* @__PURE__ */ jsxs("div", { children: [
-          block.label && /* @__PURE__ */ jsx("div", { className: "font-semibold text-gray-800 text-sm mb-2", onClick: () => setIsMobileMenuOpen(false), children: block.link ? /* @__PURE__ */ jsx(Link, { href: block.link, children: block.label }) : block.label }),
-          block.links && /* @__PURE__ */ jsx("div", { className: "pl-2 flex flex-col gap-2", children: block.links.map((link) => /* @__PURE__ */ jsx("div", { onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(link, true) }, link.id || Math.random())) })
-        ] }) }, block.id || Math.random())) }, col.id || Math.random())) })
-      ] }) : /* @__PURE__ */ jsx("div", { className: "font-bold text-gray-900 py-2", onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(item) }) }, item.id)),
-      !isMegaMenu && !isCustom && /* @__PURE__ */ jsx(Link, { href: "/shop", className: "font-bold text-gray-900 py-2 border-b block", onClick: () => setIsMobileMenuOpen(false), children: "Shop" })
-    ] }) }),
+    /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: `md:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-[105] transition-opacity duration-300 ease-in-out ${isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`,
+        onClick: () => setIsMobileMenuOpen(false),
+        "aria-hidden": "true"
+      }
+    ),
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: `md:hidden fixed inset-y-0 left-0 z-[110] w-[90vw] max-w-sm bg-white shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`,
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "Mobile Navigation",
+        children: [
+          /* @__PURE__ */ jsxs("div", { className: "p-4 px-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex items-center gap-2 max-w-[calc(100%-48px)] truncate", children: logoRelPath ? /* @__PURE__ */ jsx("img", { src: `/${logoRelPath}`, alt: storeName, className: "h-7 w-auto object-contain max-w-[140px]" }) : /* @__PURE__ */ jsx("span", { className: "text-lg font-black tracking-tight truncate", style: { fontFamily: "var(--font-heading)" }, children: storeName }) }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsMobileMenuOpen(false),
+                className: "w-10 h-10 -mr-1 rounded-full bg-gray-100 active:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-colors shadow-xs",
+                "aria-label": "Close menu",
+                children: /* @__PURE__ */ jsx(X, { className: "w-5 h-5 stroke-[2.5]" })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto px-5 py-4 pb-[calc(4rem+env(safe-area-inset-bottom))] space-y-4", children: [
+            isMegaMenu && categories.map((cat) => /* @__PURE__ */ jsxs("div", { className: "border-b border-gray-100 pb-2", children: [
+              /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer",
+                  onClick: () => setActiveMobileMenuId(activeMobileMenuId === cat.id ? null : cat.id),
+                  children: [
+                    /* @__PURE__ */ jsx("span", { children: cat.name }),
+                    cat.children && cat.children.length > 0 && /* @__PURE__ */ jsx(ChevronDown, { className: `w-4 h-4 transition-transform ${activeMobileMenuId === cat.id ? "rotate-180" : ""}` })
+                  ]
+                }
+              ),
+              activeMobileMenuId === cat.id && cat.children && /* @__PURE__ */ jsx("div", { className: "pl-4 py-2 flex flex-col gap-3", children: cat.children.map((sub) => /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx(Link, { href: `/shop?category=${sub.slug}`, className: "font-semibold text-gray-800 text-sm py-1 block", onClick: () => setIsMobileMenuOpen(false), children: sub.name }),
+                sub.children && sub.children.length > 0 && /* @__PURE__ */ jsx("div", { className: "pl-3 mt-1 flex flex-col gap-2", children: sub.children.map((deep) => /* @__PURE__ */ jsx(Link, { href: `/shop?category=${deep.slug}`, className: "text-gray-500 text-sm hover:text-black py-1 block", onClick: () => setIsMobileMenuOpen(false), children: deep.name }, deep.id)) })
+              ] }, sub.id)) })
+            ] }, cat.id)),
+            isCustom && menuItems.map((item) => /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 pb-2", children: item.type === "mega_menu" ? /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer",
+                  onClick: () => setActiveMobileMenuId(activeMobileMenuId === item.id ? null : item.id),
+                  children: [
+                    /* @__PURE__ */ jsx("span", { children: item.label }),
+                    /* @__PURE__ */ jsx(ChevronDown, { className: `w-4 h-4 transition-transform ${activeMobileMenuId === item.id ? "rotate-180" : ""}` })
+                  ]
+                }
+              ),
+              activeMobileMenuId === item.id && /* @__PURE__ */ jsx("div", { className: "pl-4 py-2 flex flex-col gap-4", children: item.layout_columns?.map((col) => /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: col.blocks?.map((block) => /* @__PURE__ */ jsx("div", { children: block.type === "image" ? /* @__PURE__ */ jsx("div", { className: "w-[150px] mt-2", onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(block, true) }) : /* @__PURE__ */ jsxs("div", { children: [
+                block.label && /* @__PURE__ */ jsx("div", { className: "font-semibold text-gray-800 text-sm mb-2", onClick: () => setIsMobileMenuOpen(false), children: block.link ? /* @__PURE__ */ jsx(Link, { href: block.link, children: block.label }) : block.label }),
+                block.links && /* @__PURE__ */ jsx("div", { className: "pl-2 flex flex-col gap-2", children: block.links.map((link) => /* @__PURE__ */ jsx("div", { onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(link, true) }, link.id || Math.random())) })
+              ] }) }, block.id || Math.random())) }, col.id || Math.random())) })
+            ] }) : /* @__PURE__ */ jsx("div", { className: "font-bold text-gray-900 py-2", onClick: () => setIsMobileMenuOpen(false), children: renderDynamicLink(item) }) }, item.id)),
+            !isMegaMenu && !isCustom && /* @__PURE__ */ jsx(Link, { href: "/shop", className: "font-bold text-gray-900 py-2 border-b border-gray-100 block", onClick: () => setIsMobileMenuOpen(false), children: "Shop" })
+          ] })
+        ]
+      }
+    ),
     isSearchOpen && /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-start justify-center pt-24 px-4", children: [
       /* @__PURE__ */ jsx(
         "div",

@@ -117,6 +117,31 @@ export default function Navbar({ settings }: { settings?: any }) {
         }
     }, [isMegaMenu]);
 
+    useEffect(() => {
+        if (isMobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsMobileMenuOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+
+        const unbindNavigate = router.on('navigate', () => {
+            setIsMobileMenuOpen(false);
+        });
+
+        return () => {
+            document.body.style.overflow = '';
+            window.removeEventListener('keydown', handleKeyDown);
+            unbindNavigate();
+        };
+    }, [isMobileMenuOpen]);
+
     if (!mounted) return <nav className="h-16 border-b" />;
 
     const storeName = settings?.store_name || "VYORA";
@@ -351,7 +376,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     );
 
     return (
-        <header className="bg-white sticky top-0 z-50 shadow-sm relative">
+        <header className={`bg-white sticky top-0 shadow-sm relative ${isMobileMenuOpen ? 'z-[105]' : 'z-50'}`}>
             {/* Top Bar / Inline Position */}
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center md:justify-between relative">
                 <div className="flex items-center gap-4 absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0">
@@ -441,106 +466,143 @@ export default function Navbar({ settings }: { settings?: any }) {
                 </div>
             )}
 
-            {/* Mobile Menu Overlay */}
-            {isMobileMenuOpen && (
-                <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b shadow-lg overflow-y-auto z-50 flex flex-col" style={{ maxHeight: 'calc(100vh - 7.5rem - env(safe-area-inset-bottom))' }}>
-                    <div className="p-4 flex flex-col gap-4 pb-20">
-                        {isMegaMenu && categories.map((cat) => (
-                            <div key={cat.id} className="border-b pb-2">
-                                <div 
-                                    className="flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer"
-                                    onClick={() => setActiveMobileMenuId(activeMobileMenuId === cat.id ? null : cat.id)}
-                                >
-                                    <span>{cat.name}</span>
-                                    {cat.children && cat.children.length > 0 && (
-                                        <ChevronDown className={`w-4 h-4 transition-transform ${activeMobileMenuId === cat.id ? 'rotate-180' : ''}`} />
-                                    )}
-                                </div>
-                                {activeMobileMenuId === cat.id && cat.children && (
-                                    <div className="pl-4 py-2 flex flex-col gap-3">
-                                        {cat.children.map((sub: any) => (
-                                            <div key={sub.id}>
-                                                <Link href={`/shop?category=${sub.slug}`} className="font-semibold text-gray-800 text-sm py-1 block" onClick={() => setIsMobileMenuOpen(false)}>
-                                                    {sub.name}
-                                                </Link>
-                                                {sub.children && sub.children.length > 0 && (
-                                                    <div className="pl-3 mt-1 flex flex-col gap-2">
-                                                        {sub.children.map((deep: any) => (
-                                                            <Link key={deep.id} href={`/shop?category=${deep.slug}`} className="text-gray-500 text-sm hover:text-black py-1 block" onClick={() => setIsMobileMenuOpen(false)}>
-                                                                {deep.name}
-                                                            </Link>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        
-                        {isCustom && menuItems.map((item: any) => (
-                            <div key={item.id} className="border-b pb-2">
-                                {item.type === 'mega_menu' ? (
-                                    <>
-                                        <div 
-                                            className="flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer"
-                                            onClick={() => setActiveMobileMenuId(activeMobileMenuId === item.id ? null : item.id)}
-                                        >
-                                            <span>{item.label}</span>
-                                            <ChevronDown className={`w-4 h-4 transition-transform ${activeMobileMenuId === item.id ? 'rotate-180' : ''}`} />
-                                        </div>
-                                        {activeMobileMenuId === item.id && (
-                                            <div className="pl-4 py-2 flex flex-col gap-4">
-                                                {item.layout_columns?.map((col: any) => (
-                                                    <div key={col.id || Math.random()} className="flex flex-col gap-3">
-                                                        {col.blocks?.map((block: any) => (
-                                                            <div key={block.id || Math.random()}>
-                                                                {block.type === 'image' ? (
-                                                                    <div className="w-[150px] mt-2" onClick={() => setIsMobileMenuOpen(false)}>
-                                                                        {renderDynamicLink(block, true)}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div>
-                                                                        {block.label && (
-                                                                            <div className="font-semibold text-gray-800 text-sm mb-2" onClick={() => setIsMobileMenuOpen(false)}>
-                                                                                {block.link ? <Link href={block.link}>{block.label}</Link> : block.label}
-                                                                            </div>
-                                                                        )}
-                                                                        {block.links && (
-                                                                            <div className="pl-2 flex flex-col gap-2">
-                                                                                {block.links.map((link: any) => (
-                                                                                    <div key={link.id || Math.random()} onClick={() => setIsMobileMenuOpen(false)}>
-                                                                                        {renderDynamicLink(link, true)}
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div className="font-bold text-gray-900 py-2" onClick={() => setIsMobileMenuOpen(false)}>
-                                        {renderDynamicLink(item)}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        
-                        {!isMegaMenu && !isCustom && (
-                            <Link href="/shop" className="font-bold text-gray-900 py-2 border-b block" onClick={() => setIsMobileMenuOpen(false)}>
-                                Shop
-                            </Link>
+            {/* Mobile Menu Backdrop (Tap outside to close) */}
+            <div 
+                className={`md:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-[105] transition-opacity duration-300 ease-in-out ${
+                    isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-hidden="true"
+            />
+
+            {/* Mobile Menu Side Drawer (90% width) */}
+            <div 
+                className={`md:hidden fixed inset-y-0 left-0 z-[110] w-[90vw] max-w-sm bg-white shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-in-out ${
+                    isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Mobile Navigation"
+            >
+                {/* Drawer Header with Store Identity and Prominent Circular Close Icon */}
+                <div className="p-4 px-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-2 max-w-[calc(100%-48px)] truncate">
+                        {logoRelPath ? (
+                            <img src={`/${logoRelPath}`} alt={storeName} className="h-7 w-auto object-contain max-w-[140px]" />
+                        ) : (
+                            <span className="text-lg font-black tracking-tight truncate" style={{ fontFamily: 'var(--font-heading)' }}>
+                                {storeName}
+                            </span>
                         )}
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-10 h-10 -mr-1 rounded-full bg-gray-100 active:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-colors shadow-xs"
+                        aria-label="Close menu"
+                    >
+                        <X className="w-5 h-5 stroke-[2.5]" />
+                    </button>
                 </div>
-            )}
+
+                {/* Drawer Scrollable Content */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(4rem+env(safe-area-inset-bottom))] space-y-4">
+                    {isMegaMenu && categories.map((cat) => (
+                        <div key={cat.id} className="border-b border-gray-100 pb-2">
+                            <div 
+                                className="flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer"
+                                onClick={() => setActiveMobileMenuId(activeMobileMenuId === cat.id ? null : cat.id)}
+                            >
+                                <span>{cat.name}</span>
+                                {cat.children && cat.children.length > 0 && (
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${activeMobileMenuId === cat.id ? 'rotate-180' : ''}`} />
+                                )}
+                            </div>
+                            {activeMobileMenuId === cat.id && cat.children && (
+                                <div className="pl-4 py-2 flex flex-col gap-3">
+                                    {cat.children.map((sub: any) => (
+                                        <div key={sub.id}>
+                                            <Link href={`/shop?category=${sub.slug}`} className="font-semibold text-gray-800 text-sm py-1 block" onClick={() => setIsMobileMenuOpen(false)}>
+                                                {sub.name}
+                                            </Link>
+                                            {sub.children && sub.children.length > 0 && (
+                                                <div className="pl-3 mt-1 flex flex-col gap-2">
+                                                    {sub.children.map((deep: any) => (
+                                                        <Link key={deep.id} href={`/shop?category=${deep.slug}`} className="text-gray-500 text-sm hover:text-black py-1 block" onClick={() => setIsMobileMenuOpen(false)}>
+                                                            {deep.name}
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    
+                    {isCustom && menuItems.map((item: any) => (
+                        <div key={item.id} className="border-b border-gray-100 pb-2">
+                            {item.type === 'mega_menu' ? (
+                                <>
+                                    <div 
+                                        className="flex items-center justify-between font-bold text-gray-900 py-2 cursor-pointer"
+                                        onClick={() => setActiveMobileMenuId(activeMobileMenuId === item.id ? null : item.id)}
+                                    >
+                                        <span>{item.label}</span>
+                                        <ChevronDown className={`w-4 h-4 transition-transform ${activeMobileMenuId === item.id ? 'rotate-180' : ''}`} />
+                                    </div>
+                                    {activeMobileMenuId === item.id && (
+                                        <div className="pl-4 py-2 flex flex-col gap-4">
+                                            {item.layout_columns?.map((col: any) => (
+                                                <div key={col.id || Math.random()} className="flex flex-col gap-3">
+                                                    {col.blocks?.map((block: any) => (
+                                                        <div key={block.id || Math.random()}>
+                                                            {block.type === 'image' ? (
+                                                                <div className="w-[150px] mt-2" onClick={() => setIsMobileMenuOpen(false)}>
+                                                                    {renderDynamicLink(block, true)}
+                                                                </div>
+                                                            ) : (
+                                                                <div>
+                                                                    {block.label && (
+                                                                        <div className="font-semibold text-gray-800 text-sm mb-2" onClick={() => setIsMobileMenuOpen(false)}>
+                                                                            {block.link ? <Link href={block.link}>{block.label}</Link> : block.label}
+                                                                        </div>
+                                                                    )}
+                                                                    {block.links && (
+                                                                        <div className="pl-2 flex flex-col gap-2">
+                                                                            {block.links.map((link: any) => (
+                                                                                <div key={link.id || Math.random()} onClick={() => setIsMobileMenuOpen(false)}>
+                                                                                    {renderDynamicLink(link, true)}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="font-bold text-gray-900 py-2" onClick={() => setIsMobileMenuOpen(false)}>
+                                    {renderDynamicLink(item)}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    
+                    {!isMegaMenu && !isCustom && (
+                        <Link href="/shop" className="font-bold text-gray-900 py-2 border-b border-gray-100 block" onClick={() => setIsMobileMenuOpen(false)}>
+                            Shop
+                        </Link>
+                    )}
+                </div>
+            </div>
 
             {/* Search Modal Overlay */}
             {isSearchOpen && (
